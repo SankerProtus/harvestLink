@@ -14,10 +14,13 @@ import {
   linkGoogleAccount,
   changePhoneNumber,
   getProfile,
+  uploadProfilePhoto,
 } from "./auth.controller.js";
 
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
-import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";  298617
+import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";
+
+import { uploadSingleImage } from "../../common/middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -82,5 +85,13 @@ router.patch(
   changePhoneNumber,
 );
 router.get("/profile", authMiddleware, getProfile);
+
+router.patch(
+  "/profile/photo",
+  authMiddleware,
+  moderateLimiter,
+  uploadSingleImage,
+  uploadProfilePhoto,
+);
 
 export default router;

@@ -1,4 +1,5 @@
-import { z } from "zod";import { ValidationError } from "../../errors/commonErrors.js";
+import { z } from "zod";
+import { ValidationError } from "../../errors/commonErrors.js";
 import {
   CROP_TYPES,
   QUANTITY_UNITS,
@@ -30,8 +31,8 @@ const quantityUnitSchema = z.enum([
   QUANTITY_UNITS.BASKET,
 ]);
 
-const requestedQuantitySchema = z
-  .coerce.number()
+const requestedQuantitySchema = z.coerce
+  .number()
   .min(
     MATCH_CONFIG.MIN_REQUESTED_QUANTITY,
     `Requested quantity must be at least ${MATCH_CONFIG.MIN_REQUESTED_QUANTITY}`,
@@ -45,7 +46,7 @@ const locationSchema = z
     `Location must be at most ${MATCH_CONFIG.LOCATION_MAX_LENGTH} characters`,
   );
 
-const maxPriceSchema = z
+const maxPriceSchema = z.coerce
   .number()
   .min(MATCH_CONFIG.MIN_MAX_PRICE, "Maximum price must be greater than zero");
 
@@ -57,13 +58,13 @@ export const matchSearchSchema = z
     requestedQuantityUnit: quantityUnitSchema,
     location: locationSchema.optional(),
     maxPrice: maxPriceSchema.optional(),
-    page: z
+    page: z.coerce
       .number()
       .int()
       .min(1, "page must be at least 1")
       .optional()
       .default(MATCH_SEARCH_CONFIG.DEFAULT_PAGE),
-    limit: z
+    limit: z.coerce
       .number()
       .int()
       .min(1, "limit must be at least 1")

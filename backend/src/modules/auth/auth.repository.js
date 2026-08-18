@@ -29,6 +29,13 @@ export async function updateUserPhone(id, phone) {
   });
 }
 
+export async function updateUserProfileImage(id, profileImageUrl) {
+  return prisma.user.update({
+    where: { id },
+    data: { profileImageUrl },
+  });
+}
+
 export async function markUserPhoneVerified(id) {
   return prisma.user.update({
     where: { id },

@@ -25,6 +25,7 @@ export async function searchMatches(filters) {
   const [items, totalCount] = await prisma.$transaction([
     prisma.listing.findMany({
       where,
+      include: { farmer: true },
       orderBy: [{ pricePerUnit: "asc" }, { createdAt: "desc" }],
       skip,
       take,

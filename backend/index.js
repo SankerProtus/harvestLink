@@ -4,6 +4,10 @@ import authRoutes from "./src/modules/auth/auth.routes.js";
 import marketplaceRoutes from "./src/modules/marketplace/marketplace.routes.js";
 import buyerMatchingRoutes from "./src/modules/buyerMatching/buyerMatching.routes.js";
 import deliveryTrackingRoutes from "./src/modules/deliveryTracking/deliveryTracking.routes.js";
+import listingInterestRoutes from "./src/modules/listingInterest/listingInterest.routes.js";
+import reviewsRoutes from "./src/modules/reviews/reviews.routes.js";
+import savedListingsRoutes from "./src/modules/savedListings/savedListings.routes.js";
+import notificationsRoutes from "./src/modules/notifications/notifications.routes.js";
 import { errorHandlerMiddleware } from "./src/common/middlewares/errorHandler.middleware.js";
 import { logger } from "./src/common/utils/logger.js";
 import { uptime } from "node:process";
@@ -41,6 +45,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/marketplace", marketplaceRoutes);
 app.use("/api/buyer-matching", buyerMatchingRoutes);
 app.use("/api/delivery-tracking", deliveryTrackingRoutes);
+app.use("/api/listing-interest", listingInterestRoutes);
+app.use("/api/reviews", reviewsRoutes);
+app.use("/api/saved-listings", savedListingsRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

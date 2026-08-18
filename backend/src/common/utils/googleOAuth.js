@@ -1,5 +1,7 @@
 import { OAuth2Client } from "google-auth-library";
 import { AUTH_PROVIDERS } from "../../modules/auth/auth.constants.js";
+import { GoogleTokenVerificationError } from "../../modules/auth/auth.errors.js";
+import { logger } from "./logger.js";
 
 // Client creation
 
@@ -18,14 +20,30 @@ function getOAuthClient() {
 // Verification
 
 export async function verifyGoogleIdToken(idToken) {
+  if (!idToken) {
+    throw new GoogleTokenVerificationError("Missing Google ID token");
+  }
+
   const client = getOAuthClient();
 
-  const ticket = await client.verifyIdToken({
-    idToken,
-    audience: getClientId(),
-  });
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: getClientId(),
+    });
 
-  return ticket.getPayload();
+    return ticket.getPayload();
+  } catch (err) {
+    // google-auth-library throws plain Errors for every failure mode
+    // (expired token, audience/client-id mismatch, malformed token,
+    // signature verification failure, etc). None of those should ever
+    // surface as a raw 500 — normalize them into our own AppError so
+    // the client gets a proper AUTH_GOOGLE_TOKEN_INVALID response.
+    logger.warn("Google ID token verification failed", {
+      message: err?.message,
+    });
+    throw new GoogleTokenVerificationError();
+  }
 }
 
 // Normalization

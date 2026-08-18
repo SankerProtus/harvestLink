@@ -79,6 +79,20 @@ export class PhoneAlreadyRegisteredError extends AppError {
   }
 }
 
+export class AccountNotFoundError extends AppError {
+  constructor(
+    message = "No account found for this phone number",
+    details = null,
+  ) {
+    super(message, {
+      statusCode: 404,
+      code: "AUTH_ACCOUNT_NOT_FOUND",
+      isOperational: true,
+      details,
+    });
+  }
+}
+
 export class AccountNotVerifiedError extends AppError {
   constructor(
     message = "This account has not been verified yet",

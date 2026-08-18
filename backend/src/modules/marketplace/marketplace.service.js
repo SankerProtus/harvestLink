@@ -1,6 +1,7 @@
 import {
   createListing as createListingRepo,
   findListingById,
+  findListingByIdWithFarmer,
   findListingByFarmerAndTitle,
   updateListing as updateListingRepo,
   updateListingQuantity as updateListingQuantityRepo,
@@ -8,6 +9,8 @@ import {
   listListingsByFarmerId,
   searchListings as searchListingsRepo,
 } from "./marketplace.repository.js";
+
+import { getRatingSummaryForFarmers } from "../reviews/reviews.service.js";
 
 import {
   toListingDTO,
@@ -78,6 +81,7 @@ export async function createListing({
   quantityUnit,
   pricePerUnit,
   location,
+  harvestDate,
   images,
 }) {
   const existing = await findListingByFarmerAndTitle(
@@ -98,6 +102,7 @@ export async function createListing({
     quantityUnit,
     pricePerUnit,
     location,
+    harvestDate: harvestDate ?? null,
     images: images ?? [],
     status: LISTING_STATUS.ACTIVE,
   });
@@ -304,13 +309,22 @@ export async function releaseListingReservation({ listingId, quantity }) {
 // Reads
 
 export async function getListing({ listingId }) {
-  const listing = await requireListing(listingId);
-  return toListingDTO(listing);
+  const listing = await findListingByIdWithFarmer(listingId);
+  if (!listing) {
+    throw new ListingNotFoundError();
+  }
+  const ratingSummaryByFarmerId = await getRatingSummaryForFarmers([
+    listing.farmerId,
+  ]);
+  return toListingDTO(listing, ratingSummaryByFarmerId);
 }
 
 export async function getFarmerListings({ farmerId }) {
   const listings = await listListingsByFarmerId(farmerId);
-  return toListingListDTO(listings);
+  const ratingSummaryByFarmerId = await getRatingSummaryForFarmers([
+    farmerId,
+  ]);
+  return toListingListDTO(listings, ratingSummaryByFarmerId);
 }
 
 export async function searchListings(filters) {
@@ -324,10 +338,14 @@ export async function searchListings(filters) {
     take,
   });
 
+  const farmerIds = [...new Set(items.map((listing) => listing.farmerId))];
+  const ratingSummaryByFarmerId = await getRatingSummaryForFarmers(farmerIds);
+
   return toListingSearchResponse({
     listings: items,
     page,
     limit,
     total: totalCount,
+    ratingSummaryByFarmerId,
   });
 }

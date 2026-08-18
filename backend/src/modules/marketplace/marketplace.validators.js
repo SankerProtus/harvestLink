@@ -89,6 +89,10 @@ const locationSchema = z
   .min(1, "Location is required")
   .max(120, "Location is too long");
 
+const harvestDateSchema = z.coerce.date({
+  errorMap: () => ({ message: "Harvest date must be a valid date" }),
+});
+
 const imagesSchema = z
   .array(z.string().url("Each image must be a valid URL"))
   .max(
@@ -109,6 +113,7 @@ export const createListingSchema = z
     quantityUnit: quantityUnitSchema,
     pricePerUnit: pricePerUnitSchema,
     location: locationSchema,
+    harvestDate: harvestDateSchema.optional(),
     images: imagesSchema.optional(),
   })
   .strict();
@@ -122,6 +127,7 @@ export const updateListingSchema = z
     quantityUnit: quantityUnitSchema.optional(),
     pricePerUnit: pricePerUnitSchema.optional(),
     location: locationSchema.optional(),
+    harvestDate: harvestDateSchema.optional(),
     images: imagesSchema.optional(),
   })
   .strict();
@@ -150,21 +156,21 @@ export const listingSearchSchema = z
     cropType: cropTypeSchema.optional(),
     quantityUnit: quantityUnitSchema.optional(),
     location: z.string().trim().max(120).optional(),
-    minPrice: z
+    minPrice: z.coerce
       .number()
       .positive("minPrice must be greater than zero")
       .optional(),
-    maxPrice: z
+    maxPrice: z.coerce
       .number()
       .positive("maxPrice must be greater than zero")
       .optional(),
-    page: z
+    page: z.coerce
       .number()
       .int()
       .min(1, "page must be at least 1")
       .optional()
       .default(1),
-    limit: z
+    limit: z.coerce
       .number()
       .int()
       .min(1, "limit must be at least 1")

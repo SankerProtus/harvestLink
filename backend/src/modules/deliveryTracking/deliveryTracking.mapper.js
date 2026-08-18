@@ -14,6 +14,30 @@ function serializeDecimal(value) {
 
 //  Order DTO
 
+// These sub-objects are only present when the query loaded the relevant
+// relation (see repository `include` clauses). Built from real columns
+// only — no phone/vehicle fields exist on the schema, so a "driver card"
+// with that detail isn't fabricated here.
+function serializeListingSummary(listing) {
+  if (!listing) return undefined;
+  return {
+    id: listing.id,
+    title: listing.title,
+    cropType: listing.cropType,
+    images: listing.images ?? [],
+  };
+}
+
+function serializePerson(person) {
+  if (!person) return undefined;
+  return {
+    id: person.id,
+    name: person.fullName,
+    phone: person.phone ?? null,
+    avatarUrl: person.profileImageUrl ?? null,
+  };
+}
+
 export function toOrderDTO(order) {
   return {
     id: order.id,
@@ -26,6 +50,9 @@ export function toOrderDTO(order) {
     latitude: order.latestLatitude ?? null,
     longitude: order.latestLongitude ?? null,
     locationReportedAt: serializeDate(order.locationReportedAt),
+    listing: serializeListingSummary(order.listing),
+    buyer: serializePerson(order.buyer),
+    farmer: serializePerson(order.farmer),
     createdAt: serializeDate(order.createdAt),
     updatedAt: serializeDate(order.updatedAt),
   };

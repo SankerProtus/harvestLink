@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  FARMER
+  BUYER
+  ADMIN
+}
+
+enum AccountStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum OtpPurpose {
+  REGISTRATION
+  LOGIN
+  CHANGE_PHONE
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+enum OAuthProvider {
+  GOOGLE
+}
+
+model User {
+  id       String   @id @default(uuid()) @db.Uuid
+  fullName String   @db.VarChar(120)
+  role     UserRole
+
+  phone           String?   @unique @db.VarChar(20)
+  phoneVerifiedAt DateTime?
+
+  accountStatus AccountStatus @default(PENDING_VERIFICATION)
+
+  profileImageUrl String? @db.VarChar(500)
+
+  lastLoginAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  listings     Listing[]
+  buyerOrders  Order[]   @relation("BuyerOrders")
+  farmerOrders Order[]   @relation("FarmerOrders")
+
+  expressedInterests ListingInterest[]
+  refreshTokens      RefreshToken[]
+  devices            Device[]
+  oauthAccounts      OAuthAccount[]
+
+  reviewsGiven    Review[]       @relation("BuyerReviews")
+  reviewsReceived Review[]       @relation("FarmerReviews")
+  savedListings   SavedListing[] @relation("BuyerSavedListings")
+  notifications   Notification[]
+
+  @@index([accountStatus])
+  @@map("users")
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid()) @db.Uuid
+  provider          OAuthProvider
+  providerAccountId String        @db.VarChar(255)
+  email             String?       @db.VarChar(255)
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model Device {
+  id         String         @id @default(uuid()) @db.Uuid
+  deviceId   String         @db.VarChar(255)
+  deviceName String?        @db.VarChar(255)
+  platform   DevicePlatform
+  pushToken  String?        @db.VarChar(500)
+  lastSeenAt DateTime?
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+  @@map("devices")
+}
+
+model RefreshToken {
+  id        String @id @default(uuid()) @db.Uuid
+  tokenHash String @unique @db.VarChar(255)
+
+  family String @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deviceId String? @db.Uuid
+  device   Device? @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  revokedReason String? @db.VarChar(100)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([family])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model OtpCode {
+  id       String     @id @default(uuid()) @db.Uuid
+  phone    String     @db.VarChar(20)
+  purpose  OtpPurpose
+  codeHash String     @db.VarChar(255)
+
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  requestIp  String?   @db.VarChar(45)
+
+  createdAt DateTime @default(now())
+
+  verificationTokens OtpVerificationToken[]
+
+  @@index([phone, purpose])
+  @@index([expiresAt])
+  @@map("otp_codes")
+}
+
+model OtpVerificationToken {
+  id      String     @id @default(uuid()) @db.Uuid
+  phone   String     @db.VarChar(20)
+  purpose OtpPurpose
+
+  otpCodeId String  @db.Uuid
+  otpCode   OtpCode @relation(fields: [otpCodeId], references: [id], onDelete: Cascade)
+
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([phone, purpose])
+  @@index([expiresAt])
+  @@map("otp_verification_tokens")
+}
+
+enum CropType {
+  TOMATO
+  MAIZE
+  CASSAVA
+  PLANTAIN
+  YAM
+  PEPPER
+  ONION
+  RICE
+  GROUNDNUT
+  COCOA
+}
+
+enum QuantityUnit {
+  KILOGRAM
+  BAG
+  CRATE
+  SACK
+  BUNCH
+  PIECE
+  BASKET
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  REMOVED
+}
+
+model Listing {
+  id String @id @default(uuid()) @db.Uuid
+
+  farmerId String @db.Uuid
+  farmer   User   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+
+  title       String  @db.VarChar(120)
+  description String? @db.VarChar(1000)
+
+  cropType     CropType
+  quantity     Decimal      @db.Decimal(10, 2)
+  quantityUnit QuantityUnit
+  pricePerUnit Decimal      @db.Decimal(10, 2)
+  location     String       @db.VarChar(120)
+  harvestDate  DateTime?    @db.Date
+
+  images String[]
+
+  status ListingStatus @default(ACTIVE)
+
+  orders    Order[]
+  interests ListingInterest[]
+  savedBy   SavedListing[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([farmerId])
+  @@index([cropType])
+  @@index([status])
+  @@index([location])
+  @@map("listings")
+}
+
+model ListingInterest {
+  id String @id @default(uuid()) @db.Uuid
+
+  listingId String  @db.Uuid
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerId String @db.Uuid
+  buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([listingId, buyerId])
+  @@index([listingId])
+  @@index([buyerId])
+  @@map("listing_interests")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id String @id @default(uuid()) @db.Uuid
+
+  listingId String  @db.Uuid
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+
+  buyerId String @db.Uuid
+  buyer   User   @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Restrict)
+
+  farmerId String @db.Uuid
+  farmer   User   @relation("FarmerOrders", fields: [farmerId], references: [id], onDelete: Restrict)
+
+  quantity            Decimal @db.Decimal(10, 2)
+  pricePerUnitAtOrder Decimal @db.Decimal(10, 2)
+
+  status OrderStatus @default(PENDING)
+
+  latestLatitude     Float?
+  latestLongitude    Float?
+  locationReportedAt DateTime?
+
+  review Review?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([farmerId])
+  @@index([listingId])
+  @@index([status])
+  @@map("orders")
+}
+
+// One review per completed order — the buyer rates the farmer after
+// delivery. `orderId` is unique so an order can only ever carry a
+// single review, enforced at the DB level rather than just in code.
+model Review {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId String @unique @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  farmerId String @db.Uuid
+  farmer   User   @relation("FarmerReviews", fields: [farmerId], references: [id], onDelete: Cascade)
+
+  buyerId String @db.Uuid
+  buyer   User   @relation("BuyerReviews", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  rating  Int     @db.SmallInt
+  comment String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+
+  @@index([farmerId])
+  @@index([buyerId])
+  @@map("reviews")
+}
+
+// A buyer's private wishlist/bookmark on a listing — distinct from
+// ListingInterest, which signals interest to the farmer. Saving is
+// silent and only visible to the buyer who saved it.
+model SavedListing {
+  id String @id @default(uuid()) @db.Uuid
+
+  listingId String  @db.Uuid
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerId String @db.Uuid
+  buyer   User   @relation("BuyerSavedListings", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([buyerId, listingId])
+  @@index([buyerId])
+  @@index([listingId])
+  @@map("saved_listings")
+}
+
+enum NotificationType {
+  ORDER_PLACED
+  ORDER_CONFIRMED
+  ORDER_IN_TRANSIT
+  ORDER_DELIVERED
+  ORDER_CANCELLED
+  LISTING_INTEREST
+  NEW_REVIEW
+}
+
+// Real, persisted notifications — created at the same points the
+// (currently unpublished) domain events in each module's `*.events.js`
+// are built. No push delivery yet; this is the in-app feed + badge
+// count, backed by real rows rather than a derived/guessed count.
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type  NotificationType
+  title String           @db.VarChar(150)
+  body  String           @db.VarChar(300)
+
+  orderId   String? @db.Uuid
+  listingId String? @db.Uuid
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}

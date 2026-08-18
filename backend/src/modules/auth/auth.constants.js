@@ -17,7 +17,7 @@ export const ACCOUNT_STATUS = Object.freeze({
 });
 
 export const OTP_CONFIG = Object.freeze({
-  CODE_LENGTH: 6,
+  CODE_LENGTH: 4,
   EXPIRY_MINUTES: 5,
   MAX_VERIFY_ATTEMPTS: 5,
   RESEND_COOLDOWN_SECONDS: 60,

@@ -50,6 +50,7 @@ export async function listOrdersByBuyerId(buyerId, filters) {
   const [items, totalCount] = await prisma.$transaction([
     prisma.order.findMany({
       where,
+      include: { listing: true, farmer: true },
       orderBy: { createdAt: "desc" },
       skip,
       take,
@@ -71,6 +72,7 @@ export async function listOrdersByFarmerId(farmerId, filters) {
   const [items, totalCount] = await prisma.$transaction([
     prisma.order.findMany({
       where,
+      include: { listing: true, buyer: true },
       orderBy: { createdAt: "desc" },
       skip,
       take,

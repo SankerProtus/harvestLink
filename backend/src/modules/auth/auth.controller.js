@@ -29,6 +29,9 @@ import {
   revokeSession as revokeSessionService,
 } from "./auth.service.js";
 
+import { uploadProfilePhoto as uploadProfilePhotoService } from "./auth.service.js";
+import { BadRequestError } from "../../errors/commonErrors.js";
+
 // Transport helper — pure response shaping, not business logic.
 
 function sendSuccess(res, statusCode, data) {
@@ -89,7 +92,6 @@ export async function login(req, res, next) {
   }
 }
 
-
 // Session / Token Management
 
 export async function refresh(req, res, next) {
@@ -134,7 +136,6 @@ export async function revokeSession(req, res, next) {
   }
 }
 
-
 // Google OAuth
 
 export async function googleSignIn(req, res, next) {
@@ -178,6 +179,21 @@ export async function changePhoneNumber(req, res, next) {
 export async function getProfile(req, res, next) {
   try {
     const result = await getUserProfile({ userId: req.user.id });
+    return sendSuccess(res, 200, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function uploadProfilePhoto(req, res, next) {
+  try {
+    if (!req.file) {
+      throw new BadRequestError("No photo file was provided");
+    }
+    const result = await uploadProfilePhotoService({
+      userId: req.user.id,
+      fileBuffer: req.file.buffer,
+    });
     return sendSuccess(res, 200, result);
   } catch (err) {
     next(err);

@@ -6,6 +6,7 @@ import {
   findUserByPhone,
   findUserById,
   updateUserPhone,
+  updateUserProfileImage,
   markUserPhoneVerified,
   updateUserLastLoginAt,
   findLatestActiveOtpCode,
@@ -44,6 +45,7 @@ import {
   GoogleAccountAlreadyLinkedError,
   InvalidAccessTokenError,
   AccessTokenExpiredError,
+  AccountNotFoundError, 
 } from "./auth.errors.js";
 
 import {
@@ -105,6 +107,7 @@ import {
 } from "./auth.events.js";
 
 import { sendOtp, resolveSmsProvider } from "../../common/utils/smsProvider.js";
+import { uploadImageBuffer } from "../../common/configs/cloudinary.js";
 
 // Shared/private helpers
 const smsProvider = resolveSmsProvider();
@@ -365,9 +368,8 @@ export async function loginWithPhone({
   const user = await findUserByPhone(phone);
   if (!user) {
     createLoginFailedEvent({ phone, reason: "USER_NOT_FOUND", ipAddress });
-    throw new NotFoundError("No account found for this phone number");
+    throw new AccountNotFoundError();
   }
-
   assertAccountIsUsable(user);
 
   const {
@@ -741,6 +743,12 @@ export async function getUserProfile({ userId }) {
     throw new NotFoundError("User not found");
   }
   return toUserProfile(user);
+}
+
+export async function uploadProfilePhoto({ userId, fileBuffer }) {
+  const imageUrl = await uploadImageBuffer(fileBuffer);
+  const updatedUser = await updateUserProfileImage(userId, imageUrl);
+  return toUserProfile(updatedUser);
 }
 
 // Session Management

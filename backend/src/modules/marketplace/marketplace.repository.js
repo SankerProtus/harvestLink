@@ -89,6 +89,7 @@ export async function searchListings(filters) {
   const [items, totalCount] = await prisma.$transaction([
     prisma.listing.findMany({
       where,
+      include: { farmer: true },
       orderBy: { createdAt: "desc" },
       skip,
       take,

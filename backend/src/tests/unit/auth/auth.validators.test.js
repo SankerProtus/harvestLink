@@ -130,10 +130,10 @@ describe("auth.validators", () => {
 
   // ─── verifyOtpSchema ──────────────────────────────────────
   describe("verifyOtpSchema", () => {
-    test("accepts a valid 6-digit code", () => {
+    test("accepts a valid 4-digit code", () => {
       const result = verifyOtpSchema.safeParse({
         phone: validPhone(),
-        code: "483921",
+        code: "4839",
         purpose: "LOGIN",
       });
       expect(result.success).toBe(true);

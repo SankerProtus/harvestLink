@@ -24,6 +24,7 @@ export function toUserProfile(user) {
     phone: user.phone ?? null,
     phoneVerifiedAt: serializeDate(user.phoneVerifiedAt),
     accountStatus: user.accountStatus,
+    profileImageUrl: user.profileImageUrl ?? null,
     lastLoginAt: serializeDate(user.lastLoginAt),
     createdAt: serializeDate(user.createdAt),
   };

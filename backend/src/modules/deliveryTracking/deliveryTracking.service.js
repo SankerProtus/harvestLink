@@ -1,6 +1,7 @@
 import {
   createOrder as createOrderRepo,
   findOrderById,
+  findOrderByIdWithRelations,
   updateOrderStatus as updateOrderStatusRepo,
   updateOrderLocation as updateOrderLocationRepo,
   listOrdersByBuyerId,
@@ -39,6 +40,8 @@ import {
   confirmListingReservation,
   releaseListingReservation,
 } from "../marketplace/marketplace.service.js";
+import { createNotification } from "../notifications/notifications.service.js";
+import { NOTIFICATION_TYPE } from "../notifications/notifications.constants.js";
 
 // Private helpers
 
@@ -107,6 +110,15 @@ export async function createOrder({ buyerId, listingId, quantity }) {
   });
   // TODO: publish `event` once an event bus exists.
 
+  await createNotification({
+    userId: order.farmerId,
+    type: NOTIFICATION_TYPE.ORDER_PLACED,
+    title: "New order received",
+    body: `A buyer requested ${order.quantity} ${listing.quantityUnit} of "${listing.title}".`,
+    orderId: order.id,
+    listingId: order.listingId,
+  });
+
   return toCreateOrderResponse(order);
 }
 
@@ -152,12 +164,28 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
       farmerId: order.farmerId,
     });
     // TODO: publish `event` once an event bus exists.
+    await createNotification({
+      userId: order.buyerId,
+      type: NOTIFICATION_TYPE.ORDER_CONFIRMED,
+      title: "Order confirmed",
+      body: `Your order for ${order.quantity} unit(s) has been confirmed by the farmer.`,
+      orderId,
+      listingId: order.listingId,
+    });
   } else if (newStatus === ORDER_STATUS.IN_TRANSIT) {
     const event = createOrderInTransitEvent({
       orderId,
       farmerId: order.farmerId,
     });
     // TODO: publish `event` once an event bus exists.
+    await createNotification({
+      userId: order.buyerId,
+      type: NOTIFICATION_TYPE.ORDER_IN_TRANSIT,
+      title: "Order on the way",
+      body: "Your order is now in transit.",
+      orderId,
+      listingId: order.listingId,
+    });
   } else if (newStatus === ORDER_STATUS.DELIVERED) {
     const event = createOrderDeliveredEvent({
       orderId,
@@ -165,6 +193,14 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
       farmerId: order.farmerId,
     });
     // TODO: publish `event` once an event bus exists.
+    await createNotification({
+      userId: order.buyerId,
+      type: NOTIFICATION_TYPE.ORDER_DELIVERED,
+      title: "Order delivered",
+      body: "Your order has been delivered. Tap to rate your experience.",
+      orderId,
+      listingId: order.listingId,
+    });
   } else if (newStatus === ORDER_STATUS.CANCELLED) {
     const event = createOrderCancelledEvent({
       orderId,
@@ -172,6 +208,16 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
       previousStatus: currentStatus,
     });
     // TODO: publish `event` once an event bus exists.
+    const recipientId =
+      userId === order.buyerId ? order.farmerId : order.buyerId;
+    await createNotification({
+      userId: recipientId,
+      type: NOTIFICATION_TYPE.ORDER_CANCELLED,
+      title: "Order cancelled",
+      body: "An order was cancelled.",
+      orderId,
+      listingId: order.listingId,
+    });
   }
 
   return toUpdateOrderStatusResponse(updatedOrder);
@@ -210,7 +256,10 @@ export async function reportLocation({ orderId, userId, latitude, longitude }) {
 // Reads
 
 export async function getOrder({ orderId, userId }) {
-  const order = await requireOrder(orderId);
+  const order = await findOrderByIdWithRelations(orderId);
+  if (!order) {
+    throw new OrderNotFoundError();
+  }
   assertOrderParticipant(order, userId);
   return toOrderDTO(order);
 }

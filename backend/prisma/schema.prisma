@@ -47,6 +47,8 @@ model User {
 
   accountStatus AccountStatus @default(PENDING_VERIFICATION)
 
+  profileImageUrl String? @db.VarChar(500)
+
   lastLoginAt DateTime?
 
   createdAt DateTime  @default(now())
@@ -57,9 +59,15 @@ model User {
   buyerOrders  Order[] @relation("BuyerOrders")
   farmerOrders Order[] @relation("FarmerOrders")
 
+  expressedInterests ListingInterest[]
   refreshTokens RefreshToken[]
   devices       Device[]
   oauthAccounts OAuthAccount[]
+
+  reviewsGiven    Review[]       @relation("BuyerReviews")
+  reviewsReceived Review[]       @relation("FarmerReviews")
+  savedListings   SavedListing[] @relation("BuyerSavedListings")
+  notifications   Notification[]
 
   @@index([accountStatus])
   @@map("users")
@@ -210,12 +218,15 @@ model Listing {
   quantityUnit QuantityUnit
   pricePerUnit Decimal      @db.Decimal(10, 2)
   location     String       @db.VarChar(120)
+  harvestDate  DateTime?    @db.Date
 
   images String[]
 
   status ListingStatus @default(ACTIVE)
 
   orders Order[]
+  interests ListingInterest[]
+  savedBy   SavedListing[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -225,6 +236,23 @@ model Listing {
   @@index([status])
   @@index([location])
   @@map("listings")
+}
+
+model ListingInterest {
+  id String @id @default(uuid()) @db.Uuid
+
+  listingId String  @db.Uuid
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerId String @db.Uuid
+  buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([listingId, buyerId])
+  @@index([listingId])
+  @@index([buyerId])
+  @@map("listing_interests")
 }
 
 enum OrderStatus {
@@ -256,6 +284,8 @@ model Order {
   latestLongitude    Float?
   locationReportedAt DateTime?
 
+  review Review?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -264,4 +294,85 @@ model Order {
   @@index([listingId])
   @@index([status])
   @@map("orders")
+}
+
+// One review per completed order — the buyer rates the farmer after
+// delivery. `orderId` is unique so an order can only ever carry a
+// single review, enforced at the DB level rather than just in code.
+model Review {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId String @unique @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  farmerId String @db.Uuid
+  farmer   User   @relation("FarmerReviews", fields: [farmerId], references: [id], onDelete: Cascade)
+
+  buyerId String @db.Uuid
+  buyer   User   @relation("BuyerReviews", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  rating  Int     @db.SmallInt
+  comment String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+
+  @@index([farmerId])
+  @@index([buyerId])
+  @@map("reviews")
+}
+
+// A buyer's private wishlist/bookmark on a listing — distinct from
+// ListingInterest, which signals interest to the farmer. Saving is
+// silent and only visible to the buyer who saved it.
+model SavedListing {
+  id String @id @default(uuid()) @db.Uuid
+
+  listingId String  @db.Uuid
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerId String @db.Uuid
+  buyer   User   @relation("BuyerSavedListings", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([buyerId, listingId])
+  @@index([buyerId])
+  @@index([listingId])
+  @@map("saved_listings")
+}
+
+enum NotificationType {
+  ORDER_PLACED
+  ORDER_CONFIRMED
+  ORDER_IN_TRANSIT
+  ORDER_DELIVERED
+  ORDER_CANCELLED
+  LISTING_INTEREST
+  NEW_REVIEW
+}
+
+// Real, persisted notifications — created at the same points the
+// (currently unpublished) domain events in each module's `*.events.js`
+// are built. No push delivery yet; this is the in-app feed + badge
+// count, backed by real rows rather than a derived/guessed count.
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type  NotificationType
+  title String           @db.VarChar(150)
+  body  String           @db.VarChar(300)
+
+  orderId   String? @db.Uuid
+  listingId String? @db.Uuid
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
