@@ -11,6 +11,7 @@ import {
 } from "./marketplace.repository.js";
 
 import { getRatingSummaryForFarmers } from "../reviews/reviews.service.js";
+import { uploadImageBuffer } from "../../common/configs/cloudinary.js";
 
 import {
   toListingDTO,
@@ -348,4 +349,17 @@ export async function searchListings(filters) {
     total: totalCount,
     ratingSummaryByFarmerId,
   });
+}
+
+export async function uploadListingPhoto({ fileBuffer }) {
+  const imageUrl = await uploadImageBuffer(fileBuffer, {
+    folder: "harvestlink/listings",
+    // No face-gravity crop here (that's an avatar-specific transform) —
+    // just cap dimensions so oversized photos don't balloon storage,
+    // preserving aspect ratio via "limit" (never upscales, never crops).
+    transformation: [
+      { width: 1600, height: 1600, crop: "limit" },
+    ],
+  });
+  return { url: imageUrl };
 }

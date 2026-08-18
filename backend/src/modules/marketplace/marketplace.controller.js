@@ -16,7 +16,10 @@ import {
   getListing as getListingService,
   getFarmerListings as getFarmerListingsService,
   searchListings as searchListingsService,
+  uploadListingPhoto as uploadListingPhotoService,
 } from "./marketplace.service.js";
+
+import { BadRequestError } from "../../errors/commonErrors.js";
 
 function sendSuccess(res, statusCode, data) {
   return res.status(statusCode).json({ success: true, data });
@@ -30,6 +33,20 @@ export async function createListing(req, res, next) {
       farmerId: req.user.id,
     });
     return sendSuccess(res, 201, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function uploadListingPhoto(req, res, next) {
+  try {
+    if (!req.file) {
+      throw new BadRequestError("No photo file was provided");
+    }
+    const result = await uploadListingPhotoService({
+      fileBuffer: req.file.buffer,
+    });
+    return sendSuccess(res, 200, result);
   } catch (err) {
     next(err);
   }

@@ -8,10 +8,12 @@ import {
   getListing,
   getFarmerListings,
   searchListings,
+  uploadListingPhoto,
 } from "./marketplace.controller.js";
 
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
 import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";
+import { uploadSingleImage } from "../../common/middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -47,6 +49,13 @@ router.get(
 router.get("/listings", lightLimiter, searchListings);
 
 router.post("/listings", authMiddleware, moderateLimiter, createListing);
+router.post(
+  "/listings/photos",
+  authMiddleware,
+  moderateLimiter,
+  uploadSingleImage,
+  uploadListingPhoto,
+);
 router.patch(
   "/listings/:listingId",
   authMiddleware,

@@ -11,16 +11,17 @@ cloudinary.config({
 // Cloudinary's stream API is callback-based.
 export function uploadImageBuffer(
   buffer,
-  { folder = "harvestlink/avatars" } = {},
+  {
+    folder = "harvestlink/avatars",
+    transformation = [{ width: 512, height: 512, crop: "fill", gravity: "face" }],
+  } = {},
 ) {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: "image",
-        transformation: [
-          { width: 512, height: 512, crop: "fill", gravity: "face" },
-        ],
+        transformation,
       },
       (error, result) => {
         if (error) return reject(error);
