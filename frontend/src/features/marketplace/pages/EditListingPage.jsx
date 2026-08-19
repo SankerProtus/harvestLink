@@ -17,7 +17,10 @@ import {
   useChangeListingStatus,
 } from "../hooks/marketplaceHooks.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
-import { LoadingState, ErrorState } from "../../../components/ui/ScreenState.jsx";
+import {
+  LoadingState,
+  ErrorState,
+} from "../../../components/ui/ScreenState.jsx";
 
 export function EditListingPage() {
   const navigation = useNavigation();
@@ -33,7 +36,10 @@ export function EditListingPage() {
   async function handleFormSubmit(updates) {
     try {
       await updateListing.mutateAsync({ listingId, updates });
-      navigation.navigate("MyListings");
+      // Same nested-navigator fix as CreateListingPage — "MyListings" lives
+      // inside ProtectedTabNavigator, so it must be reached via the parent
+      // "ProtectedTabs" stack screen, not navigated to directly.
+      navigation.navigate("ProtectedTabs", { screen: "MyListings" });
     } catch {
       // Already captured in updateListing.error and rendered below.
     }

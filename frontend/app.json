@@ -37,7 +37,8 @@
           "locationWhenInUsePermission": "HarvestLink uses your location to share your delivery position with the buyer or farmer."
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {
