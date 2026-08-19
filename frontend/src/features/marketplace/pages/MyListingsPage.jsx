@@ -2,6 +2,7 @@ import { View, Text, FlatList } from "react-native";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+
 import { Feather } from "@expo/vector-icons";
 
 import { useInterestSummaryForFarmer } from "../hooks/listingInterestHooks.js";
@@ -11,6 +12,8 @@ import {
   SectionHeader,
   SectionLabel,
 } from "../../../components/ui/SectionHeader.jsx";
+import { colors } from "../../../theme/colors.js";
+import { shadows } from "../../../theme/shadows.js";
 import {
   HeaderActionButton,
   ScreenHeader,
@@ -20,8 +23,6 @@ import { useMyListings } from "../hooks/marketplaceHooks.js";
 import { useFarmerOrders } from "../../deliveryTracking/hooks/deliveryTrackingHooks.js";
 import { useSyncStatus } from "../../../lib/useSyncStatus.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
-import { colors } from "../../../theme/colors.js";
-import { shadows } from "../../../theme/shadows.js";
 import {
   LoadingState,
   ErrorState,
@@ -29,15 +30,15 @@ import {
   Banner,
 } from "../../../components/ui/ScreenState.jsx";
 
-// Compact, single-row overview strip. Modelled on the stat-bar pattern used
-// by production fintech/marketplace dashboards (Stripe, Cash App) — one flat
-// card with vertical dividers, rather than three separately-padded/shadowed
-// cards stacked with gaps. Cuts the overview's vertical footprint roughly in
-// half so the listings below are visible without scrolling past it.
-function OverviewCell({
-  label,
-  value,
+// A single, compact stat strip — one card, three columns divided by thin
+// rules — instead of three separately-padded MetricCards. Production
+// dashboards (order-management apps, POS home screens) favor this dense
+// row so the "overview" reads at a glance without pushing the actual
+// content (the listings list) below the fold.
+function OverviewStat({
   icon,
+  value,
+  label,
   accent = "primary",
   isLast = false,
 }) {
@@ -46,18 +47,18 @@ function OverviewCell({
 
   return (
     <View
-      className={`flex-1 flex-row items-center py-3 px-3 ${
+      className={`flex-1 flex-row items-center gap-2.5 py-3 px-3 ${
         isLast ? "" : "border-r border-line/60"
       }`}
     >
       <View
-        className={`w-7 h-7 rounded-lg items-center justify-center mr-2 ${iconBg}`}
+        className={`w-8 h-8 rounded-xl items-center justify-center ${iconBg}`}
       >
-        <Feather name={icon} size={12} color={iconColor} />
+        <Feather name={icon} size={14} color={iconColor} />
       </View>
-      <View className="flex-shrink">
+      <View className="flex-1 min-w-0">
         <Text
-          className="text-[14px] leading-[16px] font-extrabold text-ink tracking-[-0.2px]"
+          className="text-[15px] font-extrabold text-ink tracking-[-0.2px]"
           numberOfLines={1}
         >
           {value}
@@ -69,24 +70,6 @@ function OverviewCell({
           {label}
         </Text>
       </View>
-    </View>
-  );
-}
-
-function OverviewStrip({ listed, earnings, matches }) {
-  return (
-    <View
-      className="flex-row rounded-xl2 bg-white border border-line/50 mb-6"
-      style={shadows.card}
-    >
-      <OverviewCell label="Listed" value={listed} icon="package" />
-      <OverviewCell
-        label="Earnings"
-        value={earnings}
-        icon="trending-up"
-        accent="accent"
-      />
-      <OverviewCell label="Matches" value={matches} icon="users" isLast />
     </View>
   );
 }
@@ -161,12 +144,28 @@ export function MyListingsPage() {
         ) : null}
 
         <SectionLabel>Overview</SectionLabel>
-
-        <OverviewStrip
-          listed={String(activeListings.length)}
-          earnings={`₵${estimatedValue.toLocaleString()}`}
-          matches={String(pendingOrders.length)}
-        />
+        <View
+          className="flex-row rounded-xl2 bg-white border border-line/50 mb-5"
+          style={shadows.card}
+        >
+          <OverviewStat
+            icon="package"
+            value={String(activeListings.length)}
+            label="Listed"
+          />
+          <OverviewStat
+            icon="trending-up"
+            value={`₵${estimatedValue.toLocaleString()}`}
+            label="Earnings"
+            accent="accent"
+          />
+          <OverviewStat
+            icon="users"
+            value={String(pendingOrders.length)}
+            label="Matches"
+            isLast
+          />
+        </View>
 
         <SectionHeader
           title="Your listings"

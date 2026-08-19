@@ -173,10 +173,7 @@ export function NotificationsPage() {
               style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
               className="bg-white/15 rounded-full px-3 py-2 border border-white/20"
             >
-              <Text
-                className="text-white text-[11px] font-bold"
-                numberOfLines={1}
-              >
+              <Text className="text-white text-[11px] font-bold">
                 Mark all read
               </Text>
             </Pressable>

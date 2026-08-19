@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+
 import {
   View,
   Text,
@@ -7,24 +8,35 @@ import {
   Pressable,
   ScrollView,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import { useNavigation } from "@react-navigation/native";
+
 import { Feather } from "@expo/vector-icons";
 
 import { Button } from "../../../components/ui/Button.jsx";
+
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.jsx";
+
 import {
   InlinePageHeader,
   IconCircleButton,
 } from "../../../components/ui/InlinePageHeader.jsx";
+
 import { PriceText } from "../../../components/ui/PriceText.jsx";
+
 import {
   useBuyerOrders,
   useFarmerOrders,
 } from "../hooks/deliveryTrackingHooks.js";
+
 import { getErrorMessage } from "../../../lib/errorMap.js";
+
 import { colors } from "../../../theme/colors.js";
+
 import { shadows } from "../../../theme/shadows.js";
+
 import {
   LoadingState,
   ErrorState,
@@ -35,22 +47,30 @@ const TABS = { BUYER: "buyer", FARMER: "farmer" };
 
 const STATUS_STYLES = {
   PENDING: { dot: "bg-warning", line: "bg-warning/40", label: "Pending" },
+
   CONFIRMED: { dot: "bg-info", line: "bg-info/40", label: "Confirmed" },
+
   IN_TRANSIT: { dot: "bg-primary", line: "bg-primary/40", label: "In transit" },
+
   DELIVERED: { dot: "bg-success", line: "bg-success/40", label: "Delivered" },
+
   CANCELLED: { dot: "bg-ink-faint", line: "bg-line", label: "Cancelled" },
 };
 
 const SUMMARY_GROUPS = [
   { key: "pending", label: "Pending", statuses: ["PENDING", "CONFIRMED"] },
+
   { key: "inTransit", label: "In transit", statuses: ["IN_TRANSIT"] },
+
   { key: "delivered", label: "Delivered", statuses: ["DELIVERED"] },
 ];
 
 function formatDate(isoString) {
   if (!isoString) return "—";
+
   return new Date(isoString).toLocaleDateString("en-GB", {
     month: "short",
+
     day: "numeric",
   });
 }
@@ -58,11 +78,13 @@ function formatDate(isoString) {
 function StatusMetricPill({ label, count, dotClass }) {
   return (
     <View
-      className="flex-row items-center gap-1.5 rounded-full bg-white border border-line/50 px-3 py-1.5 mr-2"
+      className="flex-row items-center gap-1.5 rounded-full bg-white border border-line/50 px-3 py-1 mr-2"
       style={shadows.sm}
     >
       <View className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+
       <Text className="text-[11.5px] font-bold text-ink">{count}</Text>
+
       <Text className="text-[10.5px] font-medium text-ink-muted">{label}</Text>
     </View>
   );
@@ -71,20 +93,25 @@ function StatusMetricPill({ label, count, dotClass }) {
 function StatusSummaryStrip({ orders }) {
   const counts = useMemo(() => {
     const tally = { pending: 0, inTransit: 0, delivered: 0 };
+
     for (const order of orders) {
       for (const group of SUMMARY_GROUPS) {
         if (group.statuses.includes(order.status)) {
           tally[group.key] += 1;
+
           break;
         }
       }
     }
+
     return tally;
   }, [orders]);
 
   const pills = [
     { ...SUMMARY_GROUPS[0], count: counts.pending, dot: "bg-warning" },
+
     { ...SUMMARY_GROUPS[1], count: counts.inTransit, dot: "bg-primary" },
+
     { ...SUMMARY_GROUPS[2], count: counts.delivered, dot: "bg-success" },
   ];
 
@@ -92,7 +119,7 @@ function StatusSummaryStrip({ orders }) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 6 }}
     >
       {pills.map((pill) => (
         <StatusMetricPill
@@ -108,10 +135,13 @@ function StatusSummaryStrip({ orders }) {
 
 function OrderRow({ order, activeTab, onPress, isLast }) {
   const statusStyle = STATUS_STYLES[order.status] ?? STATUS_STYLES.PENDING;
+
   const imageUri = order.listing?.images?.[0];
+
   const total = Number(order.quantity) * Number(order.pricePerUnitAtOrder);
 
   const counterpart = activeTab === TABS.BUYER ? order.farmer : order.buyer;
+
   const counterpartPrefix = activeTab === TABS.BUYER ? "From" : "To";
 
   return (
@@ -124,6 +154,7 @@ function OrderRow({ order, activeTab, onPress, isLast }) {
     >
       <View className="w-5 items-center mr-3 pt-1">
         <View className={`w-2.5 h-2.5 rounded-full ${statusStyle.dot}`} />
+
         {!isLast ? (
           <View
             className={`w-[2px] flex-1 mt-1.5 rounded-full ${statusStyle.line}`}
@@ -161,6 +192,7 @@ function OrderRow({ order, activeTab, onPress, isLast }) {
             >
               {order.listing?.title ?? "Order"}
             </Text>
+
             <Text className="text-[10px] font-bold text-ink-muted uppercase tracking-wide">
               {statusStyle.label}
             </Text>
@@ -177,6 +209,7 @@ function OrderRow({ order, activeTab, onPress, isLast }) {
 
           <View className="flex-row justify-between items-end mt-1.5">
             <PriceText amount={total} size="sm" />
+
             <Text className="text-[10px] text-ink-faint font-medium">
               {formatDate(order.createdAt)}
             </Text>
@@ -189,12 +222,15 @@ function OrderRow({ order, activeTab, onPress, isLast }) {
 
 export function MyOrdersPage() {
   const navigation = useNavigation();
+
   const [activeTab, setActiveTab] = useState(TABS.BUYER);
 
   const buyerOrders = useBuyerOrders();
+
   const farmerOrders = useFarmerOrders();
 
   const activeQuery = activeTab === TABS.BUYER ? buyerOrders : farmerOrders;
+
   const results = activeQuery.data?.results ?? [];
 
   return (
@@ -215,6 +251,7 @@ export function MyOrdersPage() {
         <SegmentedControl
           options={[
             { value: TABS.BUYER, label: "As buyer" },
+
             { value: TABS.FARMER, label: "As farmer" },
           ]}
           value={activeTab}
@@ -260,11 +297,13 @@ export function MyOrdersPage() {
       ) : (
         <>
           <StatusSummaryStrip orders={results} />
+
           <FlatList
             data={results}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{
               paddingHorizontal: 20,
+
               paddingBottom: 16,
             }}
             showsVerticalScrollIndicator={false}

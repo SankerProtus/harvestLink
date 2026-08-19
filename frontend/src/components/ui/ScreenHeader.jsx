@@ -87,7 +87,7 @@ export function ScreenHeader({
         }}
       >
         <View className="flex-row items-center justify-between">
-          <View className="flex-shrink-0" style={{ minWidth: 40 }}>
+          <View className="flex-shrink-0 min-w-[40px] items-start">
             {leftAction}
           </View>
           <View className="flex-1 px-2 items-center">
@@ -100,7 +100,14 @@ export function ScreenHeader({
               </Text>
             ) : null}
           </View>
-          <View className="flex-shrink-0 items-end" style={{ minWidth: 40 }}>
+          {/*
+            min-w rather than a fixed w-10: a plain icon button (40px) still
+            sizes and aligns exactly as before, but a wider action — like
+            the "Mark all read" text pill on the Notifications screen — can
+            grow to fit its label instead of being squeezed into a 40px box,
+            which was forcing that text to wrap one letter per line.
+          */}
+          <View className="flex-shrink-0 min-w-[40px] items-end">
             {rightAction}
           </View>
         </View>

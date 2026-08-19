@@ -8,6 +8,12 @@ function decimal(value) {
   return new Prisma.Decimal(value);
 }
 
+// Deterministic, always-resolving photo URLs — no dead links, no API keys,
+// no rate limits. Picsum Photos serves a real (stable, cached) photograph
+// for any seed string, and re-requesting the same seed always returns the
+// same image, so each listing/user keeps a consistent picture across
+// re-seeds. This replaces the previous handwritten Unsplash photo IDs,
+// several of which no longer resolved to a real image.
 function produceImage(seed, index = 1) {
   return `https://picsum.photos/seed/${seed}-${index}/900/700`;
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
+  Modal,
 } from "react-native";
 import { Alert } from "../../../lib/alert.js";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,7 +17,10 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
-import { LoadingState, ErrorState } from "../../../components/ui/ScreenState.jsx";
+import {
+  LoadingState,
+  ErrorState,
+} from "../../../components/ui/ScreenState.jsx";
 import { useListing } from "../hooks/marketplaceHooks.js";
 import { useCreateOrder } from "../../deliveryTracking/hooks/deliveryTrackingHooks.js";
 import {
@@ -83,10 +87,28 @@ function FloatingIconButton({
 
 function ImageCarousel({ images, title }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const mainScrollRef = useRef(null);
+  const thumbScrollRef = useRef(null);
+  const viewerScrollRef = useRef(null);
 
   function handleScrollEnd(event) {
     const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
     setActiveIndex(index);
+    // Keep the thumbnail strip's active state in view as the main image
+    // is swiped, the same way product galleries on shopping apps do.
+    thumbScrollRef.current?.scrollTo({
+      x: Math.max(0, index * 72 - SCREEN_WIDTH / 2 + 36),
+      animated: true,
+    });
+  }
+
+  function scrollToIndex(index) {
+    setActiveIndex(index);
+    mainScrollRef.current?.scrollTo({
+      x: index * SCREEN_WIDTH,
+      animated: true,
+    });
   }
 
   if (images.length === 0) {
@@ -100,26 +122,32 @@ function ImageCarousel({ images, title }) {
   }
 
   return (
-    <View className="w-full h-[300px] bg-primary-muted">
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScrollEnd}
-      >
-        {images.map((uri, index) => (
-          <Image
-            key={`${uri}-${index}`}
-            source={{ uri }}
-            style={{ width: SCREEN_WIDTH, height: 300 }}
-            resizeMode="cover"
-            accessibilityLabel={`${title} photo ${index + 1} of ${images.length}`}
-          />
-        ))}
-      </ScrollView>
+    <View className="w-full bg-primary-muted">
+      <View className="w-full h-[300px]">
+        <ScrollView
+          ref={mainScrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScrollEnd}
+        >
+          {images.map((uri, index) => (
+            <Pressable
+              key={`${uri}-${index}`}
+              onPress={() => setIsViewerOpen(true)}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={`${title} photo ${index + 1} of ${images.length}. Double tap to view full screen.`}
+            >
+              <Image
+                source={{ uri }}
+                style={{ width: SCREEN_WIDTH, height: 300 }}
+                resizeMode="cover"
+              />
+            </Pressable>
+          ))}
+        </ScrollView>
 
-      {images.length > 1 ? (
-        <>
+        {images.length > 1 ? (
           <View
             className="absolute bottom-4 right-4 rounded-full px-3 py-1.5"
             style={{ backgroundColor: colors.overlay }}
@@ -128,17 +156,102 @@ function ImageCarousel({ images, title }) {
               {activeIndex + 1} / {images.length}
             </Text>
           </View>
-          <View className="absolute bottom-[18px] left-0 right-0 flex-row justify-center gap-1.5">
-            {images.map((_, index) => (
-              <View
-                key={index}
-                className={`h-1.5 rounded-full ${
-                  index === activeIndex ? "w-5 bg-white" : "w-1.5 bg-white/50"
+        ) : null}
+      </View>
+
+      {/*
+        Tappable thumbnail strip beneath the main photo, mirroring the
+        product-gallery pattern on shopping apps (Amazon, Jumia, etc.):
+        buyers can jump straight to a specific angle instead of only
+        swiping through them one at a time.
+      */}
+      {images.length > 1 ? (
+        <View className="bg-white border-t border-line/40 py-2.5">
+          <ScrollView
+            ref={thumbScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+          >
+            {images.map((uri, index) => (
+              <Pressable
+                key={`thumb-${uri}-${index}`}
+                onPress={() => scrollToIndex(index)}
+                accessibilityRole="button"
+                accessibilityLabel={`Show photo ${index + 1} of ${images.length}`}
+                className={`w-14 h-14 rounded-lg overflow-hidden ${
+                  index === activeIndex
+                    ? "border-2 border-primary"
+                    : "border border-line/60 opacity-60"
                 }`}
-              />
+              >
+                <Image
+                  source={{ uri }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              </Pressable>
             ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {isViewerOpen ? (
+        <Modal
+          visible={isViewerOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsViewerOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: "#000000" }}>
+            <ScrollView
+              ref={viewerScrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentOffset={{ x: activeIndex * SCREEN_WIDTH, y: 0 }}
+              onMomentumScrollEnd={handleScrollEnd}
+            >
+              {images.map((uri, index) => (
+                <View
+                  key={`viewer-${uri}-${index}`}
+                  style={{
+                    width: SCREEN_WIDTH,
+                    height: "100%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Image
+                    source={{ uri }}
+                    style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
+                    resizeMode="contain"
+                    accessibilityLabel={`${title} photo ${index + 1} of ${images.length}, full screen`}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+            <View
+              className="absolute top-14 right-5 rounded-full px-3 py-1.5"
+              style={{ backgroundColor: colors.overlay }}
+            >
+              <Text className="text-white text-[11px] font-bold">
+                {activeIndex + 1} / {images.length}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() => setIsViewerOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close full screen photo viewer"
+              hitSlop={10}
+              className="absolute top-14 left-5 w-10 h-10 rounded-full bg-white/15 items-center justify-center"
+            >
+              <Feather name="x" size={20} color="#FFFFFF" />
+            </Pressable>
           </View>
-        </>
+        </Modal>
       ) : null}
     </View>
   );

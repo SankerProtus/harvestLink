@@ -26,7 +26,12 @@ export function CreateListingPage() {
   async function handleSubmit(values) {
     try {
       await createListing.mutateAsync(values);
-      navigation.navigate("MyListings");
+      // "MyListings" is a tab registered inside the nested
+      // ProtectedTabNavigator, not a screen on this Stack (ProtectedStack)
+      // — navigating to it by name directly fails with "was not handled by
+      // any navigator". Target the parent tab navigator explicitly and ask
+      // it to switch to that tab.
+      navigation.navigate("ProtectedTabs", { screen: "MyListings" });
     } catch {
       // Already captured in createListing.error and rendered below.
     }

@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   Image,
-  ActivityIndicator,
 } from "react-native";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
@@ -14,6 +13,7 @@ import { z } from "zod";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
+import { Alert } from "../../../lib/alert.js";
 
 import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
@@ -21,10 +21,6 @@ import { Chip } from "../../../components/ui/Chip.jsx";
 import { FieldLabel } from "../../../components/ui/Input.jsx";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
-import { Alert } from "../../../lib/alert.js";
-import { isOnline } from "../../../lib/networkMonitor.js";
-import { getErrorMessage } from "../../../lib/errorMap.js";
-import { useUploadListingPhoto } from "../hooks/marketplaceHooks.js";
 import {
   createListingSchema,
   CROP_TYPES,
@@ -120,18 +116,6 @@ const STEP_1_FIELDS = [
   "harvestDate",
 ];
 
-// Each photo slot goes through: "uploading" -> "done" (has a hosted url)
-// or "uploading" -> removed-on-failure. Only "done" slots are ever written
-// into the form's `images` field, since the backend schema requires every
-// entry in `images` to already be a valid hosted URL (imagesSchema in
-// marketplaceSchemas.js) — a local device URI would fail that check, and
-// even if it didn't, other users' devices can't resolve a file:// path.
-let slotIdCounter = 0;
-function nextSlotId() {
-  slotIdCounter += 1;
-  return `photo-${Date.now()}-${slotIdCounter}`;
-}
-
 export function ListingForm({
   mode,
   initialValues = {},
@@ -165,29 +149,9 @@ export function ListingForm({
 
   const cropType = watch("cropType");
   const quantityUnit = watch("quantityUnit");
+  const images = watch("images") ?? [];
   const [showDatePicker, setShowDatePicker] = useState(false);
   const harvestDate = watch("harvestDate");
-
-  // Photo slots — local UI state, separate from react-hook-form's `images`.
-  // Seeded from any existing hosted URLs (edit mode), each already "done".
-  const [photoSlots, setPhotoSlots] = useState(() =>
-    (initialValues.images ?? []).map((url) => ({
-      id: nextSlotId(),
-      url,
-      status: "done",
-    })),
-  );
-  const uploadListingPhoto = useUploadListingPhoto();
-
-  function syncImagesField(slots) {
-    setValue(
-      "images",
-      slots
-        .filter((slot) => slot.status === "done" && slot.url)
-        .map((slot) => slot.url),
-      { shouldValidate: true },
-    );
-  }
 
   // Non-stepped (edit) mode renders every field in one pass, same as
   // before this was introduced. Stepped (create) mode gates each half
@@ -208,67 +172,60 @@ export function ListingForm({
     if (isValid) goToStep(2);
   }
 
-  async function handleAddPhoto() {
-    if (photoSlots.length >= MAX_IMAGES) return;
+  const [isPickingImages, setIsPickingImages] = useState(false);
 
-    const online = await isOnline();
-    if (!online) {
-      Alert.alert(
-        "You're offline",
-        "Connect to the internet to add photos — everything else in this form still works offline.",
-      );
-      return;
-    }
+  // Opens the device photo library so a farmer can pick crop photos
+  // directly instead of typing an image URL by hand. Local library assets
+  // come back as file:// (iOS) or content:// (Android) URIs, which are
+  // valid per the images[].url() validation and get uploaded as-is when
+  // the listing is submitted.
+  async function handlePickImages() {
+    const remainingSlots = MAX_IMAGES - images.length;
+    if (remainingSlots <= 0) return;
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
         "Permission needed",
-        "Allow photo library access to add photos to your listing.",
+        "Allow photo library access to add photos of your produce.",
       );
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-
-    if (result.canceled) return;
-
-    const slotId = nextSlotId();
-    setPhotoSlots((prev) => [
-      ...prev,
-      { id: slotId, url: null, status: "uploading" },
-    ]);
-
+    setIsPickingImages(true);
     try {
-      const uploaded = await uploadListingPhoto.mutateAsync(
-        result.assets[0].uri,
-      );
-      setPhotoSlots((prev) => {
-        const next = prev.map((slot) =>
-          slot.id === slotId
-            ? { ...slot, url: uploaded.url, status: "done" }
-            : slot,
-        );
-        syncImagesField(next);
-        return next;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: remainingSlots,
+        quality: 0.8,
       });
-    } catch (err) {
-      setPhotoSlots((prev) => prev.filter((slot) => slot.id !== slotId));
-      Alert.alert("Upload failed", getErrorMessage(err));
+
+      if (result.canceled) return;
+
+      const pickedUris = result.assets.map((asset) => asset.uri);
+      setValue("images", [...images, ...pickedUris].slice(0, MAX_IMAGES));
+    } finally {
+      setIsPickingImages(false);
     }
   }
 
-  function removePhotoAt(slotId) {
-    setPhotoSlots((prev) => {
-      const next = prev.filter((slot) => slot.id !== slotId);
-      syncImagesField(next);
-      return next;
-    });
+  function removeImageAt(index) {
+    setValue(
+      "images",
+      images.filter((_, i) => i !== index),
+    );
+  }
+
+  // Buyers always see images[0] first on the listing detail screen, so
+  // let a farmer promote any photo to the front — the same "make cover
+  // photo" convention shopping apps use for multi-angle product photos.
+  function makeCoverPhoto(index) {
+    if (index === 0) return;
+    const next = [...images];
+    const [chosen] = next.splice(index, 1);
+    next.unshift(chosen);
+    setValue("images", next);
   }
 
   return (
@@ -472,42 +429,76 @@ export function ListingForm({
         {showStep2 ? (
           <>
             <FieldLabel>Photos (optional, up to {MAX_IMAGES})</FieldLabel>
+            {images.length > 1 ? (
+              <Text className="text-[11.5px] text-ink-muted mb-2">
+                The first photo is what buyers see everywhere else. Tap another
+                photo's star to make it the cover.
+              </Text>
+            ) : null}
             <View className="flex-row flex-wrap gap-3 mb-2">
-              {photoSlots.map((slot) => (
-                <View key={slot.id} className="w-[76px] h-[76px]">
-                  <View className="w-[76px] h-[76px] rounded-xl2 overflow-hidden border border-line bg-cream items-center justify-center">
-                    {slot.status === "uploading" ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : slot.url ? (
+              {images.map((url, index) => (
+                <View key={index} className="w-[76px] h-[76px]">
+                  <Pressable
+                    onPress={() => makeCoverPhoto(index)}
+                    disabled={index === 0}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      index === 0
+                        ? "Cover photo"
+                        : `Make photo ${index + 1} the cover photo`
+                    }
+                    className="w-[76px] h-[76px] rounded-xl2 overflow-hidden border border-line bg-cream items-center justify-center"
+                  >
+                    {url ? (
                       <Image
-                        source={{ uri: slot.url }}
+                        source={{ uri: url }}
                         className="w-full h-full"
                         resizeMode="cover"
                       />
                     ) : (
                       <Feather name="image" size={18} color={colors.inkFaint} />
                     )}
-                  </View>
-                  {slot.status !== "uploading" ? (
+                  </Pressable>
+                  {index === 0 ? (
+                    <View className="absolute -top-2 -left-2 rounded-full bg-primary px-2 py-0.5 border-2 border-white">
+                      <Text className="text-[9px] font-bold text-white">
+                        Cover
+                      </Text>
+                    </View>
+                  ) : (
                     <Pressable
-                      onPress={() => removePhotoAt(slot.id)}
+                      onPress={() => makeCoverPhoto(index)}
                       accessibilityRole="button"
-                      accessibilityLabel="Remove photo"
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-danger items-center justify-center shadow-sm border-2 border-white"
+                      accessibilityLabel={`Make photo ${index + 1} the cover photo`}
+                      className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-white items-center justify-center shadow-sm border border-line"
                     >
-                      <Feather name="x" size={12} color="#FFFFFF" />
+                      <Feather name="star" size={11} color={colors.inkMuted} />
                     </Pressable>
-                  ) : null}
+                  )}
+                  <Pressable
+                    onPress={() => removeImageAt(index)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove photo ${index + 1}`}
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-danger items-center justify-center shadow-sm border-2 border-white"
+                  >
+                    <Feather name="x" size={12} color="#FFFFFF" />
+                  </Pressable>
                 </View>
               ))}
-              {photoSlots.length < MAX_IMAGES ? (
+              {images.length < MAX_IMAGES ? (
                 <Pressable
-                  onPress={handleAddPhoto}
+                  onPress={handlePickImages}
+                  disabled={isPickingImages}
                   accessibilityRole="button"
-                  accessibilityLabel="Add photo from your library"
+                  accessibilityLabel="Add photo from your gallery"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                   className="w-[76px] h-[76px] rounded-xl2 border-2 border-dashed border-line items-center justify-center bg-white"
                 >
-                  <Feather name="camera" size={18} color={colors.inkMuted} />
+                  {isPickingImages ? (
+                    <Feather name="loader" size={18} color={colors.inkMuted} />
+                  ) : (
+                    <Feather name="camera" size={18} color={colors.inkMuted} />
+                  )}
                   <Text className="text-[10.5px] font-medium text-ink-muted mt-1">
                     Add photo
                   </Text>
@@ -515,7 +506,7 @@ export function ListingForm({
               ) : null}
             </View>
             <Text className="text-[11.5px] text-ink-muted mb-1">
-              Choose photos from your phone's gallery — no links needed.
+              Choose photos of your produce from your phone's gallery.
             </Text>
             <FieldError>{errors.images?.message}</FieldError>
           </>

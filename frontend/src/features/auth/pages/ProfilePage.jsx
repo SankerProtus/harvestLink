@@ -478,18 +478,14 @@ export function ProfilePage() {
       >
         <View
           className="items-center"
-          style={{ marginTop: -40, zIndex: 20, elevation: 20 }}
+          style={{ marginTop: -40, zIndex: 10, elevation: 10 }}
         >
           <Pressable
             onPress={handleChoosePhoto}
             accessibilityRole="button"
             accessibilityLabel="Change profile photo"
             disabled={uploadProfilePhoto.isPending}
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.85 : 1,
-              zIndex: 20,
-              elevation: 20,
-            })}
+            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
             className="relative"
           >
             <View
