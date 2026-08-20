@@ -16,6 +16,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
+import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
 import {
   LoadingState,
@@ -35,6 +36,7 @@ import {
 } from "../hooks/savedListingHooks.js";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { getErrorMessage } from "../../../lib/errorMap.js";
+import { PriceText } from "../../../components/ui/PriceText.jsx";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
 
@@ -456,9 +458,15 @@ export function ListingDetailPage() {
                       />
                     ) : null}
                   </View>
-                  <Text className="text-[12px] text-ink-muted mt-0.5">
-                    Farmer
-                  </Text>
+                  <View className="mt-1">
+                    <RatingStars
+                      rating={data.farmer.rating}
+                      reviewCount={data.farmer.reviewCount}
+                      size={13}
+                      showValue={data.farmer.rating != null}
+                      emptyLabel="No ratings yet"
+                    />
+                  </View>
                 </View>
               </View>
             ) : null}
@@ -469,9 +477,7 @@ export function ListingDetailPage() {
           <Card className="p-5">
             <View className="flex-row justify-between items-baseline">
               <View>
-                <Text className="text-[26px] font-extrabold text-primary tracking-[-0.4px]">
-                  GHS {data.pricePerUnit}
-                </Text>
+                <PriceText amount={data.pricePerUnit} size="lg" />
                 <Text className="text-[12px] text-ink-muted mt-0.5">
                   per {formatUnit(data.quantityUnit)}
                 </Text>

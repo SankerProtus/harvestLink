@@ -6,9 +6,8 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Chip } from "../../../components/ui/Chip.jsx";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
-import { CROP_TYPES, QUANTITY_UNITS } from "../schemas/marketplaceSchemas.js";
+import { QUANTITY_UNITS } from "../schemas/marketplaceSchemas.js";
 
-const CROP_TYPE_OPTIONS = Object.values(CROP_TYPES);
 const QUANTITY_UNIT_OPTIONS = Object.values(QUANTITY_UNITS);
 
 function formatLabel(value) {
@@ -47,7 +46,6 @@ function FilterPill({ label, isActive, onPress }) {
 
 export function ListingFilters({
   value,
-  onCropTypeChange,
   onQuantityUnitChange,
   onLocationChange,
   onMinPriceChange,
@@ -62,7 +60,6 @@ export function ListingFilters({
     setOpenSection((current) => (current === section ? null : section));
   }
 
-  const cropLabel = value.cropType ? formatLabel(value.cropType) : "All Crops";
   const priceLabel =
     value.minPrice || value.maxPrice
       ? `GHS ${value.minPrice || "0"}–${value.maxPrice || "Any"}`
@@ -73,7 +70,6 @@ export function ListingFilters({
     : "Unit";
 
   const locationApplied = Boolean(value.location);
-  const cropApplied = Boolean(value.cropType);
   const priceApplied = Boolean(value.minPrice || value.maxPrice);
   const unitApplied = Boolean(value.quantityUnit);
 
@@ -93,11 +89,6 @@ export function ListingFilters({
           onPress={() => togglePill("location")}
         />
         <FilterPill
-          label={cropLabel}
-          isActive={openSection === "crop" || cropApplied}
-          onPress={() => togglePill("crop")}
-        />
-        <FilterPill
           label={priceLabel}
           isActive={openSection === "price" || priceApplied}
           onPress={() => togglePill("price")}
@@ -111,29 +102,6 @@ export function ListingFilters({
 
       {openSection ? (
         <Card className="p-5">
-          {openSection === "crop" ? (
-            <>
-              <Text className="text-[13px] font-bold text-ink mb-3">
-                Crop Type
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <Chip
-                  label="All"
-                  isSelected={!value.cropType}
-                  onPress={() => onCropTypeChange(undefined)}
-                />
-                {CROP_TYPE_OPTIONS.map((crop) => (
-                  <Chip
-                    key={crop}
-                    label={formatLabel(crop)}
-                    isSelected={value.cropType === crop}
-                    onPress={() => onCropTypeChange(crop)}
-                  />
-                ))}
-              </ScrollView>
-            </>
-          ) : null}
-
           {openSection === "unit" ? (
             <>
               <Text className="text-[13px] font-bold text-ink mb-3">Unit</Text>

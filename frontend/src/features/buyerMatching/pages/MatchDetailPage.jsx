@@ -17,6 +17,7 @@ import { useCreateOrder } from "../../deliveryTracking/hooks/deliveryTrackingHoo
 import { computeMatchFit } from "../lib/matchScore.js";
 import { colors } from "../../../theme/colors.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
+import { formatCurrency } from "../../../lib/currency.js";
 
 function formatLabel(value) {
   if (!value) return "—";
@@ -277,11 +278,11 @@ export function MatchDetailPage() {
               ) : null}
               <StatRow
                 label="Price per Unit"
-                value={`GHS ${data.pricePerUnit}`}
+                value={formatCurrency(data.pricePerUnit)}
               />
               <StatRow
                 label="Total Produce Cost"
-                value={`GHS ${totalCost.toLocaleString()}`}
+                value={formatCurrency(totalCost)}
               />
               <StatRow
                 label="Harvest Date"

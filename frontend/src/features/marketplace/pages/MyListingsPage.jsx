@@ -23,6 +23,7 @@ import { useMyListings } from "../hooks/marketplaceHooks.js";
 import { useFarmerOrders } from "../../deliveryTracking/hooks/deliveryTrackingHooks.js";
 import { useSyncStatus } from "../../../lib/useSyncStatus.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
+import { formatMoney } from "../../../lib/currency.js";
 import {
   LoadingState,
   ErrorState,
@@ -155,7 +156,7 @@ export function MyListingsPage() {
           />
           <OverviewStat
             icon="trending-up"
-            value={`₵${estimatedValue.toLocaleString()}`}
+            value={`₵${formatMoney(estimatedValue)}`}
             label="Earnings"
             accent="accent"
           />

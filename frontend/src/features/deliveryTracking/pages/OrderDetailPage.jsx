@@ -20,6 +20,7 @@ import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
 import { MapPin } from "../../../components/ui/MapPin.jsx";
+import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
 import {
   LoadingState,
@@ -39,6 +40,8 @@ import {
 import { useReviewForOrder, useCreateReview } from "../hooks/reviewHooks.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
 import { colors } from "../../../theme/colors.js";
+import { formatCurrency } from "../../../lib/currency.js";
+import { PriceText } from "../../../components/ui/PriceText.jsx";
 import {
   OSM_RASTER_STYLE,
   DEFAULT_DELIVERY_MAP_ZOOM,
@@ -92,6 +95,33 @@ function formatDate(isoString) {
   });
 }
 
+// Short relative timestamp for the review card ("2 days ago") — falls
+// back to the absolute date once it's old enough that "N weeks ago"
+// stops being more useful than just reading the date.
+function timeAgo(isoString) {
+  if (!isoString) return "";
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return formatDate(isoString);
+}
+
+const RATING_LABELS = {
+  0: "Tap a star to rate",
+  1: "Poor",
+  2: "Fair",
+  3: "Good",
+  4: "Great",
+  5: "Excellent",
+};
+
 function StatusStepper({ status }) {
   const currentIndex = STEP_ORDER.indexOf(status);
 
@@ -143,29 +173,6 @@ function StatusStepper({ status }) {
   );
 }
 
-function StarPicker({ value, onChange }) {
-  return (
-    <View className="flex-row gap-1.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Pressable
-          key={star}
-          onPress={() => onChange(star)}
-          hitSlop={6}
-          accessibilityRole="button"
-          accessibilityLabel={`Rate ${star} star${star === 1 ? "" : "s"}`}
-        >
-          <Feather
-            name="star"
-            size={30}
-            color={star <= value ? colors.warning : colors.lineStrong}
-            style={{ opacity: star <= value ? 1 : 0.9 }}
-          />
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 function InfoRow({ label, value, isLast = false }) {
   return (
     <View
@@ -175,21 +182,6 @@ function InfoRow({ label, value, isLast = false }) {
     >
       <Text className="text-[12.5px] text-ink-muted">{label}</Text>
       <Text className="text-[12.5px] font-semibold text-ink">{value}</Text>
-    </View>
-  );
-}
-
-function ReadOnlyStars({ rating }) {
-  return (
-    <View className="flex-row gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Feather
-          key={star}
-          name="star"
-          size={16}
-          color={star <= rating ? colors.warning : colors.lineStrong}
-        />
-      ))}
     </View>
   );
 }
@@ -390,9 +382,7 @@ export function OrderDetailPage() {
                   {formatDate(data.createdAt)}
                 </Text>
               </View>
-              <Text className="text-[17px] font-extrabold text-primary">
-                GHS {total.toLocaleString()}
-              </Text>
+              <PriceText amount={total} size="sm" />
             </View>
 
             {data.status === "CANCELLED" ? (
@@ -420,7 +410,7 @@ export function OrderDetailPage() {
             <InfoRow label="Quantity" value={data.quantity} />
             <InfoRow
               label="Price per unit"
-              value={`GHS ${data.pricePerUnitAtOrder}`}
+              value={formatCurrency(data.pricePerUnitAtOrder)}
               isLast
             />
           </Card>
@@ -559,34 +549,71 @@ export function OrderDetailPage() {
             <SectionLabel>Rating</SectionLabel>
             <Card className="p-5">
               {review.isLoading ? (
-                <Text className="text-[13px] text-ink-muted">
-                  Loading review…
-                </Text>
+                <View className="flex-row items-center py-2">
+                  <Feather name="loader" size={14} color={colors.inkFaint} />
+                  <Text className="text-[13px] text-ink-muted ml-2">
+                    Loading review…
+                  </Text>
+                </View>
               ) : review.data ? (
                 <View>
-                  <Text className="text-[13px] font-semibold text-ink-muted mb-2">
-                    {isBuyer ? "Your Rating" : "Buyer's Rating"}
-                  </Text>
-                  <ReadOnlyStars rating={review.data.rating} />
+                  <View className="flex-row items-center">
+                    <Avatar
+                      uri={
+                        isBuyer ? user?.profileImageUrl : counterpart?.avatarUrl
+                      }
+                      name={isBuyer ? user?.fullName : counterpart?.name}
+                      size="sm"
+                      className="mr-2.5"
+                    />
+                    <View className="flex-1">
+                      <Text className="text-[13.5px] font-bold text-ink">
+                        {isBuyer
+                          ? "Your rating"
+                          : (counterpart?.name ?? "Buyer")}
+                      </Text>
+                      <Text className="text-[11px] text-ink-muted mt-0.5">
+                        {timeAgo(review.data.createdAt)}
+                      </Text>
+                    </View>
+                    <RatingStars rating={review.data.rating} size={14} />
+                  </View>
+
                   {review.data.comment ? (
-                    <Text className="text-[13.5px] text-ink mt-3 leading-[19px]">
-                      "{review.data.comment}"
-                    </Text>
-                  ) : null}
-                  <Text className="text-[11.5px] text-ink-muted mt-3">
-                    Reviewed {formatDate(review.data.createdAt)}
-                  </Text>
+                    <View className="mt-3.5 pl-[42px]">
+                      <Text className="text-[13.5px] text-ink leading-[19px]">
+                        {review.data.comment}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View className="mt-3.5 pl-[42px]">
+                      <Text className="text-[12.5px] text-ink-faint italic">
+                        No written comment was left.
+                      </Text>
+                    </View>
+                  )}
                 </View>
               ) : isBuyer ? (
                 <View>
                   <Text className="text-[14.5px] font-bold text-ink mb-1">
                     Rate this delivery
                   </Text>
-                  <Text className="text-[12.5px] text-ink-muted mb-3">
+                  <Text className="text-[12.5px] text-ink-muted mb-4">
                     Your rating helps other buyers trust{" "}
                     {counterpart?.name ?? "this farmer"}.
                   </Text>
-                  <StarPicker value={draftRating} onChange={setDraftRating} />
+
+                  <View className="items-center py-1">
+                    <RatingStars
+                      interactive
+                      value={draftRating}
+                      onChange={setDraftRating}
+                      size={34}
+                    />
+                    <Text className="text-[12.5px] font-semibold text-ink-muted mt-2.5">
+                      {RATING_LABELS[draftRating]}
+                    </Text>
+                  </View>
 
                   <TextInput
                     placeholder="Add a comment (optional)"
@@ -598,10 +625,13 @@ export function OrderDetailPage() {
                     className="mt-4 rounded-xl2 bg-cream border border-line/50 px-4 py-3 text-[13.5px] text-ink min-h-[70px]"
                     textAlignVertical="top"
                   />
+                  <Text className="text-[10.5px] text-ink-faint text-right mt-1">
+                    {draftComment.length}/500
+                  </Text>
 
                   {createReview.isError ? (
                     <Text
-                      className="text-[12.5px] text-danger mt-2"
+                      className="text-[12.5px] text-danger mt-1"
                       accessibilityRole="alert"
                     >
                       {getErrorMessage(createReview.error)}
@@ -618,9 +648,18 @@ export function OrderDetailPage() {
                   </View>
                 </View>
               ) : (
-                <Text className="text-[13px] text-ink-muted">
-                  The buyer hasn't left a rating yet.
-                </Text>
+                <View className="items-center py-3">
+                  <View className="w-11 h-11 rounded-full bg-primary-muted items-center justify-center mb-2.5">
+                    <Feather name="star" size={18} color={colors.primary} />
+                  </View>
+                  <Text className="text-[13px] font-semibold text-ink">
+                    Awaiting the buyer's rating
+                  </Text>
+                  <Text className="text-[12px] text-ink-muted text-center mt-1">
+                    {counterpart?.name ?? "The buyer"} hasn't rated this
+                    delivery yet.
+                  </Text>
+                </View>
               )}
             </Card>
           </View>

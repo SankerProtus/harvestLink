@@ -24,6 +24,7 @@ import { useUnreadNotificationCount } from "../../notifications/hooks/notificati
 import { useSyncStatus } from "../../../lib/useSyncStatus.js";
 import { syncPendingOperations } from "../../../database/sync/SyncEngine.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
+import { formatMoney } from "../../../lib/currency.js";
 import {
   ScreenHeader,
   HeaderActionButton,
@@ -420,7 +421,7 @@ export function ProfilePage() {
     stats = [
       {
         label: "Revenue, GHS",
-        value: revenue.toLocaleString(),
+        value: formatMoney(revenue),
         icon: "trending-up",
       },
       { label: "Deliveries", value: String(delivered.length), icon: "truck" },
@@ -443,7 +444,7 @@ export function ProfilePage() {
     stats = [
       {
         label: "Spent, GHS",
-        value: spent.toLocaleString(),
+        value: formatMoney(spent),
         icon: "credit-card",
       },
       {

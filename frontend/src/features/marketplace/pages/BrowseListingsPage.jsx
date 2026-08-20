@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TextInput,
-  Pressable,
-  ScrollView,
-} from "react-native";
+import { View, Text, FlatList, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useForm } from "react-hook-form";
@@ -153,11 +146,6 @@ export function BrowseListingsPage() {
     <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <ScreenHeader
         title="Marketplace"
-        subtitle={
-          pagination
-            ? `${pagination.total} listing${pagination.total === 1 ? "" : "s"} available`
-            : "Browse fresh produce near you"
-        }
         leftAction={
           <HeaderActionButton
             icon="menu"
@@ -176,37 +164,6 @@ export function BrowseListingsPage() {
           />
         }
       />
-
-      <View className="px-5 pt-5">
-        <View
-          className="rounded-xl2 bg-white px-4 py-3.5 flex-row items-center gap-3 border-[1.5px] border-line/60"
-          style={shadows.sm}
-        >
-          <Feather name="search" size={18} color={colors.inkFaint} />
-          <TextInput
-            value={formValues.location ?? ""}
-            onChangeText={(text) => setValue("location", text)}
-            onSubmitEditing={handleSubmit(onApply)}
-            returnKeyType="search"
-            placeholder="Search by location, e.g. Techiman"
-            placeholderTextColor={colors.inkFaint}
-            className="flex-1 text-[15px] text-ink"
-          />
-          {formValues.location ? (
-            <Pressable
-              onPress={() => {
-                setValue("location", "");
-                handleSubmit(onApply)();
-              }}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-            >
-              <Feather name="x" size={18} color={colors.inkFaint} />
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
 
       <View className="pt-4">
         <ScrollView
@@ -241,10 +198,9 @@ export function BrowseListingsPage() {
         </ScrollView>
       </View>
 
-      <View className="px-5 pt-3 pb-1">
+      <View className="px-5 pt-2 pb-1">
         <ListingFilters
           value={formValues}
-          onCropTypeChange={(cropType) => setValue("cropType", cropType)}
           onQuantityUnitChange={(unit) => setValue("quantityUnit", unit)}
           onLocationChange={(text) => setValue("location", text)}
           onMinPriceChange={(text) => setValue("minPrice", text)}
@@ -273,7 +229,11 @@ export function BrowseListingsPage() {
           title="No listings match your filters"
           description="Try widening your search or resetting filters."
           action={
-            <Button label="Reset filters" onPress={onReset} variant="secondary" />
+            <Button
+              label="Reset filters"
+              onPress={onReset}
+              variant="secondary"
+            />
           }
         />
       ) : (

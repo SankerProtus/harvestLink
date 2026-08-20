@@ -215,14 +215,27 @@ export const listingSearchSchema = z
       .trim()
       .max(LISTING_CONFIG.LOCATION_MAX_LENGTH)
       .optional(),
-    minPrice: z
-      .number()
-      .positive("minPrice must be greater than zero")
-      .optional(),
-    maxPrice: z
-      .number()
-      .positive("maxPrice must be greater than zero")
-      .optional(),
+    // The form keeps these as text-input strings and defaults them to ""
+    // (never `undefined`) so the input can be controlled. Plain z.number()
+    // rejects "" outright, so `.optional()` never actually kicks in and
+    // validation fails on every submit -- including chip taps for
+    // cropType, which share this same form/schema via handleSubmit. The
+    // preprocess step normalizes "" (and null) to undefined and coerces
+    // any other string to a number before the number/positive checks run.
+    minPrice: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+      z
+        .number({ invalid_type_error: "minPrice must be a number" })
+        .positive("minPrice must be greater than zero")
+        .optional(),
+    ),
+    maxPrice: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+      z
+        .number({ invalid_type_error: "maxPrice must be a number" })
+        .positive("maxPrice must be greater than zero")
+        .optional(),
+    ),
     page: z
       .number()
       .int()

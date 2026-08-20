@@ -3,6 +3,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
 import { PriceText } from "../../../components/ui/PriceText.jsx";
+import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 
 const STATUS_STYLES = {
   ACTIVE: { bg: "bg-success", text: "text-white", label: "Fresh" },
@@ -39,14 +40,15 @@ function FarmerRow({ farmer, compact = false }) {
         {farmer.name}
       </Text>
       {farmer.isVerified ? (
-        <Feather name="check-circle" size={compact ? 10 : 12} color={colors.primary} />
+        <Feather
+          name="check-circle"
+          size={compact ? 10 : 12}
+          color={colors.primary}
+        />
       ) : null}
       {!compact && farmer.rating != null ? (
-        <View className="flex-row items-center ml-auto">
-          <Feather name="star" size={11} color={colors.accent} />
-          <Text className="text-[11px] font-semibold text-ink-muted ml-0.5">
-            {farmer.rating.toFixed(1)}
-          </Text>
+        <View className="ml-auto">
+          <RatingStars rating={farmer.rating} size={11} showValue />
         </View>
       ) : null}
     </View>
@@ -129,7 +131,10 @@ function CompactCard({
         />
         <View className="flex-row items-center mt-1">
           <Feather name="map-pin" size={10} color={colors.inkFaint} />
-          <Text className="text-[10px] text-ink-muted ml-0.5 flex-1" numberOfLines={1}>
+          <Text
+            className="text-[10px] text-ink-muted ml-0.5 flex-1"
+            numberOfLines={1}
+          >
             {listing.location}
           </Text>
         </View>
@@ -206,7 +211,9 @@ function HorizontalCard({
               }}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={isSaved ? "Remove from saved" : "Save listing"}
+              accessibilityLabel={
+                isSaved ? "Remove from saved" : "Save listing"
+              }
             >
               <Ionicons
                 name={isSaved ? "heart" : "heart-outline"}
@@ -319,7 +326,10 @@ export function ListingCard({
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={isSaved ? "Remove from saved" : "Save listing"}
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, ...shadows.sm })}
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.7 : 1,
+              ...shadows.sm,
+            })}
             className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white items-center justify-center"
           >
             <Ionicons
@@ -431,7 +441,8 @@ export function ListingCard({
                 accessibilityRole="button"
                 accessibilityLabel="Request match"
                 style={({ pressed }) => ({
-                  opacity: listing.status !== "ACTIVE" ? 0.4 : pressed ? 0.85 : 1,
+                  opacity:
+                    listing.status !== "ACTIVE" ? 0.4 : pressed ? 0.85 : 1,
                   ...shadows.sm,
                 })}
                 className="flex-1 rounded-xl py-3 items-center justify-center bg-primary min-h-[44px]"

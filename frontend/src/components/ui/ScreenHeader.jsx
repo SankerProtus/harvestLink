@@ -68,6 +68,8 @@ export function ScreenHeader({
   titleClassName = "text-[20px] font-extrabold text-white tracking-[-0.3px]",
   subtitleClassName = "text-white/70 text-[13px] mt-1",
   large = false,
+  children,
+  titleRowContent,
 }) {
   const insets = useSafeAreaInsets();
 
@@ -86,31 +88,64 @@ export function ScreenHeader({
           ...shadows.md,
         }}
       >
-        <View className="flex-row items-center justify-between">
-          <View className="flex-shrink-0 min-w-[40px] items-start">
-            {leftAction}
-          </View>
-          <View className="flex-1 px-2 items-center">
-            <Text className={titleClassName} numberOfLines={1}>
+        {titleRowContent ? (
+          // Compact single-row layout: title shrinks to its own width and
+          // sits left, immediately after leftAction, freeing the rest of
+          // the row (up to rightAction) for something like a search bar —
+          // used on the Marketplace screen so the search bar sits on the
+          // same line as the title instead of adding a whole extra row.
+          <View className="flex-row items-center">
+            <View className="flex-shrink-0 min-w-[40px] items-start">
+              {leftAction}
+            </View>
+            <Text
+              className={titleClassName}
+              numberOfLines={1}
+              style={{ marginLeft: 6, marginRight: 10 }}
+            >
               {title}
             </Text>
-            {subtitle ? (
-              <Text className={subtitleClassName} numberOfLines={1}>
-                {subtitle}
+            <View className="flex-1">{titleRowContent}</View>
+            <View className="flex-shrink-0 min-w-[40px] items-end ml-2.5">
+              {rightAction}
+            </View>
+          </View>
+        ) : (
+          <View className="flex-row items-center justify-between">
+            <View className="flex-shrink-0 min-w-[40px] items-start">
+              {leftAction}
+            </View>
+            <View className="flex-1 px-2 items-center">
+              <Text className={titleClassName} numberOfLines={1}>
+                {title}
               </Text>
-            ) : null}
+              {subtitle ? (
+                <Text className={subtitleClassName} numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
+            {/*
+              min-w rather than a fixed w-10: a plain icon button (40px)
+              still sizes and aligns exactly as before, but a wider action
+              — like the "Mark all read" text pill on the Notifications
+              screen — can grow to fit its label instead of being squeezed
+              into a 40px box, which was forcing that text to wrap one
+              letter per line.
+            */}
+            <View className="flex-shrink-0 min-w-[40px] items-end">
+              {rightAction}
+            </View>
           </View>
-          {/*
-            min-w rather than a fixed w-10: a plain icon button (40px) still
-            sizes and aligns exactly as before, but a wider action — like
-            the "Mark all read" text pill on the Notifications screen — can
-            grow to fit its label instead of being squeezed into a 40px box,
-            which was forcing that text to wrap one letter per line.
-          */}
-          <View className="flex-shrink-0 min-w-[40px] items-end">
-            {rightAction}
-          </View>
-        </View>
+        )}
+
+        {/*
+          Optional content rendered inside the header itself, below the
+          title row. Keeping it inside this same colored/padded container
+          (rather than a separate white section underneath) is what lets
+          the screen below start higher, giving listings more room.
+        */}
+        {children ? <View className="mt-4">{children}</View> : null}
       </View>
     </View>
   );
