@@ -20,9 +20,9 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.jsx";
 
 import {
-  InlinePageHeader,
-  IconCircleButton,
-} from "../../../components/ui/InlinePageHeader.jsx";
+  HeaderActionButton,
+  ScreenHeader,
+} from "../../../components/ui/ScreenHeader.jsx";
 
 import { PriceText } from "../../../components/ui/PriceText.jsx";
 
@@ -30,6 +30,8 @@ import {
   useBuyerOrders,
   useFarmerOrders,
 } from "../hooks/deliveryTrackingHooks.js";
+
+import { useUnreadNotificationCount } from "../../notifications/hooks/notificationHooks.js";
 
 import { getErrorMessage } from "../../../lib/errorMap.js";
 
@@ -229,20 +231,32 @@ export function MyOrdersPage() {
 
   const farmerOrders = useFarmerOrders();
 
+  const unreadNotificationCount = useUnreadNotificationCount();
+
   const activeQuery = activeTab === TABS.BUYER ? buyerOrders : farmerOrders;
 
   const results = activeQuery.data?.results ?? [];
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["bottom"]}>
-      <InlinePageHeader
+    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+      <ScreenHeader
         title="Orders"
         subtitle="Track your transactions"
         leftAction={
-          <IconCircleButton
+          <HeaderActionButton
             icon="menu"
+            size={20}
             accessibilityLabel="Menu"
             onPress={() => navigation.navigate("Profile")}
+          />
+        }
+        rightAction={
+          <HeaderActionButton
+            icon="bell"
+            size={18}
+            accessibilityLabel="Notifications"
+            badgeCount={unreadNotificationCount.data ?? 0}
+            onPress={() => navigation.navigate("Notifications")}
           />
         }
       />

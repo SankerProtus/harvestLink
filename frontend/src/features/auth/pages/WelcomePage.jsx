@@ -243,11 +243,6 @@ export function WelcomePage() {
                   </Text>
                 </View>
               </View>
-
-              <View className="flex-row items-center gap-1.5 rounded-full bg-white/15 border border-white/25 px-2.5 py-1.5">
-                <Feather name="globe" size={12} color="#FFFFFF" />
-                <Text className="text-[11px] font-semibold text-white">EN</Text>
-              </View>
             </View>
 
             <Text className="text-white text-[28px] leading-[32px] font-extrabold tracking-[-0.5px]">
