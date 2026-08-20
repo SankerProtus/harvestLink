@@ -122,7 +122,9 @@ function RolePill({ selected, label, icon, onPress }) {
         transform: [{ scale: pressed ? 0.98 : 1 }],
       })}
       className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl border px-3 py-2.5 ${
-        selected ? "bg-primary-muted border-primary/40" : "bg-white border-line/70"
+        selected
+          ? "bg-primary-muted border-primary/40"
+          : "bg-white border-line/70"
       }`}
     >
       <MaterialCommunityIcons
@@ -213,7 +215,7 @@ export function WelcomePage() {
         {/* Hero section */}
         <View className="relative">
           <Image
-            source={require("../../../../assets/farmer-hero.jpg")}
+            source={require("../../../../assets/sign_cover_photo.jpg")}
             className="w-full h-[260px]"
             resizeMode="cover"
           />
@@ -324,9 +326,7 @@ export function WelcomePage() {
 
           {mode === "register" ? (
             <View className="mt-4">
-              <Text className="text-[12px] text-ink-muted mb-2">
-                I am a…
-              </Text>
+              <Text className="text-[12px] text-ink-muted mb-2">I am a…</Text>
               <View className="flex-row gap-2">
                 {ROLE_OPTIONS.map((option) => (
                   <RolePill
@@ -380,7 +380,11 @@ export function WelcomePage() {
             })}
             className="flex-row items-center justify-center rounded-xl2 border border-line bg-white py-3 mt-4"
           >
-            <MaterialCommunityIcons name="google" size={18} color={colors.inkSecondary} />
+            <MaterialCommunityIcons
+              name="google"
+              size={18}
+              color={colors.inkSecondary}
+            />
             <Text className="ml-2.5 text-[14px] font-semibold text-ink">
               Continue with Google
             </Text>
@@ -388,9 +392,12 @@ export function WelcomePage() {
 
           <Text className="mt-5 text-center text-[11px] leading-[16px] text-ink-faint px-2">
             By continuing, you agree to HarvestLink's{" "}
-            <Text className="font-semibold text-ink-muted">Terms of Service</Text>{" "}
+            <Text className="font-semibold text-ink-muted">
+              Terms of Service
+            </Text>{" "}
             and{" "}
-            <Text className="font-semibold text-ink-muted">Privacy Policy</Text>.
+            <Text className="font-semibold text-ink-muted">Privacy Policy</Text>
+            .
           </Text>
         </View>
       </ScrollView>

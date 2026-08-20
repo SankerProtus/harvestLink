@@ -7,7 +7,10 @@ import {
   useWindowDimensions,
   Image,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -15,85 +18,36 @@ import { setHasSeenOnboarding } from "../../../lib/onboardingStorage.js";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
 
-function SellScene() {
+function PhotoScene({ source, badge }) {
   return (
     <View
       className="w-full max-w-[320px] items-center justify-center self-center rounded-xl3 overflow-hidden"
       style={{ aspectRatio: 320 / 240, ...shadows.lg }}
     >
       <Image
-        source={require("../../../../assets/farmer-hero.jpg")}
+        source={source}
         className="absolute inset-0 w-full h-full"
         resizeMode="cover"
       />
-      <View className="absolute inset-0 bg-primary-dark/40" />
+      <View className="absolute inset-0 bg-primary-dark/20" />
       <View className="absolute bottom-6 left-6 right-6">
         <View className="flex-row items-center bg-white/95 rounded-xl2 px-4 py-3">
           <View className="w-10 h-10 rounded-xl bg-primary-muted items-center justify-center mr-3">
-            <MaterialCommunityIcons name="basket-outline" size={22} color={colors.primary} />
+            <MaterialCommunityIcons
+              name={badge.icon}
+              size={22}
+              color={colors.primary}
+            />
           </View>
           <View className="flex-1">
-            <Text className="text-[13px] font-bold text-ink">Fresh Tomatoes</Text>
-            <Text className="text-[12px] text-primary font-semibold">GHS 45 / crate</Text>
+            <Text className="text-[13px] font-bold text-ink">
+              {badge.title}
+            </Text>
+            <Text className="text-[12px] text-primary font-semibold">
+              {badge.subtitle}
+            </Text>
           </View>
         </View>
-      </View>
-    </View>
-  );
-}
-
-function BrowseScene() {
-  return (
-    <View
-      className="w-full max-w-[320px] items-center justify-center self-center"
-      style={{ aspectRatio: 320 / 240 }}
-    >
-      <View
-        className="absolute inset-x-4 top-4 bottom-4 rounded-xl3 bg-primary-muted border border-primary/10"
-      />
-      <View
-        className="h-52 w-32 rounded-[28px] bg-white border-[3px] border-primary-dark items-center pt-4 overflow-hidden"
-        style={shadows.lg}
-      >
-        <View className="h-2 w-10 rounded-full bg-line mb-4" />
-        <View className="h-20 w-24 rounded-xl2 bg-primary-muted mb-3" />
-        <View className="h-2.5 w-20 rounded-full bg-line mb-2" />
-        <View className="h-2.5 w-14 rounded-full bg-line" />
-      </View>
-      <View
-        className="absolute -right-2 top-12 w-12 h-12 rounded-full bg-primary items-center justify-center border-[3px] border-white"
-        style={shadows.md}
-      >
-        <MaterialCommunityIcons name="check-decagram" size={24} color="#FFFFFF" />
-      </View>
-      <View
-        className="absolute left-6 bottom-10 w-10 h-10 rounded-full bg-accent items-center justify-center border-[3px] border-white"
-        style={shadows.sm}
-      >
-        <MaterialCommunityIcons name="cart-outline" size={18} color="#FFFFFF" />
-      </View>
-    </View>
-  );
-}
-
-function OfflineScene() {
-  return (
-    <View
-      className="w-full max-w-[320px] items-center justify-center self-center"
-      style={{ aspectRatio: 320 / 240 }}
-    >
-      <View className="absolute inset-x-4 top-4 bottom-4 rounded-xl3 bg-primary-muted border border-primary/10" />
-      <View
-        className="w-28 h-28 rounded-full bg-white border-[3px] border-primary items-center justify-center"
-        style={shadows.lg}
-      >
-        <MaterialCommunityIcons name="cloud-sync-outline" size={44} color={colors.primary} />
-      </View>
-      <View className="absolute top-10 right-16 w-9 h-9 rounded-full bg-success items-center justify-center border-2 border-white">
-        <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
-      </View>
-      <View className="absolute bottom-12 left-16 w-10 h-10 rounded-full bg-accent-light items-center justify-center border-2 border-white">
-        <MaterialCommunityIcons name="wifi-off" size={18} color={colors.accent} />
       </View>
     </View>
   );
@@ -102,19 +56,39 @@ function OfflineScene() {
 const SLIDES = [
   {
     key: "sell",
-    Scene: SellScene,
+    // Vendors handing produce straight to a customer at a market stall —
+    // the clearest visual for "direct to buyer, no middleman."
+    image: require("../../../../assets/onboarding_photo_2.jpg"),
+    badge: {
+      icon: "basket-outline",
+      title: "Fresh Tomatoes",
+      subtitle: "GHS 45 / crate",
+    },
     title: "Sell your harvest,\nnot to middlemen",
     body: "List what you've grown and set your own price. Buyers see it directly — no broker taking a cut.",
   },
   {
     key: "browse",
-    Scene: BrowseScene,
+    // Phone + basket of produce — browsing and buying through the app.
+    image: require("../../../../assets/onboarding_photo_1.jpg"),
+    badge: {
+      icon: "check-decagram",
+      title: "Verified listing",
+      subtitle: "500+ farmers nearby",
+    },
     title: "Fresh produce,\nverified farmers",
     body: "Browse real listings from farmers near you and buy with confidence.",
   },
   {
     key: "offline",
-    Scene: OfflineScene,
+    // Delivery trucks and a solar-powered depot — produce still moving
+    // and syncing even where the grid and connectivity are unreliable.
+    image: require("../../../../assets/onboarding_photo_3.jpg"),
+    badge: {
+      icon: "cloud-sync-outline",
+      title: "Synced offline",
+      subtitle: "Updates when back online",
+    },
     title: "Works even on\na weak network",
     body: "Keep listing, browsing, and tracking orders offline. Syncs when you're back online.",
   },
@@ -200,7 +174,9 @@ export function OnboardingPage({ onComplete }) {
             className="w-8 h-8 rounded-lg mr-2"
             resizeMode="contain"
           />
-          <Text className="text-[16px] font-extrabold text-primary">HarvestLink</Text>
+          <Text className="text-[16px] font-extrabold text-primary">
+            HarvestLink
+          </Text>
         </View>
 
         {!isLastSlide ? (
@@ -211,7 +187,9 @@ export function OnboardingPage({ onComplete }) {
             hitSlop={8}
             className="py-2 px-3 rounded-full bg-white border border-line"
           >
-            <Text className="text-[13px] font-semibold text-ink-muted">Skip</Text>
+            <Text className="text-[13px] font-semibold text-ink-muted">
+              Skip
+            </Text>
           </Pressable>
         ) : (
           <View style={{ width: 60 }} />
@@ -231,10 +209,10 @@ export function OnboardingPage({ onComplete }) {
         scrollEventThrottle={16}
         className="flex-1"
       >
-        {SLIDES.map(({ key, Scene, title, body }) => (
+        {SLIDES.map(({ key, image, badge, title, body }) => (
           <View key={key} style={{ width: windowWidth }} className="px-6">
             <View className="flex-1 items-center justify-center">
-              <Scene />
+              <PhotoScene source={image} badge={badge} />
               <Text className="text-ink text-[28px] leading-[34px] font-extrabold text-center mt-10 tracking-[-0.5px]">
                 {title}
               </Text>
