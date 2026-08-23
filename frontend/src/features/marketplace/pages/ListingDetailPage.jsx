@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import {
   View,
   Text,
-  Image,
   ScrollView,
   Pressable,
   Dimensions,
@@ -16,6 +15,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
+import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
 import {
@@ -140,10 +140,12 @@ function ImageCarousel({ images, title }) {
               accessibilityRole="imagebutton"
               accessibilityLabel={`${title} photo ${index + 1} of ${images.length}. Double tap to view full screen.`}
             >
-              <Image
-                source={{ uri }}
+              <RemoteImage
+                uri={uri}
                 style={{ width: SCREEN_WIDTH, height: 300 }}
-                resizeMode="cover"
+                iconWrapperStyle={{ width: SCREEN_WIDTH, height: 300 }}
+                iconSize={26}
+                accessibilityLabel={`${title} photo ${index + 1} of ${images.length}`}
               />
             </Pressable>
           ))}
@@ -187,10 +189,10 @@ function ImageCarousel({ images, title }) {
                     : "border border-line/60 opacity-60"
                 }`}
               >
-                <Image
-                  source={{ uri }}
+                <RemoteImage
+                  uri={uri}
                   className="w-full h-full"
-                  resizeMode="cover"
+                  iconSize={16}
                 />
               </Pressable>
             ))}
@@ -224,10 +226,12 @@ function ImageCarousel({ images, title }) {
                     justifyContent: "center",
                   }}
                 >
-                  <Image
-                    source={{ uri }}
+                  <RemoteImage
+                    uri={uri}
                     style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
                     resizeMode="contain"
+                    iconWrapperStyle={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
+                    iconSize={32}
                     accessibilityLabel={`${title} photo ${index + 1} of ${images.length}, full screen`}
                   />
                 </View>

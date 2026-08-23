@@ -72,11 +72,7 @@ function CompactCard({
       className="flex-1 bg-white rounded-xl border border-line/50 overflow-hidden mb-3"
     >
       <View className="h-[108px] bg-primary-muted relative">
-        <RemoteImage
-          uri={imageUri}
-          className="w-full h-full"
-          iconSize={20}
-        />
+        <RemoteImage uri={imageUri} className="w-full h-full" iconSize={20} />
         <View className="absolute top-2 left-2">
           <View className={`rounded-full px-1.5 py-0.5 ${statusStyle.bg}`}>
             <Text
@@ -154,11 +150,7 @@ function HorizontalCard({
       className="bg-white rounded-xl2 mb-3 border border-line/50 overflow-hidden flex-row"
     >
       <View className="w-[100px] h-[100px] bg-primary-muted relative">
-        <RemoteImage
-          uri={imageUri}
-          className="w-full h-full"
-          iconSize={20}
-        />
+        <RemoteImage uri={imageUri} className="w-full h-full" iconSize={20} />
         {isDraft ? (
           <View className="absolute bottom-1 left-1 rounded-full bg-accent px-1.5 py-0.5">
             <Text className="text-[8px] font-bold text-white">Draft</Text>

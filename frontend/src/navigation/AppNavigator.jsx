@@ -69,7 +69,7 @@ function ProtectedNavigator() {
         component={ListingDetailPage}
       />
       <ProtectedStack.Screen
-        name="Marketplace"
+        name="MarketplaceBrowse"
         component={BrowseListingsPage}
       />
       <ProtectedStack.Screen

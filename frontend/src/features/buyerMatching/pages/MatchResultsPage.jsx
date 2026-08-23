@@ -41,10 +41,6 @@ const CROP_TYPE_OPTIONS = Object.values(CROP_TYPES);
 const QUANTITY_UNIT_OPTIONS = Object.values(QUANTITY_UNITS);
 const MAX_RECENT_SEARCHES = 5;
 
-// A handful of realistic starting points for buyers who don't know
-// exactly what to search yet — tapping one fills the form and searches
-// immediately. Recent searches (this session) appear alongside these
-// once the person has actually searched for something.
 const POPULAR_SEARCHES = [
   {
     label: "Tomatoes near Techiman",
@@ -209,16 +205,25 @@ export function MatchResultsPage() {
             : "Connect with the right farmers"
         }
         leftAction={
-          <HeaderActionButton
-            icon="menu"
-            size={20}
-            accessibilityLabel="Menu"
-            onPress={() =>
-              isAuthenticated
-                ? navigation.navigate("ProtectedTabs", { screen: "Profile" })
-                : navigation.navigate("Welcome")
-            }
-          />
+          navigation.canGoBack() ? (
+            <HeaderActionButton
+              icon="arrow-left"
+              size={20}
+              accessibilityLabel="Go back"
+              onPress={() => navigation.goBack()}
+            />
+          ) : (
+            <HeaderActionButton
+              icon="menu"
+              size={20}
+              accessibilityLabel="Menu"
+              onPress={() =>
+                isAuthenticated
+                  ? navigation.navigate("ProtectedTabs", { screen: "Profile" })
+                  : navigation.navigate("Welcome")
+              }
+            />
+          )
         }
       />
 

@@ -25,9 +25,10 @@ import { useSyncStatus } from "../../../lib/useSyncStatus.js";
 import { syncPendingOperations } from "../../../database/sync/SyncEngine.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
 import { formatMoney } from "../../../lib/currency.js";
+
 import {
-  ScreenHeader,
   HeaderActionButton,
+  ScreenHeader,
 } from "../../../components/ui/ScreenHeader.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
 import { ErrorState } from "../../../components/ui/ScreenState.jsx";
@@ -494,7 +495,8 @@ export function ProfilePage() {
               className="w-[96px] h-[96px] rounded-full bg-primary items-center justify-center overflow-hidden border-[4px] border-surface"
               style={shadows.lg}
             >
-              {user.profileImageUrl && failedAvatarUri !== user.profileImageUrl ? (
+              {user.profileImageUrl &&
+              failedAvatarUri !== user.profileImageUrl ? (
                 <Image
                   source={{ uri: user.profileImageUrl }}
                   className="w-full h-full"

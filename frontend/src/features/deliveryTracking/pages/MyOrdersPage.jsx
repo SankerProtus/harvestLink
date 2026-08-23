@@ -1,21 +1,17 @@
 import { useMemo, useState } from "react";
 
-import {
-  View,
-  Text,
-  Image,
-  FlatList,
-  Pressable,
-  ScrollView,
-} from "react-native";
+import { View, Text, FlatList, Pressable, ScrollView } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useNavigation } from "@react-navigation/native";
 
+import { useAuth } from "../../../context/AuthContext.jsx";
+
 import { Feather } from "@expo/vector-icons";
 
 import { Button } from "../../../components/ui/Button.jsx";
+import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.jsx";
 
@@ -34,8 +30,6 @@ import {
 import { useUnreadNotificationCount } from "../../notifications/hooks/notificationHooks.js";
 
 import { getErrorMessage } from "../../../lib/errorMap.js";
-
-import { colors } from "../../../theme/colors.js";
 
 import { shadows } from "../../../theme/shadows.js";
 
@@ -173,17 +167,12 @@ function OrderRow({ order, activeTab, onPress, isLast }) {
         }
       >
         <View className="w-12 h-12 rounded-xl overflow-hidden bg-primary-muted">
-          {imageUri ? (
-            <Image
-              source={{ uri: imageUri }}
-              className="w-full h-full"
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="w-full h-full items-center justify-center">
-              <Feather name="package" size={18} color={colors.inkFaint} />
-            </View>
-          )}
+          <RemoteImage
+            uri={imageUri}
+            className="w-full h-full"
+            iconSize={18}
+            icon="package"
+          />
         </View>
 
         <View className="flex-1 min-w-0">
@@ -224,6 +213,8 @@ function OrderRow({ order, activeTab, onPress, isLast }) {
 
 export function MyOrdersPage() {
   const navigation = useNavigation();
+  const { user } = useAuth();
+  const isBuyerRole = user?.role === "BUYER";
 
   const [activeTab, setActiveTab] = useState(TABS.BUYER);
 
@@ -247,9 +238,7 @@ export function MyOrdersPage() {
             icon="menu"
             size={20}
             accessibilityLabel="Menu"
-            onPress={() =>
-              navigation.navigate("ProtectedTabs", { screen: "Profile" })
-            }
+            onPress={() => navigation.navigate("Profile")}
           />
         }
         rightAction={
@@ -301,11 +290,24 @@ export function MyOrdersPage() {
               label={
                 activeTab === TABS.BUYER ? "Browse market" : "Create listing"
               }
-              onPress={() =>
-                navigation.navigate(
-                  activeTab === TABS.BUYER ? "Marketplace" : "CreateListing",
-                )
-              }
+              onPress={() => {
+                if (activeTab === TABS.BUYER) {
+                  // A farmer can still toggle to "As buyer" here, but
+                  // farmers don't have a Marketplace tab — send them to
+                  // the standalone browse screen (which now has its own
+                  // back arrow) instead of a tab that doesn't exist for
+                  // their role.
+                  if (isBuyerRole) {
+                    navigation.navigate("ProtectedTabs", {
+                      screen: "Marketplace",
+                    });
+                  } else {
+                    navigation.navigate("MarketplaceBrowse");
+                  }
+                } else {
+                  navigation.navigate("CreateListing");
+                }
+              }}
               variant="secondary"
             />
           }

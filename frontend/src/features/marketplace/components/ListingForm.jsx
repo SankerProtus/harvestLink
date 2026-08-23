@@ -1,10 +1,4 @@
-import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  Pressable,
-} from "react-native";
+import { View, Text, TextInput, ScrollView, Pressable } from "react-native";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -449,7 +443,11 @@ export function ListingForm({
                     }
                     className="w-[76px] h-[76px] rounded-xl2 overflow-hidden border border-line bg-cream items-center justify-center"
                   >
-                    <RemoteImage uri={url} className="w-full h-full" iconSize={18} />
+                    <RemoteImage
+                      uri={url}
+                      className="w-full h-full"
+                      iconSize={18}
+                    />
                   </Pressable>
                   {index === 0 ? (
                     <View className="absolute -top-2 -left-2 rounded-full bg-primary px-2 py-0.5 border-2 border-white">

@@ -26,12 +26,14 @@ import { useUnreadNotificationCount } from "../../notifications/hooks/notificati
 
 import { Button } from "../../../components/ui/Button.jsx";
 import { Chip } from "../../../components/ui/Chip.jsx";
+
 import {
   HeaderActionButton,
   ScreenHeader,
 } from "../../../components/ui/ScreenHeader.jsx";
 import { ListingFilters } from "../components/ListingFilters.jsx";
 import { ListingCard } from "../components/ListingCard.jsx";
+
 import { listingSearchSchema } from "../schemas/marketplaceSchemas.js";
 import { useListings } from "../hooks/marketplaceHooks.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
@@ -147,16 +149,25 @@ export function BrowseListingsPage() {
       <ScreenHeader
         title="Marketplace"
         leftAction={
-          <HeaderActionButton
-            icon="menu"
-            size={20}
-            accessibilityLabel="Menu"
-            onPress={() =>
-              isAuthenticated
-                ? navigation.navigate("ProtectedTabs", { screen: "Profile" })
-                : navigation.navigate("Welcome")
-            }
-          />
+          navigation.canGoBack() ? (
+            <HeaderActionButton
+              icon="arrow-left"
+              size={20}
+              accessibilityLabel="Go back"
+              onPress={() => navigation.goBack()}
+            />
+          ) : (
+            <HeaderActionButton
+              icon="menu"
+              size={20}
+              accessibilityLabel="Menu"
+              onPress={() =>
+                isAuthenticated
+                  ? navigation.navigate("ProtectedTabs", { screen: "Profile" })
+                  : navigation.navigate("Welcome")
+              }
+            />
+          )
         }
         rightAction={
           isAuthenticated ? (

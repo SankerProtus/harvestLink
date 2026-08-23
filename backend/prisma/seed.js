@@ -15,6 +15,13 @@ function placeholderImage(text, bgHex, size = "800x600") {
   return `https://placehold.co/${size}/${bgHex}/FFFFFF.png?text=${encoded}&font=roboto`;
 }
 
+// Direct-hotlink a Wikimedia Commons file by name. Special:FilePath
+// redirects straight to the current media file, so this stays stable
+// even if the underlying storage path/hash changes.
+function commonsFile(filename) {
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}`;
+}
+
 const CROP_COLORS = {
   TOMATO: "C0392B",
   MAIZE: "D4A017",
@@ -28,7 +35,35 @@ const CROP_COLORS = {
   COCOA: "4E342E",
 };
 
+// Real product photos per crop, sourced from Wikimedia Commons. Fill in
+// the TODO entries the same way you did for onions: search
+// commons.wikimedia.org, grab the exact "File:..." name, wrap it in
+// commonsFile(). Any crop type not yet listed here falls back to the
+// old colored placeholder, so nothing breaks while you fill it in.
+const CROP_PHOTOS = {
+  CASSAVA: [commonsFile("Cassava.jpg"), commonsFile("Dried cassava.jpg")],
+  TOMATO: [commonsFile("The Beauty of Fresh Tomatoes in Nigeria.jpg")],
+  // MAIZE: [ ... ],       // TODO
+  // PLANTAIN: [ ... ],    // TODO
+  // YAM: [ ... ],         // TODO
+  // PEPPER: [ ... ],      // TODO
+  // ONION: [ ... ],       // TODO
+  // RICE: [ ... ],        // TODO
+  // GROUNDNUT: [ ... ],   // TODO
+  // COCOA: [ ... ],       // TODO
+};
+
 function cropImages(cropType, label, count = 2) {
+  const realPhotos = CROP_PHOTOS[cropType];
+  if (realPhotos?.length) {
+    // Cycle through whatever real photos we have for this crop so every
+    // listing isn't stuck with the exact same single image.
+    return Array.from(
+      { length: count },
+      (_, i) => realPhotos[i % realPhotos.length],
+    );
+  }
+
   const color = CROP_COLORS[cropType] ?? "2D7A3B";
   return Array.from({ length: count }, (_, i) =>
     placeholderImage(count > 1 ? `${label} ${i + 1}` : label, color),

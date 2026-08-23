@@ -3,10 +3,14 @@ import { View, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme/colors.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { getTabsForRole } from "./tabConfig.js";
+import { getTabsForRole } from "../navigation/tabConfig.js";
 
 const Tab = createBottomTabNavigator();
 
+// Keyed by the `icon` value in tabConfig.js, not by route name — this is
+// what lets both roles share the same handful of icon glyphs (e.g.
+// "receipt" for Orders, "person" for Profile) while each role's Home,
+// second, and third tabs point at role-specific glyphs.
 const ICONS = {
   home: { active: "home", inactive: "home-outline" },
   grid: { active: "grid", inactive: "grid-outline" },
@@ -17,28 +21,27 @@ const ICONS = {
   person: { active: "person", inactive: "person-outline" },
 };
 
-function TabIcon({ iconKey, focused, color, size }) {
+function TabIcon({ iconKey, focused, color }) {
   const icons = ICONS[iconKey];
   const iconName = focused ? icons.active : icons.inactive;
 
   return (
     <View
       style={{
-        width: 44,
-        height: 32,
-        borderRadius: 12,
+        width: 46,
+        height: 30,
+        borderRadius: 15,
         alignItems: "center",
         justifyContent: "center",
+        // Fixed footprint regardless of focus state — only the background
+        // color changes. Sizing the pill via padding (so it grows/shrinks
+        // with content) let it exceed the fixed icon slot React Navigation
+        // allocates in the tab bar, which clips anything taller than that
+        // slot — that's what was cutting the pill off.
         backgroundColor: focused ? colors.primaryLight : "transparent",
-        flexShrink: 0,
-        overflow: "visible",
       }}
     >
-      <Ionicons
-        name={iconName}
-        size={focused ? size + 1 : size}
-        color={color}
-      />
+      <Ionicons name={iconName} size={22} color={color} />
     </View>
   );
 }
@@ -92,13 +95,9 @@ export function ProtectedTabNavigator() {
           component={component}
           options={{
             tabBarLabel: label,
-            tabBarIcon: ({ color, size, focused }) => (
-              <TabIcon
-                iconKey={icon}
-                focused={focused}
-                color={color}
-                size={size}
-              />
+            tabBarIconStyle: { marginTop: 2 },
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon iconKey={icon} focused={focused} color={color} />
             ),
           }}
         />
