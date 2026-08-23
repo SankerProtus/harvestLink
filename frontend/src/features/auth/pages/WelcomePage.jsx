@@ -168,11 +168,14 @@ export function WelcomePage() {
 
   async function requestOtpForPurpose(phone, purpose, purposeRole) {
     try {
-      await requestOtp.mutateAsync({ phone, purpose });
+      const result = await requestOtp.mutateAsync({ phone, purpose });
       navigation.navigate("OtpVerify", {
         phone,
         purpose,
         role: purpose === OTP_PURPOSES.REGISTRATION ? purposeRole : undefined,
+        // Only present when the backend has OTP_DEBUG_EXPOSE enabled
+        // (demo builds) — undefined in a normal deployment.
+        debugCode: result?.debugCode,
       });
     } catch {
       // Already captured in requestOtp.error and rendered below.

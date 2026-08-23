@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { View, Text, FlatList, Pressable, ScrollView } from "react-native";
+import { View, Text, FlatList, Pressable } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -8,12 +8,11 @@ import { useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../../../context/AuthContext.jsx";
 
-import { Feather } from "@expo/vector-icons";
-
 import { Button } from "../../../components/ui/Button.jsx";
 import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.jsx";
+import { StatStrip } from "../../../components/ui/StatStrip.jsx";
 
 import {
   HeaderActionButton,
@@ -30,8 +29,6 @@ import {
 import { useUnreadNotificationCount } from "../../notifications/hooks/notificationHooks.js";
 
 import { getErrorMessage } from "../../../lib/errorMap.js";
-
-import { shadows } from "../../../theme/shadows.js";
 
 import {
   LoadingState,
@@ -71,21 +68,6 @@ function formatDate(isoString) {
   });
 }
 
-function StatusMetricPill({ label, count, dotClass }) {
-  return (
-    <View
-      className="flex-row items-center gap-1.5 rounded-full bg-white border border-line/50 px-3 py-1 mr-2"
-      style={shadows.sm}
-    >
-      <View className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
-
-      <Text className="text-[11.5px] font-bold text-ink">{count}</Text>
-
-      <Text className="text-[10.5px] font-medium text-ink-muted">{label}</Text>
-    </View>
-  );
-}
-
 function StatusSummaryStrip({ orders }) {
   const counts = useMemo(() => {
     const tally = { pending: 0, inTransit: 0, delivered: 0 };
@@ -103,29 +85,31 @@ function StatusSummaryStrip({ orders }) {
     return tally;
   }, [orders]);
 
-  const pills = [
-    { ...SUMMARY_GROUPS[0], count: counts.pending, dot: "bg-warning" },
-
-    { ...SUMMARY_GROUPS[1], count: counts.inTransit, dot: "bg-primary" },
-
-    { ...SUMMARY_GROUPS[2], count: counts.delivered, dot: "bg-success" },
-  ];
-
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 6 }}
-    >
-      {pills.map((pill) => (
-        <StatusMetricPill
-          key={pill.key}
-          label={pill.label}
-          count={pill.count}
-          dotClass={pill.dot}
-        />
-      ))}
-    </ScrollView>
+    <View className="px-5 pb-4">
+      <StatStrip
+        items={[
+          {
+            icon: "clock",
+            value: String(counts.pending),
+            label: "Pending",
+            accent: "warning",
+          },
+          {
+            icon: "truck",
+            value: String(counts.inTransit),
+            label: "In transit",
+            accent: "primary",
+          },
+          {
+            icon: "check-circle",
+            value: String(counts.delivered),
+            label: "Delivered",
+            accent: "success",
+          },
+        ]}
+      />
+    </View>
   );
 }
 

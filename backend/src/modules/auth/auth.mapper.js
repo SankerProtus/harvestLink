@@ -87,12 +87,16 @@ export function toRefreshTokenDTO({ token, expiresAt }) {
 }
 
 //  OTP DTOs
-export function toOtpRequestResponse(otpCode, resendAvailableAt) {
+export function toOtpRequestResponse(otpCode, resendAvailableAt, debugCode = null) {
   return {
     phone: otpCode.phone,
     purpose: otpCode.purpose,
     expiresAt: serializeDate(otpCode.expiresAt),
     resendAvailableAt: serializeDate(resendAvailableAt),
+    // Only ever populated when OTP_DEBUG_EXPOSE=true on the server (demo
+    // builds only) — undefined/omitted otherwise so it never leaks in a
+    // real deployment.
+    ...(debugCode ? { debugCode } : {}),
   };
 }
 

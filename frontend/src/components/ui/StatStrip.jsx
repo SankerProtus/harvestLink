@@ -3,10 +3,14 @@ import { Feather } from "@expo/vector-icons";
 import { colors } from "../../theme/colors.js";
 import { shadows } from "../../theme/shadows.js";
 
-// A single, compact stat strip — one card, columns divided by thin rules —
-// instead of separately-padded MetricCards. Production dashboards (order
-// management apps, POS home screens) favor this dense row so the "overview"
-// reads at a glance without pushing the actual content below the fold.
+const ACCENTS = {
+  primary: { bg: "bg-primary-muted", color: colors.primary },
+  accent: { bg: "bg-accent-light", color: colors.accent },
+  warning: { bg: "bg-warning-muted", color: colors.warning },
+  success: { bg: "bg-success-muted", color: colors.success },
+  info: { bg: "bg-info-muted", color: colors.info },
+};
+
 export function StatStripItem({
   icon,
   value,
@@ -14,8 +18,7 @@ export function StatStripItem({
   accent = "primary",
   isLast = false,
 }) {
-  const iconBg = accent === "accent" ? "bg-accent-light" : "bg-primary-muted";
-  const iconColor = accent === "accent" ? colors.accent : colors.primary;
+  const { bg: iconBg, color: iconColor } = ACCENTS[accent] ?? ACCENTS.primary;
 
   return (
     <View

@@ -45,7 +45,7 @@ import {
   GoogleAccountAlreadyLinkedError,
   InvalidAccessTokenError,
   AccessTokenExpiredError,
-  AccountNotFoundError, 
+  AccountNotFoundError,
 } from "./auth.errors.js";
 
 import {
@@ -108,10 +108,19 @@ import {
 
 import { sendOtp, resolveSmsProvider } from "../../common/utils/smsProvider.js";
 import { uploadImageBuffer } from "../../common/configs/cloudinary.js";
+import { logger } from "../../common/utils/logger.js";
 
 // Shared/private helpers
 const smsProvider = resolveSmsProvider();
 const OTP_VERIFICATION_TOKEN_TTL_MINUTES = 10;
+
+// Demo/debug fallback — NEVER enable this in a real deployment. When set,
+// the raw OTP code is echoed back in the API response so the app can show
+// it on-screen if SMS delivery is unavailable (e.g. no SMS provider
+// configured for a demo build). It also makes OTP requests resilient: a
+// failed SMS send no longer blocks the flow, since the code is still
+// visible in-app. Controlled entirely by env var, off by default.
+const OTP_DEBUG_EXPOSE = process.env.OTP_DEBUG_EXPOSE === "true";
 
 function issueSessionTokens({ userId, role }) {
   const family = randomUUID();
@@ -226,7 +235,19 @@ export async function requestOtp({ phone, purpose, ipAddress }) {
     requestIp: ipAddress ?? null,
   });
 
-  await sendOtp({ phone, code: rawCode, purpose, provider: smsProvider });
+  try {
+    await sendOtp({ phone, code: rawCode, purpose, provider: smsProvider });
+  } catch (err) {
+    // In debug mode, don't let a failed SMS send block the flow — the code
+    // is still returned in the response below so the app can display it.
+    if (!OTP_DEBUG_EXPOSE) {
+      throw err;
+    }
+    logger.warn("OTP SMS delivery failed; continuing because OTP_DEBUG_EXPOSE is set", {
+      phone,
+      purpose,
+    });
+  }
 
   createOtpRequestedEvent({ phone, purpose, ipAddress });
 
@@ -234,7 +255,11 @@ export async function requestOtp({ phone, purpose, ipAddress }) {
     otpCode.createdAt.getTime() + OTP_CONFIG.RESEND_COOLDOWN_SECONDS * 1000,
   );
 
-  return toOtpRequestResponse(otpCode, resendAvailableAt);
+  return toOtpRequestResponse(
+    otpCode,
+    resendAvailableAt,
+    OTP_DEBUG_EXPOSE ? rawCode : null,
+  );
 }
 
 // OTP Verification
