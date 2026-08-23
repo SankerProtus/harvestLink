@@ -1,6 +1,13 @@
 import { Router } from "express";
 
-import { createReview, getReviewForOrder } from "./reviews.controller.js";
+import {
+  createReview,
+  getReviewForOrder,
+  listFarmerReviews,
+  listListingReviews,
+  listReviewComments,
+  createReviewComment,
+} from "./reviews.controller.js";
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
 import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";
 
@@ -26,6 +33,30 @@ router.get(
   authMiddleware,
   lightUserLimiter,
   getReviewForOrder,
+);
+router.get(
+  "/farmer/:farmerId",
+  authMiddleware,
+  lightUserLimiter,
+  listFarmerReviews,
+);
+router.get(
+  "/listing/:listingId",
+  authMiddleware,
+  lightUserLimiter,
+  listListingReviews,
+);
+router.get(
+  "/:reviewId/comments",
+  authMiddleware,
+  lightUserLimiter,
+  listReviewComments,
+);
+router.post(
+  "/:reviewId/comments",
+  authMiddleware,
+  moderateUserLimiter,
+  createReviewComment,
 );
 
 export default router;

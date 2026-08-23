@@ -8,6 +8,66 @@ export async function findReviewByOrderId(orderId) {
   return prisma.review.findUnique({ where: { orderId } });
 }
 
+export async function findReviewById(reviewId) {
+  return prisma.review.findUnique({ where: { id: reviewId } });
+}
+
+export async function findFarmerById(farmerId) {
+  return prisma.user.findFirst({
+    where: { id: farmerId, role: "FARMER", deletedAt: null },
+    select: { id: true, fullName: true, profileImageUrl: true },
+  });
+}
+
+export async function findListingById(listingId) {
+  return prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { id: true, title: true, farmerId: true },
+  });
+}
+
+const REVIEW_LIST_INCLUDE = {
+  buyer: {
+    select: { id: true, fullName: true, profileImageUrl: true },
+  },
+  order: {
+    select: {
+      listingId: true,
+      listing: { select: { id: true, title: true } },
+    },
+  },
+  _count: { select: { comments: true } },
+};
+
+export async function listReviewsForFarmer(farmerId, { skip, take }) {
+  const [items, totalCount] = await Promise.all([
+    prisma.review.findMany({
+      where: { farmerId },
+      include: REVIEW_LIST_INCLUDE,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.review.count({ where: { farmerId } }),
+  ]);
+  return { items, totalCount };
+}
+
+export async function listReviewsForListing(listingId, { skip, take }) {
+  const where = { order: { listingId } };
+  const [items, totalCount] = await Promise.all([
+    prisma.review.findMany({
+      where,
+      include: REVIEW_LIST_INCLUDE,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.review.count({ where }),
+  ]);
+  return { items, totalCount };
+}
+
 export async function createReview({
   orderId,
   farmerId,
@@ -17,6 +77,27 @@ export async function createReview({
 }) {
   return prisma.review.create({
     data: { orderId, farmerId, buyerId, rating, comment: comment ?? null },
+  });
+}
+
+const COMMENT_AUTHOR_SELECT = {
+  author: {
+    select: { id: true, fullName: true, profileImageUrl: true, role: true },
+  },
+};
+
+export async function listCommentsForReview(reviewId) {
+  return prisma.reviewComment.findMany({
+    where: { reviewId },
+    include: COMMENT_AUTHOR_SELECT,
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function createReviewComment({ reviewId, authorId, body }) {
+  return prisma.reviewComment.create({
+    data: { reviewId, authorId, body },
+    include: COMMENT_AUTHOR_SELECT,
   });
 }
 

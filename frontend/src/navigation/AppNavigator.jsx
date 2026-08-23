@@ -23,6 +23,7 @@ import { OrderDetailPage } from "../features/deliveryTracking/pages/OrderDetailP
 
 import { ListingInterestPage } from "../features/marketplace/pages/ListingInterestPage.jsx";
 import { NotificationsPage } from "../features/notifications/pages/NotificationsPage.jsx";
+import { FarmerProfilePage } from "../features/farmerProfile/pages/FarmerProfilePage.jsx";
 
 import { ProtectedTabNavigator } from "./ProtectedTabNavigator.jsx";
 
@@ -44,6 +45,7 @@ function PublicNavigator() {
       <PublicStack.Screen name="GoogleSignIn" component={GoogleSignInScreen} />
       <PublicStack.Screen name="Marketplace" component={BrowseListingsPage} />
       <PublicStack.Screen name="ListingDetail" component={ListingDetailPage} />
+      <PublicStack.Screen name="FarmerProfile" component={FarmerProfilePage} />
       <PublicStack.Screen name="MatchSearch" component={MatchResultsPage} />
       <PublicStack.Screen name="MatchDetail" component={MatchDetailPage} />
     </PublicStack.Navigator>
@@ -64,6 +66,10 @@ function ProtectedNavigator() {
       <ProtectedStack.Screen
         name="ListingDetail"
         component={ListingDetailPage}
+      />
+      <ProtectedStack.Screen
+        name="FarmerProfile"
+        component={FarmerProfilePage}
       />
       <ProtectedStack.Screen
         name="MarketplaceBrowse"

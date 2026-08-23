@@ -66,6 +66,7 @@ model User {
 
   reviewsGiven    Review[]       @relation("BuyerReviews")
   reviewsReceived Review[]       @relation("FarmerReviews")
+  reviewComments  ReviewComment[]
   savedListings   SavedListing[] @relation("BuyerSavedListings")
   notifications   Notification[]
 
@@ -314,11 +315,35 @@ model Review {
   rating  Int     @db.SmallInt
   comment String? @db.VarChar(500)
 
+  comments ReviewComment[]
+
   createdAt DateTime @default(now())
 
   @@index([farmerId])
   @@index([buyerId])
   @@map("reviews")
+}
+
+// A reply thread on a review — restricted at the service layer to just
+// the two people the review is between (the buyer who wrote it and the
+// farmer it's about), similar to how marketplace apps let a seller
+// respond publicly to a review and the reviewer reply back. Anyone
+// browsing can read the thread; only those two can post to it.
+model ReviewComment {
+  id String @id @default(uuid()) @db.Uuid
+
+  reviewId String @db.Uuid
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  authorId String @db.Uuid
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  body String @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+
+  @@index([reviewId])
+  @@map("review_comments")
 }
 
 // A buyer's private wishlist/bookmark on a listing — distinct from
@@ -349,6 +374,7 @@ enum NotificationType {
   ORDER_CANCELLED
   LISTING_INTEREST
   NEW_REVIEW
+  REVIEW_COMMENT
 }
 
 // Real, persisted notifications — created at the same points the

@@ -43,6 +43,14 @@ const IDS = {
     "50000000-0000-4000-8000-000000000002",
     "50000000-0000-4000-8000-000000000003",
   ],
+
+  reviews: [
+    "60000000-0000-4000-8000-000000000001",
+    "60000000-0000-4000-8000-000000000002",
+    "60000000-0000-4000-8000-000000000003",
+    "60000000-0000-4000-8000-000000000004",
+    "60000000-0000-4000-8000-000000000005",
+  ],
 };
 
 /*
@@ -532,6 +540,14 @@ async function main() {
     },
   });
 
+  await prisma.reviewComment.deleteMany({
+    where: {
+      reviewId: {
+        in: IDS.reviews,
+      },
+    },
+  });
+
   await prisma.review.deleteMany({
     where: {
       orderId: {
@@ -617,6 +633,7 @@ async function main() {
   await prisma.review.createMany({
     data: [
       {
+        id: IDS.reviews[0],
         orderId: IDS.orders[0],
         farmerId: IDS.farmers[0],
         buyerId: IDS.buyers[0],
@@ -627,6 +644,7 @@ async function main() {
       },
 
       {
+        id: IDS.reviews[1],
         orderId: IDS.orders[4],
         farmerId: IDS.farmers[3],
         buyerId: IDS.buyers[1],
@@ -686,6 +704,7 @@ async function main() {
   await prisma.review.createMany({
     data: [
       {
+        id: IDS.reviews[2],
         orderId: IDS.orders[6],
         farmerId: IDS.farmers[1],
         buyerId: IDS.buyers[0],
@@ -696,6 +715,7 @@ async function main() {
       },
 
       {
+        id: IDS.reviews[3],
         orderId: IDS.orders[7],
         farmerId: IDS.farmers[2],
         buyerId: IDS.buyers[1],
@@ -706,6 +726,7 @@ async function main() {
       },
 
       {
+        id: IDS.reviews[4],
         orderId: IDS.orders[8],
         farmerId: IDS.farmers[4],
         buyerId: IDS.buyers[2],
@@ -713,6 +734,64 @@ async function main() {
         comment:
           "Good maize quality and neatly prepared for collection.",
         createdAt: daysAgo(8),
+      },
+    ],
+  });
+
+  /*
+   * REVIEW COMMENTS
+   *
+   * A reply thread on a review is restricted at the service layer to
+   * just the two people the review is between — the buyer who wrote it
+   * and the farmer it's about. Not every review gets a reply (reviews[3]
+   * is left untouched below), which is closer to how this actually looks
+   * in production than commenting on 100% of reviews.
+   */
+
+  await prisma.reviewComment.createMany({
+    data: [
+      // Review 1 (tomatoes, 5★) — farmer thanks the buyer, buyer replies.
+      {
+        reviewId: IDS.reviews[0],
+        authorId: IDS.farmers[0],
+        body: "Thank you so much for the kind words! Looking forward to supplying you again next season.",
+        createdAt: daysAgo(0.7),
+      },
+      {
+        reviewId: IDS.reviews[0],
+        authorId: IDS.buyers[0],
+        body: "Definitely — already planning my next order for next month.",
+        createdAt: daysAgo(0.4),
+      },
+
+      // Review 2 (cocoa, 4★) — farmer follows up on the feedback.
+      {
+        reviewId: IDS.reviews[1],
+        authorId: IDS.farmers[3],
+        body: "Glad you were satisfied. Let me know if you need a larger batch next time.",
+        createdAt: daysAgo(4.5),
+      },
+
+      // Review 3 (cassava, 5★) — short back-and-forth.
+      {
+        reviewId: IDS.reviews[2],
+        authorId: IDS.farmers[1],
+        body: "Thanks for the review! I always harvest the same day to keep it fresh.",
+        createdAt: daysAgo(11.6),
+      },
+      {
+        reviewId: IDS.reviews[2],
+        authorId: IDS.buyers[0],
+        body: "It really showed — best cassava I've bought this month.",
+        createdAt: daysAgo(11.2),
+      },
+
+      // Review 5 (maize, 4★) — farmer acknowledges the feedback.
+      {
+        reviewId: IDS.reviews[4],
+        authorId: IDS.farmers[4],
+        body: "Appreciate the feedback! I'll keep the same prep process going forward.",
+        createdAt: daysAgo(7.5),
       },
     ],
   });
@@ -956,7 +1035,7 @@ async function main() {
 
   console.log("");
   console.log(
-    "Created: 12 listings with 5 images each, 9 orders, 5 reviews, 7 saved listings, 6 interests and 10 notifications."
+    "Created: 12 listings with 5 images each, 9 orders, 5 reviews, 6 review comments, 7 saved listings, 6 interests and 10 notifications."
   );
 
   console.log("");

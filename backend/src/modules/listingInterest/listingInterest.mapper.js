@@ -5,14 +5,13 @@ function serializeDate(date) {
     : new Date(date).toISOString();
 }
 
-// Built from real User columns only — no rating/avatar fields exist on
-// the schema, so those are intentionally left out rather than invented.
 function serializeBuyer(buyer) {
   if (!buyer) return undefined;
   return {
     id: buyer.id,
     name: buyer.fullName,
     phone: buyer.phone ?? null,
+    avatarUrl: buyer.profileImageUrl ?? null,
   };
 }
 

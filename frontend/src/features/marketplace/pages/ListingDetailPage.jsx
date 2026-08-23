@@ -17,12 +17,14 @@ import { Card } from "../../../components/ui/Card.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
 import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
+import { ReviewCard } from "../../../components/ui/ReviewCard.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
 import {
   LoadingState,
   ErrorState,
 } from "../../../components/ui/ScreenState.jsx";
 import { useListing } from "../hooks/marketplaceHooks.js";
+import { useListingReviews } from "../../deliveryTracking/hooks/reviewHooks.js";
 import { useCreateOrder } from "../../deliveryTracking/hooks/deliveryTrackingHooks.js";
 import {
   useExpressedInterestIds,
@@ -230,7 +232,10 @@ function ImageCarousel({ images, title }) {
                     uri={uri}
                     style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
                     resizeMode="contain"
-                    iconWrapperStyle={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
+                    iconWrapperStyle={{
+                      width: SCREEN_WIDTH,
+                      height: SCREEN_WIDTH,
+                    }}
                     iconSize={32}
                     accessibilityLabel={`${title} photo ${index + 1} of ${images.length}, full screen`}
                   />
@@ -315,6 +320,7 @@ export function ListingDetailPage() {
   const insets = useSafeAreaInsets();
 
   const listing = useListing(listingId);
+  const listingReviews = useListingReviews(listingId, { page: 1, limit: 3 });
   const createOrder = useCreateOrder();
   const expressedInterestIds = useExpressedInterestIds();
   const expressInterest = useExpressInterest();
@@ -442,7 +448,16 @@ export function ListingDetailPage() {
             </View>
 
             {data.farmer ? (
-              <View className="flex-row items-center mt-4 pt-4 border-t border-line/60">
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("FarmerProfile", {
+                    farmerId: data.farmer.id,
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`View ${data.farmer.name}'s profile`}
+                className="flex-row items-center mt-4 pt-4 border-t border-line/60"
+              >
                 <Avatar
                   uri={data.farmer.avatarUrl}
                   name={data.farmer.name}
@@ -472,7 +487,12 @@ export function ListingDetailPage() {
                     />
                   </View>
                 </View>
-              </View>
+                <Feather
+                  name="chevron-right"
+                  size={18}
+                  color={colors.inkFaint}
+                />
+              </Pressable>
             ) : null}
           </Card>
         </View>
@@ -527,6 +547,43 @@ export function ListingDetailPage() {
               </Text>
             </View>
           </Card>
+        </View>
+
+        <View className="px-5 mt-5">
+          <View className="flex-row items-center justify-between mb-1">
+            <SectionLabel>Reviews</SectionLabel>
+            {(listingReviews.data?.pagination?.total ?? 0) > 0 ? (
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("FarmerProfile", {
+                    farmerId: data.farmer?.id,
+                  })
+                }
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="See all reviews for this farmer"
+              >
+                <Text className="text-[12.5px] font-bold text-primary">
+                  See all
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+          {listingReviews.isLoading ? (
+            <Text className="text-[12.5px] text-ink-faint mt-2">
+              Loading reviews…
+            </Text>
+          ) : (listingReviews.data?.results ?? []).length === 0 ? (
+            <Card className="p-4">
+              <Text className="text-[13px] text-ink-muted">
+                No reviews yet for this product.
+              </Text>
+            </Card>
+          ) : (
+            listingReviews.data.results.map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))
+          )}
         </View>
 
         {canOrder ? (

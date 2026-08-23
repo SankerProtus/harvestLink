@@ -33,3 +33,29 @@ export class OrderAlreadyReviewedError extends ConflictError {
     super("This order has already been reviewed");
   }
 }
+
+export class ReviewNotFoundError extends NotFoundError {
+  constructor() {
+    super("Review not found");
+  }
+}
+
+export class FarmerNotFoundError extends NotFoundError {
+  constructor() {
+    super("Farmer not found");
+  }
+}
+
+export class ListingNotFoundError extends NotFoundError {
+  constructor() {
+    super("Listing not found");
+  }
+}
+
+export class NotReviewParticipantError extends ForbiddenError {
+  constructor() {
+    super(
+      "Only the buyer who wrote this review and the farmer it's about can reply to it",
+    );
+  }
+}

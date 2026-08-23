@@ -15,11 +15,35 @@ export function useExpressedInterestIds() {
   });
 }
 
+// Same fix as the saved-listings heart: "Express interest" is read from
+// the cached id list below, which previously only updated after
+// invalidateQueries() triggered a full network refetch — a second round
+// trip stacked on top of the mutation itself before the button visibly
+// changed. This now flips the button immediately via an optimistic
+// update in onMutate, rolls back on failure, and reconciles with the
+// server quietly afterward instead of blocking the UI on it.
 export function useExpressInterest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (listingId) => listingInterestApi.expressInterest(listingId),
-    onSuccess: () => {
+    onMutate: async (listingId) => {
+      await queryClient.cancelQueries({ queryKey: listingInterestQueryKeys.mine });
+      const previous = queryClient.getQueryData(listingInterestQueryKeys.mine);
+
+      queryClient.setQueryData(listingInterestQueryKeys.mine, (current) => {
+        const ids = new Set(current?.listingIds ?? []);
+        ids.add(listingId);
+        return { ...current, listingIds: Array.from(ids) };
+      });
+
+      return { previous };
+    },
+    onError: (_error, _listingId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(listingInterestQueryKeys.mine, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: listingInterestQueryKeys.mine,
       });
@@ -34,7 +58,24 @@ export function useWithdrawInterest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (listingId) => listingInterestApi.withdrawInterest(listingId),
-    onSuccess: () => {
+    onMutate: async (listingId) => {
+      await queryClient.cancelQueries({ queryKey: listingInterestQueryKeys.mine });
+      const previous = queryClient.getQueryData(listingInterestQueryKeys.mine);
+
+      queryClient.setQueryData(listingInterestQueryKeys.mine, (current) => {
+        const ids = new Set(current?.listingIds ?? []);
+        ids.delete(listingId);
+        return { ...current, listingIds: Array.from(ids) };
+      });
+
+      return { previous };
+    },
+    onError: (_error, _listingId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(listingInterestQueryKeys.mine, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: listingInterestQueryKeys.mine,
       });
