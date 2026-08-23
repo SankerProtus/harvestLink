@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import { View, TextInput, Text } from "react-native";
 import { OTP_CONFIG } from "../schemas/authSchemas.js";
-import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
 
 const CODE_LENGTH = OTP_CONFIG.CODE_LENGTH;
@@ -30,7 +29,10 @@ export function OTPInput({ value = "", onChangeText, error }) {
 
   return (
     <View className="w-full">
-      <View className="flex-row justify-between gap-2.5" accessibilityRole="none">
+      <View
+        className="flex-row justify-between gap-2.5"
+        accessibilityRole="none"
+      >
         {Array.from({ length: CODE_LENGTH }).map((_, index) => {
           const filled = Boolean(value[index]);
           return (

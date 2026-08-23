@@ -11,7 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusBar } from "expo-status-bar";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -224,30 +224,30 @@ export function WelcomePage() {
           />
           <View className="absolute inset-0 bg-primary-dark/55" />
 
+          {/* Logo — pinned to the top-left corner, independent of the
+              headline below so it always sits flush under the status bar. */}
           <View
-            className="absolute inset-x-0 bottom-0 px-5 pb-8"
-            style={{ paddingTop: insets.top + 12 }}
+            className="absolute left-5 flex-row items-center"
+            style={{ top: insets.top + 12 }}
           >
-            <View className="flex-row items-center justify-between mb-5">
-              <View className="flex-row items-center">
-                <View
-                  className="h-10 w-10 rounded-xl bg-white items-center justify-center overflow-hidden"
-                  style={shadows.sm}
-                >
-                  <Image
-                    source={require("../../../../assets/icon.png")}
-                    resizeMode="contain"
-                    className="h-8 w-8"
-                  />
-                </View>
-                <View className="ml-2.5">
-                  <Text className="text-[16px] font-extrabold text-white tracking-[-0.3px]">
-                    HarvestLink
-                  </Text>
-                </View>
-              </View>
+            <View
+              className="h-10 w-10 rounded-xl bg-white items-center justify-center overflow-hidden"
+              style={shadows.sm}
+            >
+              <Image
+                source={require("../../../../assets/icon.png")}
+                resizeMode="contain"
+                className="h-8 w-8"
+              />
             </View>
+            <View className="ml-2.5">
+              <Text className="text-[16px] font-extrabold text-white tracking-[-0.3px]">
+                HarvestLink
+              </Text>
+            </View>
+          </View>
 
+          <View className="absolute inset-x-0 bottom-0 px-5 pb-8">
             <Text className="text-white text-[28px] leading-[32px] font-extrabold tracking-[-0.5px]">
               Fresh produce, direct markets
             </Text>

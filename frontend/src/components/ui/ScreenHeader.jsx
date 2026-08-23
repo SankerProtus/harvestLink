@@ -1,7 +1,6 @@
 import { View, Text, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { colors } from "../../theme/colors.js";
 import { shadows } from "../../theme/shadows.js";
 
 export function HeaderActionButton({
@@ -89,11 +88,6 @@ export function ScreenHeader({
         }}
       >
         {titleRowContent ? (
-          // Compact single-row layout: title shrinks to its own width and
-          // sits left, immediately after leftAction, freeing the rest of
-          // the row (up to rightAction) for something like a search bar —
-          // used on the Marketplace screen so the search bar sits on the
-          // same line as the title instead of adding a whole extra row.
           <View className="flex-row items-center">
             <View className="flex-shrink-0 min-w-[40px] items-start">
               {leftAction}
@@ -125,26 +119,12 @@ export function ScreenHeader({
                 </Text>
               ) : null}
             </View>
-            {/*
-              min-w rather than a fixed w-10: a plain icon button (40px)
-              still sizes and aligns exactly as before, but a wider action
-              — like the "Mark all read" text pill on the Notifications
-              screen — can grow to fit its label instead of being squeezed
-              into a 40px box, which was forcing that text to wrap one
-              letter per line.
-            */}
             <View className="flex-shrink-0 min-w-[40px] items-end">
               {rightAction}
             </View>
           </View>
         )}
 
-        {/*
-          Optional content rendered inside the header itself, below the
-          title row. Keeping it inside this same colored/padded container
-          (rather than a separate white section underneath) is what lets
-          the screen below start higher, giving listings more room.
-        */}
         {children ? <View className="mt-4">{children}</View> : null}
       </View>
     </View>

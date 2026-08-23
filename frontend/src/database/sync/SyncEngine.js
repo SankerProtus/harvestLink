@@ -1,5 +1,4 @@
 import {
-  createListing as createLocalListing,
   updateListing as updateLocalListing,
   getListingByLocalId,
 } from "../repositories/ListingRepository.js";
@@ -8,7 +7,6 @@ import {
   getPendingOperations,
   incrementRetry,
   markCompleted,
-  markFailed,
 } from "./SyncQueue.js";
 
 import { resolve as resolveConflict } from "./ConflictResolver.js";

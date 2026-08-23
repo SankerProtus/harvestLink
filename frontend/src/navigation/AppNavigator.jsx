@@ -8,7 +8,6 @@ import { WelcomePage } from "../features/auth/pages/WelcomePage.jsx";
 import { OtpVerifyPage } from "../features/auth/pages/OtpVerifyPage.jsx";
 import { CompleteRegistrationPage } from "../features/auth/pages/CompleteRegistrationPage.jsx";
 import { GoogleSignInScreen } from "../features/auth/pages/GoogleSignInScreen.jsx";
-import { ProfilePage } from "../features/auth/pages/ProfilePage.jsx";
 import { SessionsPage } from "../features/auth/pages/SessionsPage.jsx";
 import { SyncDiagnosticsPage } from "../features/sync/pages/SyncDiagnosticsPage.jsx";
 
@@ -16,12 +15,10 @@ import { BrowseListingsPage } from "../features/marketplace/pages/BrowseListings
 import { ListingDetailPage } from "../features/marketplace/pages/ListingDetailPage.jsx";
 import { CreateListingPage } from "../features/marketplace/pages/CreateListingPage.jsx";
 import { EditListingPage } from "../features/marketplace/pages/EditListingPage.jsx";
-import { MyListingsPage } from "../features/marketplace/pages/MyListingsPage.jsx";
 
 import { MatchResultsPage } from "../features/buyerMatching/pages/MatchResultsPage.jsx";
 import { MatchDetailPage } from "../features/buyerMatching/pages/MatchDetailPage.jsx";
 
-import { MyOrdersPage } from "../features/deliveryTracking/pages/MyOrdersPage.jsx";
 import { OrderDetailPage } from "../features/deliveryTracking/pages/OrderDetailPage.jsx";
 
 import { ListingInterestPage } from "../features/marketplace/pages/ListingInterestPage.jsx";
