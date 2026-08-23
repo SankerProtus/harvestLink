@@ -26,33 +26,48 @@ export function CreateListingPage() {
   async function handleSubmit(values) {
     try {
       await createListing.mutateAsync(values);
-      // "MyListings" is a tab registered inside the nested
+      // "Listings" is a tab registered inside the nested
       // ProtectedTabNavigator, not a screen on this Stack (ProtectedStack)
       // — navigating to it by name directly fails with "was not handled by
       // any navigator". Target the parent tab navigator explicitly and ask
-      // it to switch to that tab.
-      navigation.navigate("ProtectedTabs", { screen: "MyListings" });
+      // it to switch to that tab. This works the same whether this screen
+      // is currently a pushed stack screen or the "Sell" tab's own root.
+      navigation.navigate("ProtectedTabs", { screen: "Listings" });
     } catch {
       // Already captured in createListing.error and rendered below.
     }
   }
 
+  // This component doubles as both a pushed stack screen (from "Log New
+  // Harvest" CTAs elsewhere) and the root of the "Sell" tab. A tab root has
+  // nothing to go back to, so guard against a dead back button / inert
+  // cancel affordance when there's no history to unwind.
+  const canGoBack = navigation.canGoBack();
+
   function handleCancel() {
-    navigation.goBack();
+    if (canGoBack) {
+      navigation.goBack();
+      return;
+    }
+    // No history to unwind (this is the "Sell" tab's own root) — send the
+    // farmer back to Home instead of leaving the button inert.
+    navigation.navigate("ProtectedTabs", { screen: "Home" });
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <ScreenHeader
-        title="Create New Listing"
+        title={canGoBack ? "Create New Listing" : "Sell Your Harvest"}
         subtitle={STEP_SUBTITLES[step]}
         leftAction={
-          <HeaderActionButton
-            icon="arrow-left"
-            size={20}
-            accessibilityLabel="Go back"
-            onPress={handleCancel}
-          />
+          canGoBack ? (
+            <HeaderActionButton
+              icon="arrow-left"
+              size={20}
+              accessibilityLabel="Go back"
+              onPress={handleCancel}
+            />
+          ) : null
         }
         rightAction={<StepIndicator current={step} total={2} />}
       />

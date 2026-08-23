@@ -3,37 +3,47 @@ import { View, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme/colors.js";
 import { useAuth } from "../context/AuthContext.jsx";
-
-import { BrowseListingsPage } from "../features/marketplace/pages/BrowseListingsPage.jsx";
-import { MatchResultsPage } from "../features/buyerMatching/pages/MatchResultsPage.jsx";
-import { MyListingsPage } from "../features/marketplace/pages/MyListingsPage.jsx";
-import { MyOrdersPage } from "../features/deliveryTracking/pages/MyOrdersPage.jsx";
-import { ProfilePage } from "../features/auth/pages/ProfilePage.jsx";
+import { getTabsForRole } from "./tabConfig.js";
 
 const Tab = createBottomTabNavigator();
 
 const ICONS = {
-  MyListings: { active: "grid", inactive: "grid-outline" },
-  Marketplace: { active: "storefront", inactive: "storefront-outline" },
-  MatchSearch: { active: "search", inactive: "search-outline" },
-  MyOrders: { active: "receipt", inactive: "receipt-outline" },
-  Profile: { active: "person", inactive: "person-outline" },
+  home: { active: "home", inactive: "home-outline" },
+  grid: { active: "grid", inactive: "grid-outline" },
+  "add-circle": { active: "add-circle", inactive: "add-circle-outline" },
+  storefront: { active: "storefront", inactive: "storefront-outline" },
+  search: { active: "search", inactive: "search-outline" },
+  receipt: { active: "receipt", inactive: "receipt-outline" },
+  person: { active: "person", inactive: "person-outline" },
 };
 
-function TabIcon({ route, focused, color, size }) {
-  const icons = ICONS[route.name];
+function TabIcon({ iconKey, focused, color, size }) {
+  const icons = ICONS[iconKey];
   const iconName = focused ? icons.active : icons.inactive;
 
   return (
     <View
-      className={`items-center justify-center ${focused ? "bg-primary-muted rounded-xl px-3 py-1" : ""}`}
+      style={{
+        width: 44,
+        height: 32,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: focused ? colors.primaryLight : "transparent",
+        flexShrink: 0,
+        overflow: "visible",
+      }}
     >
-      <Ionicons name={iconName} size={focused ? size + 1 : size} color={color} />
+      <Ionicons
+        name={iconName}
+        size={focused ? size + 1 : size}
+        color={color}
+      />
     </View>
   );
 }
 
-const screenOptions = ({ route }) => ({
+const baseScreenOptions = {
   headerShown: false,
   tabBarActiveTintColor: colors.primary,
   tabBarInactiveTintColor: colors.inkFaint,
@@ -56,55 +66,43 @@ const screenOptions = ({ route }) => ({
     shadowOffset: { width: 0, height: -4 },
     elevation: 12,
   },
-  tabBarIcon: ({ color, size, focused }) => (
-    <TabIcon route={route} focused={focused} color={color} size={size} />
-  ),
-});
+};
 
 export function ProtectedTabNavigator() {
   const { user } = useAuth();
-  const isFarmer = user?.role === "FARMER";
+  const tabs = getTabsForRole(user?.role);
 
   return (
     <Tab.Navigator
-      initialRouteName={isFarmer ? "MyListings" : "Marketplace"}
-      screenOptions={screenOptions}
+      initialRouteName="Home"
+      screenOptions={{
+        ...baseScreenOptions,
+        tabBarItemStyle: {
+          // Evenly divides the bar across exactly this role's tab count —
+          // every role always renders the same number of destinations, so
+          // this stays visually balanced with no reserved-but-empty slots.
+          flex: 1 / tabs.length,
+        },
+      }}
     >
-      <Tab.Screen
-        name="MyListings"
-        component={MyListingsPage}
-        options={{
-          tabBarLabel: "Dashboard",
-          tabBarButton: isFarmer ? undefined : () => null,
-        }}
-      />
-
-      <Tab.Screen
-        name="Marketplace"
-        component={BrowseListingsPage}
-        options={{
-          tabBarLabel: "Market",
-          tabBarButton: isFarmer ? () => null : undefined,
-        }}
-      />
-
-      <Tab.Screen
-        name="MatchSearch"
-        component={MatchResultsPage}
-        options={{ tabBarLabel: "Matches" }}
-      />
-
-      <Tab.Screen
-        name="MyOrders"
-        component={MyOrdersPage}
-        options={{ tabBarLabel: "Orders" }}
-      />
-
-      <Tab.Screen
-        name="Profile"
-        component={ProfilePage}
-        options={{ tabBarLabel: "Profile" }}
-      />
+      {tabs.map(({ name, label, icon, component }) => (
+        <Tab.Screen
+          key={name}
+          name={name}
+          component={component}
+          options={{
+            tabBarLabel: label,
+            tabBarIcon: ({ color, size, focused }) => (
+              <TabIcon
+                iconKey={icon}
+                focused={focused}
+                color={color}
+                size={size}
+              />
+            ),
+          }}
+        />
+      ))}
     </Tab.Navigator>
   );
 }

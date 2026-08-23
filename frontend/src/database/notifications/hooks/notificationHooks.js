@@ -14,9 +14,6 @@ export function useNotifications(params = { page: 1, limit: 20 }) {
   });
 }
 
-// Polls periodically so the badge count reflects new notifications
-// (order placed, interest expressed, review received, etc.) without
-// needing a push/socket layer.
 export function useUnreadNotificationCount() {
   return useQuery({
     queryKey: notificationQueryKeys.unreadCount,

@@ -69,6 +69,10 @@ function ProtectedNavigator() {
         component={ListingDetailPage}
       />
       <ProtectedStack.Screen
+        name="Marketplace"
+        component={BrowseListingsPage}
+      />
+      <ProtectedStack.Screen
         name="CreateListing"
         component={CreateListingPage}
       />
@@ -104,21 +108,9 @@ export function AppNavigator() {
     return null;
   }
 
-  // The onboarding carousel is a self-contained gate with no navigation
-  // dependency of its own — it's rendered before any Navigator mounts,
-  // rather than as a stack screen with a state-driven `initialRouteName`.
-  // (An earlier version tried to do this inside the stack, toggling
-  // `initialRouteName` off live state while also calling
-  // `navigation.replace()` — two overlapping mechanisms fighting to
-  // control the same transition, which produced an intermittent "no
-  // navigation context" crash. This is simpler and removes that class of
-  // bug entirely: once onboarding completes, PublicNavigator mounts
-  // fresh with a single, static, non-conditional initialRouteName.)
   if (!hasSeenOnboarding) {
     return (
-      <OnboardingPage
-        onComplete={() => setHasSeenOnboardingState(true)}
-      />
+      <OnboardingPage onComplete={() => setHasSeenOnboardingState(true)} />
     );
   }
 

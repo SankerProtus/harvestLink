@@ -1,11 +1,5 @@
 import { Platform } from "react-native";
 
-// Design System: Shadow/Elevation per DESIGN_STRATEGY.md
-// Elevation 0: None (flat)
-// Elevation 1: 0 2px 4px rgba(0,0,0,0.08) - Cards in lists
-// Elevation 2: 0 4px 8px rgba(0,0,0,0.12) - Active cards, modals
-// Elevation 3: 0 8px 16px rgba(0,0,0,0.15) - Modal dialogs
-
 export const shadows = {
   none: {},
 

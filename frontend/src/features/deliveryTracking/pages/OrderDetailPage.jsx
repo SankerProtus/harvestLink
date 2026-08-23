@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   View,
   Text,
-  Image,
   ScrollView,
   Linking,
   Share,
@@ -19,6 +18,7 @@ import { Feather } from "@expo/vector-icons";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
+import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 import { MapPin } from "../../../components/ui/MapPin.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
@@ -359,17 +359,12 @@ export function OrderDetailPage() {
           <Card className="p-4">
             <View className="flex-row gap-3">
               <View className="w-12 h-12 rounded-xl overflow-hidden bg-primary-muted">
-                {data.listing?.images?.[0] ? (
-                  <Image
-                    source={{ uri: data.listing.images[0] }}
-                    className="w-full h-full"
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View className="w-full h-full items-center justify-center">
-                    <Feather name="package" size={16} color={colors.inkFaint} />
-                  </View>
-                )}
+                <RemoteImage
+                  uri={data.listing?.images?.[0]}
+                  className="w-full h-full"
+                  iconSize={16}
+                  icon="package"
+                />
               </View>
               <View className="flex-1">
                 <Text

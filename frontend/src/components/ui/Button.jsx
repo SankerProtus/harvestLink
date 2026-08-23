@@ -3,9 +3,6 @@ import { Feather } from "@expo/vector-icons";
 import { colors } from "../../theme/colors.js";
 import { shadows } from "../../theme/shadows.js";
 
-// Design System: Buttons per SCREEN_SPECIFICATIONS_AND_COMPONENTS.md
-// All buttons follow 8pt grid: 44px height (5.5U), 8px corner radius
-
 const VARIANT_STYLES = {
   primary: "bg-primary",
   secondary: "bg-white border-[1px] border-line",

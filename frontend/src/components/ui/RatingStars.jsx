@@ -2,12 +2,6 @@ import { View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors.js";
 
-// Single source of truth for star ratings app-wide — both the tappable
-// picker (leaving a review) and the read-only display (showing an
-// average). Built on Ionicons' filled/outline/half glyph trio rather
-// than Feather's single outline-only "star", which could only vary by
-// color, never by fill — so a 2-star and a 5-star rating looked
-// identical at a glance except for a subtle tint difference.
 export function RatingStars({
   rating = 0,
   value,

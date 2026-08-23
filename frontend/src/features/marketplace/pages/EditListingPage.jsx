@@ -36,10 +36,10 @@ export function EditListingPage() {
   async function handleFormSubmit(updates) {
     try {
       await updateListing.mutateAsync({ listingId, updates });
-      // Same nested-navigator fix as CreateListingPage — "MyListings" lives
+      // Same nested-navigator fix as CreateListingPage — "Listings" lives
       // inside ProtectedTabNavigator, so it must be reached via the parent
       // "ProtectedTabs" stack screen, not navigated to directly.
-      navigation.navigate("ProtectedTabs", { screen: "MyListings" });
+      navigation.navigate("ProtectedTabs", { screen: "Listings" });
     } catch {
       // Already captured in updateListing.error and rendered below.
     }

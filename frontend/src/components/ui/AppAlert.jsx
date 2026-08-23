@@ -1,11 +1,3 @@
-// src/components/ui/AppAlert.jsx
-//
-// Themed replacement for React Native's system Alert dialog, styled to
-// match HarvestLink's design system (rounded cards, brand green, soft
-// shadows) instead of the OS's plain gray popup. Mount this once near
-// the app root (see App.js) — it renders whatever the last
-// `Alert.alert(...)` call (src/lib/alert.js) requested.
-
 import { Modal, View, Text, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useAlertStore } from "../../lib/alertStore.js";

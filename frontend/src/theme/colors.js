@@ -1,7 +1,3 @@
-// Design System Colors - Reference: DESIGN_STRATEGY.md
-// Single source of truth for color values used outside NativeWind className
-// strings. Keep in sync with tailwind.config.js.
-
 export const colors = Object.freeze({
   // Primary Brand Green - Trust, agriculture, growth
   primary: "#2D7A3B",        // Brand Green
@@ -30,9 +26,9 @@ export const colors = Object.freeze({
   infoMuted: "#DBEAFE",      // Light info background
 
   // Text - WCAG 2.2 AA Compliant
-  ink: "#1A1A1A",            // Primary text (18:1 on white)
-  inkSecondary: "#5A5A5A",   // Secondary text (7:1 on white)
-  inkMuted: "#A0A0A0",       // Disabled, tertiary (4.5:1 on white)
+  ink: "#1A1A1A",            // Primary text
+  inkSecondary: "#5A5A5A",   // Secondary text
+  inkMuted: "#A0A0A0",       // Disabled, tertiary
   inkFaint: "#A0A0A0",       // Placeholders, hints
 
   // Borders & Dividers

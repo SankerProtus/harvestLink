@@ -35,6 +35,7 @@ import { getErrorMessage } from "../../../lib/errorMap.js";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
 import { ErrorState, EmptyState } from "../../../components/ui/ScreenState.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 const CROP_TYPE_OPTIONS = Object.values(CROP_TYPES);
 const QUANTITY_UNIT_OPTIONS = Object.values(QUANTITY_UNITS);
@@ -141,6 +142,7 @@ function friendlyError(fieldName, fieldError) {
 
 export function MatchResultsPage() {
   const navigation = useNavigation();
+  const { isAuthenticated } = useAuth();
   const [submittedFilters, setSubmittedFilters] = useState(null);
   // Once a search runs, the form collapses into a compact summary bar so
   // results get the space — tapping the bar re-expands it to edit, the
@@ -211,7 +213,11 @@ export function MatchResultsPage() {
             icon="menu"
             size={20}
             accessibilityLabel="Menu"
-            onPress={() => navigation.navigate("Profile")}
+            onPress={() =>
+              isAuthenticated
+                ? navigation.navigate("ProtectedTabs", { screen: "Profile" })
+                : navigation.navigate("Welcome")
+            }
           />
         }
       />

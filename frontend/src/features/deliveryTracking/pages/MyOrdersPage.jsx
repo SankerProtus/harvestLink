@@ -247,7 +247,9 @@ export function MyOrdersPage() {
             icon="menu"
             size={20}
             accessibilityLabel="Menu"
-            onPress={() => navigation.navigate("Profile")}
+            onPress={() =>
+              navigation.navigate("ProtectedTabs", { screen: "Profile" })
+            }
           />
         }
         rightAction={

@@ -1,5 +1,3 @@
-// Type scale for screens that need programmatic font styles outside className.
-
 export const typography = Object.freeze({
   display: { fontSize: 32, lineHeight: 36, fontWeight: "800", letterSpacing: -0.6 },
   title1: { fontSize: 24, lineHeight: 28, fontWeight: "800", letterSpacing: -0.4 },

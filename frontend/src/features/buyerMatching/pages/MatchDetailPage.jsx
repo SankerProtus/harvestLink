@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Image } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -7,6 +7,8 @@ import { Feather } from "@expo/vector-icons";
 
 import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
+import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
+import { Avatar } from "../../../components/ui/Avatar.jsx";
 import {
   HeaderActionButton,
   ScreenHeader,
@@ -195,29 +197,13 @@ export function MatchDetailPage() {
           <Card className="p-5">
             {data.images?.[0] ? (
               <View className="w-full h-[120px] rounded-xl2 overflow-hidden mb-4 bg-primary-muted">
-                <Image
-                  source={{ uri: data.images[0] }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
+                <RemoteImage uri={data.images[0]} className="w-full h-full" />
               </View>
             ) : null}
 
             <View className="flex-row items-center justify-between mb-4">
               <View className="items-center flex-1">
-                <View className="w-12 h-12 rounded-full bg-primary items-center justify-center overflow-hidden">
-                  {data.farmer?.avatarUrl ? (
-                    <Image
-                      source={{ uri: data.farmer.avatarUrl }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Text className="text-white font-bold">
-                      {initialsOf(data.farmer?.name)}
-                    </Text>
-                  )}
-                </View>
+                <Avatar uri={data.farmer?.avatarUrl} name={data.farmer?.name} size="md" />
                 <Text
                   className="text-[12.5px] font-bold text-ink mt-1.5"
                   numberOfLines={1}

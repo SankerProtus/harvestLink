@@ -1,9 +1,11 @@
-import { View, Text, Image, Pressable } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
 import { PriceText } from "../../../components/ui/PriceText.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
+import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
+import { Avatar } from "../../../components/ui/Avatar.jsx";
 
 const STATUS_STYLES = {
   ACTIVE: { bg: "bg-success", text: "text-white", label: "Fresh" },
@@ -21,18 +23,12 @@ function FarmerRow({ farmer, compact = false }) {
 
   return (
     <View className={`flex-row items-center ${compact ? "mt-1" : "mt-2"}`}>
-      {farmer.avatarUrl ? (
-        <Image
-          source={{ uri: farmer.avatarUrl }}
-          className={`rounded-full mr-1.5 bg-line ${compact ? "w-4 h-4" : "w-5 h-5"}`}
-        />
-      ) : (
-        <View
-          className={`rounded-full mr-1.5 bg-primary-muted items-center justify-center ${compact ? "w-4 h-4" : "w-5 h-5"}`}
-        >
-          <Feather name="user" size={compact ? 8 : 10} color={colors.primary} />
-        </View>
-      )}
+      <Avatar
+        uri={farmer.avatarUrl}
+        name={farmer.name}
+        size="xs"
+        className={`mr-1.5 ${compact ? "w-4 h-4" : "w-5 h-5"}`}
+      />
       <Text
         className={`font-medium text-ink-muted flex-1 ${compact ? "text-[10px]" : "text-[12px]"}`}
         numberOfLines={1}
@@ -76,17 +72,11 @@ function CompactCard({
       className="flex-1 bg-white rounded-xl border border-line/50 overflow-hidden mb-3"
     >
       <View className="h-[108px] bg-primary-muted relative">
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
-        ) : (
-          <View className="w-full h-full items-center justify-center">
-            <Feather name="image" size={20} color={colors.inkFaint} />
-          </View>
-        )}
+        <RemoteImage
+          uri={imageUri}
+          className="w-full h-full"
+          iconSize={20}
+        />
         <View className="absolute top-2 left-2">
           <View className={`rounded-full px-1.5 py-0.5 ${statusStyle.bg}`}>
             <Text
@@ -164,17 +154,11 @@ function HorizontalCard({
       className="bg-white rounded-xl2 mb-3 border border-line/50 overflow-hidden flex-row"
     >
       <View className="w-[100px] h-[100px] bg-primary-muted relative">
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
-        ) : (
-          <View className="w-full h-full items-center justify-center">
-            <Feather name="image" size={20} color={colors.inkFaint} />
-          </View>
-        )}
+        <RemoteImage
+          uri={imageUri}
+          className="w-full h-full"
+          iconSize={20}
+        />
         {isDraft ? (
           <View className="absolute bottom-1 left-1 rounded-full bg-accent px-1.5 py-0.5">
             <Text className="text-[8px] font-bold text-white">Draft</Text>
@@ -285,19 +269,13 @@ export function ListingCard({
       className="bg-white rounded-xl2 mb-4 border border-line/50 overflow-hidden"
     >
       <View className="h-[160px] bg-primary-muted relative">
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
-        ) : (
-          <View className="w-full h-full items-center justify-center">
-            <View className="w-14 h-14 rounded-full bg-white/80 items-center justify-center">
-              <Feather name="image" size={22} color={colors.inkFaint} />
-            </View>
-          </View>
-        )}
+        <RemoteImage
+          uri={imageUri}
+          className="w-full h-full"
+          iconSize={22}
+          iconWrapperClassName="w-full h-full items-center justify-center"
+          iconBadgeClassName="w-14 h-14 rounded-full bg-white/80 items-center justify-center"
+        />
 
         <View className="absolute inset-x-0 top-0 h-16 bg-black/10" />
 

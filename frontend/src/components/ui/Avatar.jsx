@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View, Text, Image } from "react-native";
 
 function initialsOf(name) {
@@ -12,22 +13,26 @@ const SIZE_STYLES = {
   lg: { box: "w-24 h-24", text: "text-[28px]" },
 };
 
-// Single source of truth for "photo if we have one, else initials in a
-// colored circle" — used everywhere a person's picture shows up (order
-// counterparts, farmer cards, match details, the profile screen) so the
-// fallback never silently diverges into a generic icon on one screen and
-// initials on another.
 export function Avatar({ uri, name, size = "md", className = "" }) {
   const sizeStyle = SIZE_STYLES[size] ?? SIZE_STYLES.md;
+  // Seed/demo avatars are hotlinked from a third-party placeholder service,
+  // which occasionally 404s, times out, or is simply unreachable (offline
+  // device, restrictive network). Without this, a failed load renders as a
+  // broken-image glyph instead of falling back to initials like we do when
+  // there's no uri at all.
+  const [failed, setFailed] = useState(false);
+  const showImage = uri && !failed;
+
   return (
     <View
       className={`${sizeStyle.box} rounded-full bg-primary items-center justify-center overflow-hidden ${className}`}
     >
-      {uri ? (
+      {showImage ? (
         <Image
           source={{ uri }}
           className="w-full h-full"
           resizeMode="cover"
+          onError={() => setFailed(true)}
         />
       ) : (
         <Text className={`text-white font-extrabold ${sizeStyle.text}`}>

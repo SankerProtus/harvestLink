@@ -4,7 +4,6 @@ import {
   TextInput,
   ScrollView,
   Pressable,
-  Image,
 } from "react-native";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
@@ -18,6 +17,7 @@ import { Alert } from "../../../lib/alert.js";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Chip } from "../../../components/ui/Chip.jsx";
+import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 import { FieldLabel } from "../../../components/ui/Input.jsx";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
@@ -449,15 +449,7 @@ export function ListingForm({
                     }
                     className="w-[76px] h-[76px] rounded-xl2 overflow-hidden border border-line bg-cream items-center justify-center"
                   >
-                    {url ? (
-                      <Image
-                        source={{ uri: url }}
-                        className="w-full h-full"
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <Feather name="image" size={18} color={colors.inkFaint} />
-                    )}
+                    <RemoteImage uri={url} className="w-full h-full" iconSize={18} />
                   </Pressable>
                   {index === 0 ? (
                     <View className="absolute -top-2 -left-2 rounded-full bg-primary px-2 py-0.5 border-2 border-white">

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -334,6 +334,7 @@ export function ProfilePage() {
 
   const uploadProfilePhoto = useUploadProfilePhoto();
   const unreadNotificationCount = useUnreadNotificationCount();
+  const [failedAvatarUri, setFailedAvatarUri] = useState(null);
 
   async function handleChoosePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -493,11 +494,12 @@ export function ProfilePage() {
               className="w-[96px] h-[96px] rounded-full bg-primary items-center justify-center overflow-hidden border-[4px] border-surface"
               style={shadows.lg}
             >
-              {user.profileImageUrl ? (
+              {user.profileImageUrl && failedAvatarUri !== user.profileImageUrl ? (
                 <Image
                   source={{ uri: user.profileImageUrl }}
                   className="w-full h-full"
                   resizeMode="cover"
+                  onError={() => setFailedAvatarUri(user.profileImageUrl)}
                 />
               ) : (
                 <Text className="text-2xl font-extrabold text-white">
@@ -551,7 +553,7 @@ export function ProfilePage() {
                   label="My Listings"
                   description="Manage what you're selling"
                   icon="package"
-                  onPress={() => navigation.navigate("MyListings")}
+                  onPress={() => navigation.navigate("Listings")}
                 />
               ) : null}
               <NavRow

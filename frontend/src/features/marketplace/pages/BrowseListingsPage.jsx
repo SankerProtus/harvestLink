@@ -60,7 +60,7 @@ function toApiFilters(formValues) {
 export function BrowseListingsPage() {
   const navigation = useNavigation();
   const unreadNotificationCount = useUnreadNotificationCount();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS);
   const [page, setPage] = useState(1);
 
@@ -151,17 +151,23 @@ export function BrowseListingsPage() {
             icon="menu"
             size={20}
             accessibilityLabel="Menu"
-            onPress={() => navigation.navigate("Profile")}
+            onPress={() =>
+              isAuthenticated
+                ? navigation.navigate("ProtectedTabs", { screen: "Profile" })
+                : navigation.navigate("Welcome")
+            }
           />
         }
         rightAction={
-          <HeaderActionButton
-            icon="bell"
-            size={18}
-            accessibilityLabel="Notifications"
-            badgeCount={unreadNotificationCount.data ?? 0}
-            onPress={() => navigation.navigate("Notifications")}
-          />
+          isAuthenticated ? (
+            <HeaderActionButton
+              icon="bell"
+              size={18}
+              accessibilityLabel="Notifications"
+              badgeCount={unreadNotificationCount.data ?? 0}
+              onPress={() => navigation.navigate("Notifications")}
+            />
+          ) : null
         }
       />
 

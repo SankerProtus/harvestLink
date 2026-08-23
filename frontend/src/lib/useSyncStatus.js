@@ -15,9 +15,6 @@ function byMostRecentFirst(a, b) {
   return bTime - aTime;
 }
 
-// Real, locally-computed sync status — no mocked numbers. Pending/failed
-// counts come straight from the WatermelonDB-backed SyncQueue; connectivity
-// comes from the existing networkMonitor module.
 export function useSyncStatus() {
   const [pendingCount, setPendingCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);

@@ -3,9 +3,6 @@ import { Feather } from "@expo/vector-icons";
 import { colors } from "../../theme/colors.js";
 import { shadows } from "../../theme/shadows.js";
 
-// Design System: Text Input per SCREEN_SPECIFICATIONS_AND_COMPONENTS.md
-// Standard height: 44px, padding: 12px horizontal / 10px vertical, corner radius: 8px
-
 export function FieldLabel({ children, required = false }) {
   return (
     <Text className="text-xs font-semibold text-ink mb-2">
