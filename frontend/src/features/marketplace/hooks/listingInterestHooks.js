@@ -15,13 +15,6 @@ export function useExpressedInterestIds() {
   });
 }
 
-// Same fix as the saved-listings heart: "Express interest" is read from
-// the cached id list below, which previously only updated after
-// invalidateQueries() triggered a full network refetch — a second round
-// trip stacked on top of the mutation itself before the button visibly
-// changed. This now flips the button immediately via an optimistic
-// update in onMutate, rolls back on failure, and reconciles with the
-// server quietly afterward instead of blocking the UI on it.
 export function useExpressInterest() {
   const queryClient = useQueryClient();
   return useMutation({
