@@ -14,6 +14,7 @@ import {
   loadPersistedRefreshToken,
 } from "../api/client.js";
 import * as authApi from "../api/auth.api.js";
+import { connectSocket, disconnectSocket } from "../lib/socket.js";
 
 const AuthContext = createContext(null);
 
@@ -80,6 +81,17 @@ export function AuthProvider({ children }) {
 
     return unsubscribe;
   }, []);
+
+  //  Keep the realtime socket connection in step with auth state — one
+  //  connection per signed-in session, torn down on logout so a stale
+  //  socket never lingers with an old user's identity.
+  useEffect(() => {
+    if (user?.id) {
+      connectSocket();
+    } else {
+      disconnectSocket();
+    }
+  }, [user?.id]);
 
   //  Actions
 

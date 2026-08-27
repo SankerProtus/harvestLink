@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, Pressable, TextInput } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Avatar } from "./Avatar.jsx";
 import { RatingStars } from "./RatingStars.jsx";
 import { colors } from "../../theme/colors.js";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { getSocket } from "../../lib/socket.js";
 import {
+  reviewQueryKeys,
   useReviewComments,
   useAddReviewComment,
 } from "../../features/deliveryTracking/hooks/reviewHooks.js";
@@ -71,12 +74,79 @@ export function ReviewCard({ review, showListingTitle = false }) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [draftReply, setDraftReply] = useState("");
+  const queryClient = useQueryClient();
 
   const isParticipant =
     user?.id === review.buyerId || user?.id === review.farmerId;
 
   const comments = useReviewComments(review.id, { enabled: expanded });
   const addComment = useAddReviewComment();
+
+  // Live updates: while this card's thread is open, join its room and
+  // splice in any comment the other party posts — no polling, no manual
+  // refresh. Deduped by id so it's harmless if the same comment also
+  // arrives via the normal query-invalidation refetch (e.g. for the
+  // author's own device).
+  useEffect(() => {
+    if (!expanded) return undefined;
+
+    const socket = getSocket();
+
+    function joinRoom() {
+      socket.emit("review:join", review.id);
+    }
+
+    // Socket.IO room membership doesn't survive a reconnect (a new
+    // connection is a blank slate server-side), so a dropped wifi
+    // signal or the app backgrounding would otherwise silently stop
+    // delivering live replies for this thread until it's collapsed and
+    // reopened. Rejoining on every "connect" — including the very
+    // first one — closes that gap.
+    socket.on("connect", joinRoom);
+    joinRoom(); // covers the case where the socket is already connected
+
+    // A reconnect can also mean comments were posted while this device
+    // was offline; the live push alone only covers what's sent after
+    // we're back, so refetch once per reconnect to backfill anything
+    // missed during the gap.
+    function handleReconnect() {
+      queryClient.invalidateQueries({
+        queryKey: reviewQueryKeys.comments(review.id),
+      });
+    }
+    socket.io.on("reconnect", handleReconnect);
+
+    function handleNewComment(comment) {
+      if (comment.reviewId !== review.id) return;
+      queryClient.setQueryData(reviewQueryKeys.comments(review.id), (old) => {
+        if (!old) return old;
+        // Drop any optimistic placeholder for this same author — the
+        // real comment just arrived (via the live socket push, possibly
+        // before this device's own POST has resolved), so the temporary
+        // entry from useAddReviewComment's onMutate is now redundant and
+        // would otherwise show up as a brief visual duplicate.
+        const withoutStaleOptimistic = old.filter(
+          (existing) =>
+            !(existing._isOptimistic && existing.authorId === comment.authorId),
+        );
+        if (
+          withoutStaleOptimistic.some((existing) => existing.id === comment.id)
+        ) {
+          return withoutStaleOptimistic;
+        }
+        return [...withoutStaleOptimistic, comment];
+      });
+    }
+
+    socket.on("review:comment:new", handleNewComment);
+
+    return () => {
+      socket.off("connect", joinRoom);
+      socket.io.off("reconnect", handleReconnect);
+      socket.off("review:comment:new", handleNewComment);
+      socket.emit("review:leave", review.id);
+    };
+  }, [expanded, review.id, queryClient]);
 
   function handleToggleExpand() {
     setExpanded((current) => !current);
@@ -85,8 +155,9 @@ export function ReviewCard({ review, showListingTitle = false }) {
   function handleSubmitReply() {
     const body = draftReply.trim();
     if (!body) return;
+    const authorRole = user.id === review.buyerId ? "BUYER" : "FARMER";
     addComment.mutate(
-      { reviewId: review.id, body },
+      { reviewId: review.id, body, authorRole },
       { onSuccess: () => setDraftReply("") },
     );
   }

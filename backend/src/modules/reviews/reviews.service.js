@@ -29,6 +29,7 @@ import {
 } from "./reviews.errors.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { NOTIFICATION_TYPE } from "../notifications/notifications.constants.js";
+import { emitNewReviewComment } from "../../common/realtime/socketServer.js";
 
 async function requireOrder(orderId) {
   const order = await findOrderById(orderId);
@@ -165,6 +166,11 @@ export async function addReviewComment({ reviewId, authorId, body }) {
   }
 
   const comment = await createReviewCommentRepo({ reviewId, authorId, body });
+  const commentDTO = toReviewCommentDTO(comment, review);
+
+  // Push to anyone else currently viewing this review's thread — the
+  // author already has their own copy from this function's return value.
+  emitNewReviewComment(reviewId, commentDTO);
 
   const recipientId = isBuyer ? review.farmerId : review.buyerId;
   await createNotification({
@@ -177,5 +183,5 @@ export async function addReviewComment({ reviewId, authorId, body }) {
     listingId: null,
   });
 
-  return toReviewCommentDTO(comment, review);
+  return commentDTO;
 }

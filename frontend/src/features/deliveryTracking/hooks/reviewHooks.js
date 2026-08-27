@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as reviewsApi from "../../../api/reviews.api.js";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 export const reviewQueryKeys = {
   forOrder: (orderId) => ["reviews", "order", orderId],
@@ -40,14 +41,62 @@ export function useReviewComments(reviewId, { enabled = true } = {}) {
   });
 }
 
+// Sending a reply used to wait on a full network round trip before the
+// sender's own message appeared at all — the same lag the heart/interest
+// buttons had. This shows the reply immediately (optimistic), rolls back
+// if the request actually fails, and reconciles with the server's
+// definitive copy once it responds — without disturbing anything the
+// live socket connection may have already spliced in.
 export function useAddReviewComment() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
   return useMutation({
     mutationFn: ({ reviewId, body }) =>
       reviewsApi.createReviewComment({ reviewId, body }),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: reviewQueryKeys.comments(variables.reviewId),
+    onMutate: async ({ reviewId, body, authorRole }) => {
+      await queryClient.cancelQueries({
+        queryKey: reviewQueryKeys.comments(reviewId),
+      });
+      const previous = queryClient.getQueryData(
+        reviewQueryKeys.comments(reviewId),
+      );
+
+      const optimisticComment = {
+        id: `optimistic-${Date.now()}`,
+        reviewId,
+        authorId: user?.id,
+        authorName: user?.fullName ?? "You",
+        authorAvatarUrl: user?.profileImageUrl ?? null,
+        authorRole,
+        body,
+        createdAt: new Date().toISOString(),
+        _isOptimistic: true,
+      };
+
+      queryClient.setQueryData(reviewQueryKeys.comments(reviewId), (old) =>
+        old ? [...old, optimisticComment] : [optimisticComment],
+      );
+
+      return { previous, reviewId };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(
+          reviewQueryKeys.comments(context.reviewId),
+          context.previous,
+        );
+      }
+    },
+    onSuccess: (createdComment, { reviewId }) => {
+      queryClient.setQueryData(reviewQueryKeys.comments(reviewId), (old) => {
+        const withoutOptimistic = (old ?? []).filter(
+          (comment) => !comment._isOptimistic,
+        );
+        if (withoutOptimistic.some((comment) => comment.id === createdComment.id)) {
+          return withoutOptimistic;
+        }
+        return [...withoutOptimistic, createdComment];
       });
     },
   });

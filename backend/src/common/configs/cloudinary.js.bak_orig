@@ -1,3 +1,0 @@
-export function uploadImageBuffer(buffer) {
-  return Promise.resolve("https://res.cloudinary.com/fake/image/upload/mock.jpg");
-}

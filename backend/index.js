@@ -1,5 +1,6 @@
 import express from "express";
 import helmet from "helmet";
+import cors from "cors";
 import authRoutes from "./src/modules/auth/auth.routes.js";
 import marketplaceRoutes from "./src/modules/marketplace/marketplace.routes.js";
 import buyerMatchingRoutes from "./src/modules/buyerMatching/buyerMatching.routes.js";
@@ -15,6 +16,12 @@ import { uptime } from "node:process";
 const app = express();
 
 app.use(helmet());
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(
+  cors({
+    origin: corsOrigin ? corsOrigin.split(",") : true,
+  }),
+);
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 

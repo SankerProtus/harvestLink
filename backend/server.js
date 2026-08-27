@@ -1,7 +1,10 @@
 import "dotenv/config";
 
+import { createServer } from "node:http";
+
 import { logger } from "./src/common/utils/logger.js";
 import { prisma } from "./src/common/utils/prismaClient.js";
+import { initSocketServer } from "./src/common/realtime/socketServer.js";
 import app from "./index.js";
 
 const PORT = process.env.PORT || 3000;
@@ -9,7 +12,10 @@ const PORT = process.env.PORT || 3000;
 let httpServer;
 
 function start() {
-  httpServer = app.listen(PORT, () => {
+  httpServer = createServer(app);
+  initSocketServer(httpServer);
+
+  httpServer.listen(PORT, () => {
     logger.info("Server started", {
       port: PORT,
       env: process.env.NODE_ENV ?? "development",
