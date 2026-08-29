@@ -6,6 +6,8 @@ import {
   Pressable,
   Dimensions,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Alert } from "../../../lib/alert.js";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -421,182 +423,191 @@ export function ListingDetailPage() {
 
   return (
     <View className="flex-1 bg-surface">
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: canOrder ? 120 : 24 }}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
-        <ImageCarousel images={images} title={data.title} />
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: canOrder ? 120 : 24 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <ImageCarousel images={images} title={data.title} />
 
-        <View className="px-5 pt-5 -mt-5">
-          <Card className="p-5">
-            <View className="flex-row justify-between items-start gap-3">
-              <Text className="text-[22px] font-extrabold text-ink flex-1 tracking-[-0.3px]">
-                {data.title}
-              </Text>
-              <View className={`rounded-full px-3 py-1.5 ${statusStyle.bg}`}>
-                <Text className={`text-[11px] font-bold ${statusStyle.text}`}>
-                  {statusStyle.label}
+          <View className="px-5 pt-5 -mt-5">
+            <Card className="p-5">
+              <View className="flex-row justify-between items-start gap-3">
+                <Text className="text-[22px] font-extrabold text-ink flex-1 tracking-[-0.3px]">
+                  {data.title}
                 </Text>
-              </View>
-            </View>
-
-            <View className="flex-row items-center mt-2.5">
-              <Feather name="map-pin" size={13} color={colors.inkFaint} />
-              <Text className="text-[13px] text-ink-muted ml-1.5">
-                {data.location}
-              </Text>
-            </View>
-
-            {data.farmer ? (
-              <Pressable
-                onPress={() =>
-                  navigation.navigate("FarmerProfile", {
-                    farmerId: data.farmer.id,
-                  })
-                }
-                accessibilityRole="button"
-                accessibilityLabel={`View ${data.farmer.name}'s profile`}
-                className="flex-row items-center mt-4 pt-4 border-t border-line/60"
-              >
-                <Avatar
-                  uri={data.farmer.avatarUrl}
-                  name={data.farmer.name}
-                  size="sm"
-                  className="mr-3"
-                />
-                <View className="flex-1">
-                  <View className="flex-row items-center">
-                    <Text className="text-[14px] font-bold text-ink mr-1">
-                      {data.farmer.name}
-                    </Text>
-                    {data.farmer.isVerified ? (
-                      <Feather
-                        name="check-circle"
-                        size={13}
-                        color={colors.primary}
-                      />
-                    ) : null}
-                  </View>
-                  <View className="mt-1">
-                    <RatingStars
-                      rating={data.farmer.rating}
-                      reviewCount={data.farmer.reviewCount}
-                      size={13}
-                      showValue={data.farmer.rating != null}
-                      emptyLabel="No ratings yet"
-                    />
-                  </View>
+                <View className={`rounded-full px-3 py-1.5 ${statusStyle.bg}`}>
+                  <Text className={`text-[11px] font-bold ${statusStyle.text}`}>
+                    {statusStyle.label}
+                  </Text>
                 </View>
-                <Feather
-                  name="chevron-right"
-                  size={18}
-                  color={colors.inkFaint}
-                />
-              </Pressable>
-            ) : null}
-          </Card>
-        </View>
+              </View>
 
-        <View className="px-5 mt-4">
-          <Card className="p-5">
-            <View className="flex-row justify-between items-baseline">
-              <View>
-                <PriceText amount={data.pricePerUnit} size="lg" />
-                <Text className="text-[12px] text-ink-muted mt-0.5">
-                  per {formatUnit(data.quantityUnit)}
+              <View className="flex-row items-center mt-2.5">
+                <Feather name="map-pin" size={13} color={colors.inkFaint} />
+                <Text className="text-[13px] text-ink-muted ml-1.5">
+                  {data.location}
                 </Text>
               </View>
-              <View className="items-end">
-                <Text className="text-[15px] font-bold text-ink">
-                  {data.quantity} {formatUnit(data.quantityUnit)}
-                </Text>
-                <Text className="text-[10px] text-ink-faint uppercase tracking-wide font-semibold mt-0.5">
-                  available
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </View>
 
-        {data.description ? (
-          <View className="px-5 mt-5">
-            <SectionLabel>Description</SectionLabel>
-            <Card className="p-4">
-              <Text className="text-[14px] text-ink-secondary leading-[22px]">
-                {data.description}
-              </Text>
+              {data.farmer ? (
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate("FarmerProfile", {
+                      farmerId: data.farmer.id,
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${data.farmer.name}'s profile`}
+                  className="flex-row items-center mt-4 pt-4 border-t border-line/60"
+                >
+                  <Avatar
+                    uri={data.farmer.avatarUrl}
+                    name={data.farmer.name}
+                    size="sm"
+                    className="mr-3"
+                  />
+                  <View className="flex-1">
+                    <View className="flex-row items-center">
+                      <Text className="text-[14px] font-bold text-ink mr-1">
+                        {data.farmer.name}
+                      </Text>
+                      {data.farmer.isVerified ? (
+                        <Feather
+                          name="check-circle"
+                          size={13}
+                          color={colors.primary}
+                        />
+                      ) : null}
+                    </View>
+                    <View className="mt-1">
+                      <RatingStars
+                        rating={data.farmer.rating}
+                        reviewCount={data.farmer.reviewCount}
+                        size={13}
+                        showValue={data.farmer.rating != null}
+                        emptyLabel="No ratings yet"
+                      />
+                    </View>
+                  </View>
+                  <Feather
+                    name="chevron-right"
+                    size={18}
+                    color={colors.inkFaint}
+                  />
+                </Pressable>
+              ) : null}
             </Card>
           </View>
-        ) : null}
 
-        <View className="px-5 mt-5">
-          <SectionLabel>Details</SectionLabel>
-          <Card padded={false}>
-            {data.harvestDate ? (
-              <View className="flex-row justify-between items-center py-3.5 px-4 border-b border-line/60">
-                <Text className="text-[13px] text-ink-muted">Harvest date</Text>
+          <View className="px-5 mt-4">
+            <Card className="p-5">
+              <View className="flex-row justify-between items-baseline">
+                <View>
+                  <PriceText amount={data.pricePerUnit} size="lg" />
+                  <Text className="text-[12px] text-ink-muted mt-0.5">
+                    per {formatUnit(data.quantityUnit)}
+                  </Text>
+                </View>
+                <View className="items-end">
+                  <Text className="text-[15px] font-bold text-ink">
+                    {data.quantity} {formatUnit(data.quantityUnit)}
+                  </Text>
+                  <Text className="text-[10px] text-ink-faint uppercase tracking-wide font-semibold mt-0.5">
+                    available
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+
+          {data.description ? (
+            <View className="px-5 mt-5">
+              <SectionLabel>Description</SectionLabel>
+              <Card className="p-4">
+                <Text className="text-[14px] text-ink-secondary leading-[22px]">
+                  {data.description}
+                </Text>
+              </Card>
+            </View>
+          ) : null}
+
+          <View className="px-5 mt-5">
+            <SectionLabel>Details</SectionLabel>
+            <Card padded={false}>
+              {data.harvestDate ? (
+                <View className="flex-row justify-between items-center py-3.5 px-4 border-b border-line/60">
+                  <Text className="text-[13px] text-ink-muted">
+                    Harvest date
+                  </Text>
+                  <Text className="text-[13px] font-semibold text-ink">
+                    {formatDate(data.harvestDate)}
+                  </Text>
+                </View>
+              ) : null}
+              <View className="flex-row justify-between items-center py-3.5 px-4">
+                <Text className="text-[13px] text-ink-muted">Listed on</Text>
                 <Text className="text-[13px] font-semibold text-ink">
-                  {formatDate(data.harvestDate)}
+                  {formatDate(data.createdAt)}
                 </Text>
               </View>
-            ) : null}
-            <View className="flex-row justify-between items-center py-3.5 px-4">
-              <Text className="text-[13px] text-ink-muted">Listed on</Text>
-              <Text className="text-[13px] font-semibold text-ink">
-                {formatDate(data.createdAt)}
-              </Text>
-            </View>
-          </Card>
-        </View>
-
-        <View className="px-5 mt-5">
-          <View className="flex-row items-center justify-between mb-1">
-            <SectionLabel>Reviews</SectionLabel>
-            {(listingReviews.data?.pagination?.total ?? 0) > 0 ? (
-              <Pressable
-                onPress={() =>
-                  navigation.navigate("FarmerProfile", {
-                    farmerId: data.farmer?.id,
-                  })
-                }
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="See all reviews for this farmer"
-              >
-                <Text className="text-[12.5px] font-bold text-primary">
-                  See all
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-          {listingReviews.isLoading ? (
-            <Text className="text-[12.5px] text-ink-faint mt-2">
-              Loading reviews…
-            </Text>
-          ) : (listingReviews.data?.results ?? []).length === 0 ? (
-            <Card className="p-4">
-              <Text className="text-[13px] text-ink-muted">
-                No reviews yet for this product.
-              </Text>
             </Card>
-          ) : (
-            listingReviews.data.results.map((review) => (
-              <ReviewCard key={review.id} review={review} />
-            ))
-          )}
-        </View>
-
-        {canOrder ? (
-          <View className="px-5 mt-5">
-            <SectionLabel>Quantity</SectionLabel>
-            <QuantityStepper
-              value={requestedQuantity}
-              onChange={setRequestedQuantity}
-              max={Math.max(1, Math.floor(Number(data.quantity)))}
-            />
           </View>
-        ) : null}
-      </ScrollView>
+
+          <View className="px-5 mt-5">
+            <View className="flex-row items-center justify-between mb-1">
+              <SectionLabel>Reviews</SectionLabel>
+              {(listingReviews.data?.pagination?.total ?? 0) > 0 ? (
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate("FarmerProfile", {
+                      farmerId: data.farmer?.id,
+                    })
+                  }
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="See all reviews for this farmer"
+                >
+                  <Text className="text-[12.5px] font-bold text-primary">
+                    See all
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {listingReviews.isLoading ? (
+              <Text className="text-[12.5px] text-ink-faint mt-2">
+                Loading reviews…
+              </Text>
+            ) : (listingReviews.data?.results ?? []).length === 0 ? (
+              <Card className="p-4">
+                <Text className="text-[13px] text-ink-muted">
+                  No reviews yet for this product.
+                </Text>
+              </Card>
+            ) : (
+              listingReviews.data.results.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))
+            )}
+          </View>
+
+          {canOrder ? (
+            <View className="px-5 mt-5">
+              <SectionLabel>Quantity</SectionLabel>
+              <QuantityStepper
+                value={requestedQuantity}
+                onChange={setRequestedQuantity}
+                max={Math.max(1, Math.floor(Number(data.quantity)))}
+              />
+            </View>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View
         className="absolute left-5 right-5 flex-row justify-between z-10"

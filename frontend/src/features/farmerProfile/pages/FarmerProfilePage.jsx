@@ -1,4 +1,10 @@
-import { View, Text, FlatList } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
@@ -60,39 +66,46 @@ export function FarmerProfilePage() {
         }
       />
 
-      {reviews.isLoading ? (
-        <LoadingState label="Loading profile…" />
-      ) : reviews.isError ? (
-        <ErrorState
-          title="Couldn't load this profile"
-          message={getErrorMessage(reviews.error)}
-          onRetry={() => reviews.refetch()}
-        />
-      ) : (
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 8,
-            paddingBottom: 24,
-          }}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            farmer ? <FarmerSummaryHeader farmer={farmer} /> : null
-          }
-          ListEmptyComponent={
-            <EmptyState
-              icon="star"
-              title="No reviews yet"
-              description="Reviews from buyers will show up here once orders are delivered and rated."
-            />
-          }
-          renderItem={({ item }) => (
-            <ReviewCard review={item} showListingTitle />
-          )}
-        />
-      )}
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        {reviews.isLoading ? (
+          <LoadingState label="Loading profile…" />
+        ) : reviews.isError ? (
+          <ErrorState
+            title="Couldn't load this profile"
+            message={getErrorMessage(reviews.error)}
+            onRetry={() => reviews.refetch()}
+          />
+        ) : (
+          <FlatList
+            data={results}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 8,
+              paddingBottom: 24,
+            }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            ListHeaderComponent={
+              farmer ? <FarmerSummaryHeader farmer={farmer} /> : null
+            }
+            ListEmptyComponent={
+              <EmptyState
+                icon="star"
+                title="No reviews yet"
+                description="Reviews from buyers will show up here once orders are delivered and rated."
+              />
+            }
+            renderItem={({ item }) => (
+              <ReviewCard review={item} showListingTitle />
+            )}
+          />
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
