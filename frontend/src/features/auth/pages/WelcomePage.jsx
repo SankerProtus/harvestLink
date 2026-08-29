@@ -224,11 +224,9 @@ export function WelcomePage() {
           />
           <View className="absolute inset-0 bg-primary-dark/55" />
 
-          {/* Logo — pinned to the top-left corner, independent of the
-              headline below so it always sits flush under the status bar. */}
           <View
             className="absolute left-5 flex-row items-center"
-            style={{ top: insets.top + 12 }}
+            style={{ top: insets.top - 8 }}
           >
             <View
               className="h-10 w-10 rounded-xl bg-white items-center justify-center overflow-hidden"
