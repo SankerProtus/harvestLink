@@ -9,6 +9,7 @@ import { OtpVerifyPage } from "../features/auth/pages/OtpVerifyPage.jsx";
 import { CompleteRegistrationPage } from "../features/auth/pages/CompleteRegistrationPage.jsx";
 import { GoogleSignInScreen } from "../features/auth/pages/GoogleSignInScreen.jsx";
 import { SessionsPage } from "../features/auth/pages/SessionsPage.jsx";
+import { VerifyPhonePage } from "../features/auth/pages/VerifyPhonePage.jsx";
 import { SyncDiagnosticsPage } from "../features/sync/pages/SyncDiagnosticsPage.jsx";
 
 import { BrowseListingsPage } from "../features/marketplace/pages/BrowseListingsPage.jsx";
@@ -91,6 +92,7 @@ function ProtectedNavigator() {
         component={NotificationsPage}
       />
       <ProtectedStack.Screen name="Sessions" component={SessionsPage} />
+      <ProtectedStack.Screen name="VerifyPhone" component={VerifyPhonePage} />
       <ProtectedStack.Screen
         name="SyncDiagnostics"
         component={SyncDiagnosticsPage}

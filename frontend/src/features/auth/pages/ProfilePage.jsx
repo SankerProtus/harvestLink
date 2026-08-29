@@ -609,6 +609,19 @@ export function ProfilePage() {
           <View className="mt-6">
             <SectionLabel>Account details</SectionLabel>
             <GroupCard>
+              {!user.phoneVerifiedAt ? (
+                <NavRow
+                  label="Verify phone number"
+                  description={
+                    user.phone
+                      ? "Confirm your number to get verified"
+                      : "Add a number to get verified"
+                  }
+                  icon="shield"
+                  value="Pending"
+                  onPress={() => navigation.navigate("VerifyPhone")}
+                />
+              ) : null}
               <InfoRow label="Phone" value={user.phone ?? "Not set"} />
               <InfoRow
                 label="Phone verified"
