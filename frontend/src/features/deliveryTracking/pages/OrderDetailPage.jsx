@@ -6,6 +6,8 @@ import {
   Linking,
   Share,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -352,312 +354,325 @@ export function OrderDetailPage() {
           />
         }
       />
-      <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
-        <View className="px-5 pt-4">
-          <Card className="p-4">
-            <View className="flex-row gap-3">
-              <View className="w-12 h-12 rounded-xl overflow-hidden bg-primary-muted">
-                <RemoteImage
-                  uri={data.listing?.images?.[0]}
-                  className="w-full h-full"
-                  iconSize={16}
-                  icon="package"
-                />
-              </View>
-              <View className="flex-1">
-                <Text
-                  className="text-[14.5px] font-bold text-ink"
-                  numberOfLines={1}
-                >
-                  {data.listing?.title ?? "Order"}
-                </Text>
-                <Text className="text-[11.5px] text-ink-muted mt-0.5">
-                  {formatDate(data.createdAt)}
-                </Text>
-              </View>
-              <PriceText amount={total} size="sm" />
-            </View>
-
-            {data.status === "CANCELLED" ? (
-              <View className="flex-row items-center justify-between mt-4 pt-4 border-t border-line/70">
-                <Text className="text-[13px] font-semibold text-ink-muted">
-                  Status
-                </Text>
-                <View className="rounded-full px-3 py-1.5 bg-line">
-                  <Text className="text-[11.5px] font-bold text-ink-muted">
-                    Cancelled
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View className="mt-5 pt-4 border-t border-line/70">
-                <StatusStepper status={data.status} />
-              </View>
-            )}
-          </Card>
-        </View>
-
-        <View className="px-5 mt-6">
-          <SectionLabel>Order summary</SectionLabel>
-          <Card padded={false}>
-            <InfoRow label="Quantity" value={data.quantity} />
-            <InfoRow
-              label="Price per unit"
-              value={formatCurrency(data.pricePerUnitAtOrder)}
-              isLast
-            />
-          </Card>
-        </View>
-
-        {counterpart ? (
-          <View className="px-5 mt-6">
-            <SectionLabel>{isBuyer ? "Farmer" : "Buyer"}</SectionLabel>
-            <Card className="flex-row items-center p-4">
-              <Avatar
-                uri={counterpart.avatarUrl}
-                name={counterpart.name}
-                size="md"
-                className="mr-3"
-              />
-              <View className="flex-1">
-                <Text
-                  className="text-[14.5px] font-bold text-ink"
-                  numberOfLines={1}
-                >
-                  {counterpart.name}
-                </Text>
-                <Text className="text-[12px] text-ink-muted mt-0.5">
-                  {isBuyer ? "Farmer" : "Buyer"}
-                </Text>
-              </View>
-              {counterpart.phone ? (
-                <View style={{ width: 100 }}>
-                  <Button
-                    label="Call"
-                    icon="phone"
-                    variant="secondary"
-                    onPress={() => Linking.openURL(`tel:${counterpart.phone}`)}
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 28 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="px-5 pt-4">
+            <Card className="p-4">
+              <View className="flex-row gap-3">
+                <View className="w-12 h-12 rounded-xl overflow-hidden bg-primary-muted">
+                  <RemoteImage
+                    uri={data.listing?.images?.[0]}
+                    className="w-full h-full"
+                    iconSize={16}
+                    icon="package"
                   />
                 </View>
-              ) : null}
-            </Card>
-          </View>
-        ) : null}
-
-        <View className="px-5 mt-6">
-          <SectionLabel>Delivery location</SectionLabel>
-          <Card className="p-5">
-            {hasLocation ? (
-              <>
-                <View
-                  style={{
-                    width: "100%",
-                    height: 190,
-                    borderRadius: 16,
-                    overflow: "hidden",
-                  }}
-                >
-                  <Map
-                    style={{ flex: 1 }}
-                    mapStyle={OSM_RASTER_STYLE}
-                    attribution
-                    logo={false}
+                <View className="flex-1">
+                  <Text
+                    className="text-[14.5px] font-bold text-ink"
+                    numberOfLines={1}
                   >
-                    <Camera
-                      initialViewState={{
-                        center: [data.longitude, data.latitude],
-                        zoom: DEFAULT_DELIVERY_MAP_ZOOM,
-                      }}
-                    />
-                    <Marker lngLat={[data.longitude, data.latitude]}>
-                      <MapPin />
-                    </Marker>
-                  </Map>
+                    {data.listing?.title ?? "Order"}
+                  </Text>
+                  <Text className="text-[11.5px] text-ink-muted mt-0.5">
+                    {formatDate(data.createdAt)}
+                  </Text>
                 </View>
-                <Text className="text-[11.5px] text-ink-muted mt-2.5">
-                  Last updated {formatDate(data.locationReportedAt)}
-                </Text>
-              </>
-            ) : (
-              <View className="h-[190px] rounded-xl2 bg-cream items-center justify-center border border-line/50">
-                <Feather name="map-pin" size={22} color={colors.inkFaint} />
-                <Text className="text-[13px] text-ink-muted mt-2">
-                  No location reported yet.
-                </Text>
+                <PriceText amount={total} size="sm" />
               </View>
-            )}
 
-            {locationError ? (
-              <Text
-                className="text-[12.5px] text-danger mt-2"
-                accessibilityRole="alert"
-              >
-                {getErrorMessage(locationError)}
-              </Text>
-            ) : null}
-
-            {canReportLocation ? (
-              <>
-                <View className="h-3" />
-                <Button
-                  label="Report My Current Location"
-                  icon="navigation"
-                  onPress={handleReportLocationPress}
-                  variant="secondary"
-                  isLoading={reportLocation.isPending}
-                />
-              </>
-            ) : null}
-          </Card>
-        </View>
-
-        {availableActions.length > 0 ? (
-          <View className="px-5 mt-6">
-            <SectionLabel>Update status</SectionLabel>
-            <Card className="p-5">
-              {updateStatus.isError ? (
-                <Text
-                  className="text-[13px] text-danger mb-3"
-                  accessibilityRole="alert"
-                >
-                  {getErrorMessage(updateStatus.error)}
-                </Text>
-              ) : null}
-              {availableActions.map((action, index) => (
-                <View key={action.to} className={index > 0 ? "mt-2.5" : ""}>
-                  <Button
-                    label={action.label}
-                    onPress={() => handleTransitionPress(action)}
-                    variant={action.to === "CANCELLED" ? "danger" : "primary"}
-                    isLoading={updateStatus.isPending}
-                  />
-                </View>
-              ))}
-            </Card>
-          </View>
-        ) : null}
-
-        {data.status === "DELIVERED" && (isBuyer || isFarmer) ? (
-          <View className="px-5 mt-6">
-            <SectionLabel>Rating</SectionLabel>
-            <Card className="p-5">
-              {review.isLoading ? (
-                <View className="flex-row items-center py-2">
-                  <Feather name="loader" size={14} color={colors.inkFaint} />
-                  <Text className="text-[13px] text-ink-muted ml-2">
-                    Loading review…
+              {data.status === "CANCELLED" ? (
+                <View className="flex-row items-center justify-between mt-4 pt-4 border-t border-line/70">
+                  <Text className="text-[13px] font-semibold text-ink-muted">
+                    Status
                   </Text>
-                </View>
-              ) : review.data ? (
-                <View>
-                  <View className="flex-row items-center">
-                    <Avatar
-                      uri={
-                        isBuyer ? user?.profileImageUrl : counterpart?.avatarUrl
-                      }
-                      name={isBuyer ? user?.fullName : counterpart?.name}
-                      size="sm"
-                      className="mr-2.5"
-                    />
-                    <View className="flex-1">
-                      <Text className="text-[13.5px] font-bold text-ink">
-                        {isBuyer
-                          ? "Your rating"
-                          : (counterpart?.name ?? "Buyer")}
-                      </Text>
-                      <Text className="text-[11px] text-ink-muted mt-0.5">
-                        {timeAgo(review.data.createdAt)}
-                      </Text>
-                    </View>
-                    <RatingStars rating={review.data.rating} size={14} />
-                  </View>
-
-                  {review.data.comment ? (
-                    <View className="mt-3.5 pl-[42px]">
-                      <Text className="text-[13.5px] text-ink leading-[19px]">
-                        {review.data.comment}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View className="mt-3.5 pl-[42px]">
-                      <Text className="text-[12.5px] text-ink-faint italic">
-                        No written comment was left.
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              ) : isBuyer ? (
-                <View>
-                  <Text className="text-[14.5px] font-bold text-ink mb-1">
-                    Rate this delivery
-                  </Text>
-                  <Text className="text-[12.5px] text-ink-muted mb-4">
-                    Your rating helps other buyers trust{" "}
-                    {counterpart?.name ?? "this farmer"}.
-                  </Text>
-
-                  <View className="items-center py-1">
-                    <RatingStars
-                      interactive
-                      value={draftRating}
-                      onChange={setDraftRating}
-                      size={34}
-                    />
-                    <Text className="text-[12.5px] font-semibold text-ink-muted mt-2.5">
-                      {RATING_LABELS[draftRating]}
+                  <View className="rounded-full px-3 py-1.5 bg-line">
+                    <Text className="text-[11.5px] font-bold text-ink-muted">
+                      Cancelled
                     </Text>
-                  </View>
-
-                  <TextInput
-                    placeholder="Add a comment (optional)"
-                    placeholderTextColor={colors.inkFaint}
-                    value={draftComment}
-                    onChangeText={setDraftComment}
-                    multiline
-                    maxLength={500}
-                    className="mt-4 rounded-xl2 bg-cream border border-line/50 px-4 py-3 text-[13.5px] text-ink min-h-[70px]"
-                    textAlignVertical="top"
-                  />
-                  <Text className="text-[10.5px] text-ink-faint text-right mt-1">
-                    {draftComment.length}/500
-                  </Text>
-
-                  {createReview.isError ? (
-                    <Text
-                      className="text-[12.5px] text-danger mt-1"
-                      accessibilityRole="alert"
-                    >
-                      {getErrorMessage(createReview.error)}
-                    </Text>
-                  ) : null}
-
-                  <View className="mt-3">
-                    <Button
-                      label="Submit Rating"
-                      onPress={handleSubmitReview}
-                      disabled={draftRating < 1}
-                      isLoading={createReview.isPending}
-                    />
                   </View>
                 </View>
               ) : (
-                <View className="items-center py-3">
-                  <View className="w-11 h-11 rounded-full bg-primary-muted items-center justify-center mb-2.5">
-                    <Feather name="star" size={18} color={colors.primary} />
-                  </View>
-                  <Text className="text-[13px] font-semibold text-ink">
-                    Awaiting the buyer's rating
-                  </Text>
-                  <Text className="text-[12px] text-ink-muted text-center mt-1">
-                    {counterpart?.name ?? "The buyer"} hasn't rated this
-                    delivery yet.
-                  </Text>
+                <View className="mt-5 pt-4 border-t border-line/70">
+                  <StatusStepper status={data.status} />
                 </View>
               )}
             </Card>
           </View>
-        ) : null}
-      </ScrollView>
+
+          <View className="px-5 mt-6">
+            <SectionLabel>Order summary</SectionLabel>
+            <Card padded={false}>
+              <InfoRow label="Quantity" value={data.quantity} />
+              <InfoRow
+                label="Price per unit"
+                value={formatCurrency(data.pricePerUnitAtOrder)}
+                isLast
+              />
+            </Card>
+          </View>
+
+          {counterpart ? (
+            <View className="px-5 mt-6">
+              <SectionLabel>{isBuyer ? "Farmer" : "Buyer"}</SectionLabel>
+              <Card className="flex-row items-center p-4">
+                <Avatar
+                  uri={counterpart.avatarUrl}
+                  name={counterpart.name}
+                  size="md"
+                  className="mr-3"
+                />
+                <View className="flex-1">
+                  <Text
+                    className="text-[14.5px] font-bold text-ink"
+                    numberOfLines={1}
+                  >
+                    {counterpart.name}
+                  </Text>
+                  <Text className="text-[12px] text-ink-muted mt-0.5">
+                    {isBuyer ? "Farmer" : "Buyer"}
+                  </Text>
+                </View>
+                {counterpart.phone ? (
+                  <View style={{ width: 100 }}>
+                    <Button
+                      label="Call"
+                      icon="phone"
+                      variant="secondary"
+                      onPress={() =>
+                        Linking.openURL(`tel:${counterpart.phone}`)
+                      }
+                    />
+                  </View>
+                ) : null}
+              </Card>
+            </View>
+          ) : null}
+
+          <View className="px-5 mt-6">
+            <SectionLabel>Delivery location</SectionLabel>
+            <Card className="p-5">
+              {hasLocation ? (
+                <>
+                  <View
+                    style={{
+                      width: "100%",
+                      height: 190,
+                      borderRadius: 16,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Map
+                      style={{ flex: 1 }}
+                      mapStyle={OSM_RASTER_STYLE}
+                      attribution
+                      logo={false}
+                    >
+                      <Camera
+                        initialViewState={{
+                          center: [data.longitude, data.latitude],
+                          zoom: DEFAULT_DELIVERY_MAP_ZOOM,
+                        }}
+                      />
+                      <Marker lngLat={[data.longitude, data.latitude]}>
+                        <MapPin />
+                      </Marker>
+                    </Map>
+                  </View>
+                  <Text className="text-[11.5px] text-ink-muted mt-2.5">
+                    Last updated {formatDate(data.locationReportedAt)}
+                  </Text>
+                </>
+              ) : (
+                <View className="h-[190px] rounded-xl2 bg-cream items-center justify-center border border-line/50">
+                  <Feather name="map-pin" size={22} color={colors.inkFaint} />
+                  <Text className="text-[13px] text-ink-muted mt-2">
+                    No location reported yet.
+                  </Text>
+                </View>
+              )}
+
+              {locationError ? (
+                <Text
+                  className="text-[12.5px] text-danger mt-2"
+                  accessibilityRole="alert"
+                >
+                  {getErrorMessage(locationError)}
+                </Text>
+              ) : null}
+
+              {canReportLocation ? (
+                <>
+                  <View className="h-3" />
+                  <Button
+                    label="Report My Current Location"
+                    icon="navigation"
+                    onPress={handleReportLocationPress}
+                    variant="secondary"
+                    isLoading={reportLocation.isPending}
+                  />
+                </>
+              ) : null}
+            </Card>
+          </View>
+
+          {availableActions.length > 0 ? (
+            <View className="px-5 mt-6">
+              <SectionLabel>Update status</SectionLabel>
+              <Card className="p-5">
+                {updateStatus.isError ? (
+                  <Text
+                    className="text-[13px] text-danger mb-3"
+                    accessibilityRole="alert"
+                  >
+                    {getErrorMessage(updateStatus.error)}
+                  </Text>
+                ) : null}
+                {availableActions.map((action, index) => (
+                  <View key={action.to} className={index > 0 ? "mt-2.5" : ""}>
+                    <Button
+                      label={action.label}
+                      onPress={() => handleTransitionPress(action)}
+                      variant={action.to === "CANCELLED" ? "danger" : "primary"}
+                      isLoading={updateStatus.isPending}
+                    />
+                  </View>
+                ))}
+              </Card>
+            </View>
+          ) : null}
+
+          {data.status === "DELIVERED" && (isBuyer || isFarmer) ? (
+            <View className="px-5 mt-6">
+              <SectionLabel>Rating</SectionLabel>
+              <Card className="p-5">
+                {review.isLoading ? (
+                  <View className="flex-row items-center py-2">
+                    <Feather name="loader" size={14} color={colors.inkFaint} />
+                    <Text className="text-[13px] text-ink-muted ml-2">
+                      Loading review…
+                    </Text>
+                  </View>
+                ) : review.data ? (
+                  <View>
+                    <View className="flex-row items-center">
+                      <Avatar
+                        uri={
+                          isBuyer
+                            ? user?.profileImageUrl
+                            : counterpart?.avatarUrl
+                        }
+                        name={isBuyer ? user?.fullName : counterpart?.name}
+                        size="sm"
+                        className="mr-2.5"
+                      />
+                      <View className="flex-1">
+                        <Text className="text-[13.5px] font-bold text-ink">
+                          {isBuyer
+                            ? "Your rating"
+                            : (counterpart?.name ?? "Buyer")}
+                        </Text>
+                        <Text className="text-[11px] text-ink-muted mt-0.5">
+                          {timeAgo(review.data.createdAt)}
+                        </Text>
+                      </View>
+                      <RatingStars rating={review.data.rating} size={14} />
+                    </View>
+
+                    {review.data.comment ? (
+                      <View className="mt-3.5 pl-[42px]">
+                        <Text className="text-[13.5px] text-ink leading-[19px]">
+                          {review.data.comment}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View className="mt-3.5 pl-[42px]">
+                        <Text className="text-[12.5px] text-ink-faint italic">
+                          No written comment was left.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ) : isBuyer ? (
+                  <View>
+                    <Text className="text-[14.5px] font-bold text-ink mb-1">
+                      Rate this delivery
+                    </Text>
+                    <Text className="text-[12.5px] text-ink-muted mb-4">
+                      Your rating helps other buyers trust{" "}
+                      {counterpart?.name ?? "this farmer"}.
+                    </Text>
+
+                    <View className="items-center py-1">
+                      <RatingStars
+                        interactive
+                        value={draftRating}
+                        onChange={setDraftRating}
+                        size={34}
+                      />
+                      <Text className="text-[12.5px] font-semibold text-ink-muted mt-2.5">
+                        {RATING_LABELS[draftRating]}
+                      </Text>
+                    </View>
+
+                    <TextInput
+                      placeholder="Add a comment (optional)"
+                      placeholderTextColor={colors.inkFaint}
+                      value={draftComment}
+                      onChangeText={setDraftComment}
+                      multiline
+                      maxLength={500}
+                      className="mt-4 rounded-xl2 bg-cream border border-line/50 px-4 py-3 text-[13.5px] text-ink min-h-[70px]"
+                      textAlignVertical="top"
+                    />
+                    <Text className="text-[10.5px] text-ink-faint text-right mt-1">
+                      {draftComment.length}/500
+                    </Text>
+
+                    {createReview.isError ? (
+                      <Text
+                        className="text-[12.5px] text-danger mt-1"
+                        accessibilityRole="alert"
+                      >
+                        {getErrorMessage(createReview.error)}
+                      </Text>
+                    ) : null}
+
+                    <View className="mt-3">
+                      <Button
+                        label="Submit Rating"
+                        onPress={handleSubmitReview}
+                        disabled={draftRating < 1}
+                        isLoading={createReview.isPending}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <View className="items-center py-3">
+                    <View className="w-11 h-11 rounded-full bg-primary-muted items-center justify-center mb-2.5">
+                      <Feather name="star" size={18} color={colors.primary} />
+                    </View>
+                    <Text className="text-[13px] font-semibold text-ink">
+                      Awaiting the buyer's rating
+                    </Text>
+                    <Text className="text-[12px] text-ink-muted text-center mt-1">
+                      {counterpart?.name ?? "The buyer"} hasn't rated this
+                      delivery yet.
+                    </Text>
+                  </View>
+                )}
+              </Card>
+            </View>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

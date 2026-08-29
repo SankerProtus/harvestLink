@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
@@ -118,75 +125,80 @@ export function OtpVerifyPage() {
         </Text>
       </View>
 
-      <ScrollView
+      <KeyboardAvoidingView
         className="flex-1"
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",
-          paddingHorizontal: 20,
-          paddingBottom: 32,
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <DemoOtpBanner code={debugCode} />
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            paddingHorizontal: 20,
+            paddingBottom: 32,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <DemoOtpBanner code={debugCode} />
 
-        <View className="items-center py-6">
-          <OTPInput
-            value={code}
-            onChangeText={setCode}
-            error={displayError ? getErrorMessage(displayError) : undefined}
-          />
-        </View>
-
-        <AuthButton
-          label={
-            purpose === OTP_PURPOSES.REGISTRATION
-              ? "Verify & Continue"
-              : "Verify & Log In"
-          }
-          onPress={handleSubmit}
-          variant="primary"
-          isLoading={isBusy}
-          disabled={code.length !== OTP_CONFIG.CODE_LENGTH}
-        />
-
-        <View className="mt-6 items-center">
-          {cooldown > 0 ? (
-            <Text className="text-[13px] text-ink-muted">
-              Resend code in{" "}
-              <Text className="font-bold text-primary">{cooldown}s</Text>
-            </Text>
-          ) : (
-            <Pressable
-              onPress={handleResend}
-              disabled={requestOtp.isPending}
-              accessibilityRole="button"
-              accessibilityLabel="Resend verification code"
-              hitSlop={8}
-            >
-              <Text className="text-[14px] font-bold text-primary">
-                {requestOtp.isPending ? "Sending…" : "Resend code"}
-              </Text>
-            </Pressable>
-          )}
-        </View>
-
-        {login.error?.code === "AUTH_ACCOUNT_NOT_FOUND" ? (
-          <View className="mt-8 pt-6 border-t border-line">
-            <Text className="text-[13px] text-ink-muted text-center mb-3">
-              No account with this number yet.
-            </Text>
-            <AuthButton
-              label="Register Instead"
-              onPress={() =>
-                navigation.navigate("Welcome", { prefillPhone: phone })
-              }
-              variant="secondary"
+          <View className="items-center py-6">
+            <OTPInput
+              value={code}
+              onChangeText={setCode}
+              error={displayError ? getErrorMessage(displayError) : undefined}
             />
           </View>
-        ) : null}
-      </ScrollView>
+
+          <AuthButton
+            label={
+              purpose === OTP_PURPOSES.REGISTRATION
+                ? "Verify & Continue"
+                : "Verify & Log In"
+            }
+            onPress={handleSubmit}
+            variant="primary"
+            isLoading={isBusy}
+            disabled={code.length !== OTP_CONFIG.CODE_LENGTH}
+          />
+
+          <View className="mt-6 items-center">
+            {cooldown > 0 ? (
+              <Text className="text-[13px] text-ink-muted">
+                Resend code in{" "}
+                <Text className="font-bold text-primary">{cooldown}s</Text>
+              </Text>
+            ) : (
+              <Pressable
+                onPress={handleResend}
+                disabled={requestOtp.isPending}
+                accessibilityRole="button"
+                accessibilityLabel="Resend verification code"
+                hitSlop={8}
+              >
+                <Text className="text-[14px] font-bold text-primary">
+                  {requestOtp.isPending ? "Sending…" : "Resend code"}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          {login.error?.code === "AUTH_ACCOUNT_NOT_FOUND" ? (
+            <View className="mt-8 pt-6 border-t border-line">
+              <Text className="text-[13px] text-ink-muted text-center mb-3">
+                No account with this number yet.
+              </Text>
+              <AuthButton
+                label="Register Instead"
+                onPress={() =>
+                  navigation.navigate("Welcome", { prefillPhone: phone })
+                }
+                variant="secondary"
+              />
+            </View>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

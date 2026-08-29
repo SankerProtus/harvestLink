@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { View, Text, FlatList, Pressable, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useForm } from "react-hook-form";
@@ -182,151 +190,162 @@ export function BrowseListingsPage() {
         }
       />
 
-      <View className="pt-4">
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
-        >
-          <Chip
-            label="All"
-            isSelected={!formValues.cropType}
-            icon="grid"
-            onPress={() => {
-              setValue("cropType", undefined);
-              handleSubmit(onApply)();
-            }}
-          />
-          {CROP_TYPE_LIST.map((crop) => (
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View className="pt-4">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20 }}
+          >
             <Chip
-              key={crop}
-              label={formatCropLabel(crop)}
-              isSelected={formValues.cropType === crop}
-              icon="feather"
+              label="All"
+              isSelected={!formValues.cropType}
+              icon="grid"
               onPress={() => {
-                setValue(
-                  "cropType",
-                  formValues.cropType === crop ? undefined : crop,
-                );
+                setValue("cropType", undefined);
                 handleSubmit(onApply)();
               }}
             />
-          ))}
-        </ScrollView>
-      </View>
-
-      <View className="px-5 pt-2 pb-1">
-        <ListingFilters
-          value={formValues}
-          onQuantityUnitChange={(unit) => setValue("quantityUnit", unit)}
-          onLocationChange={(text) => setValue("location", text)}
-          onMinPriceChange={(text) => setValue("minPrice", text)}
-          onMaxPriceChange={(text) => setValue("maxPrice", text)}
-          errors={{
-            location: errors.location?.message,
-            minPrice: errors.minPrice?.message,
-            maxPrice: errors.maxPrice?.message,
-          }}
-          onApply={handleSubmit(onApply)}
-          onReset={onReset}
-        />
-      </View>
-
-      {listings.isLoading ? (
-        <LoadingState label="Loading listings…" />
-      ) : listings.isError ? (
-        <ErrorState
-          title="Couldn't load listings"
-          message={getErrorMessage(listings.error)}
-          onRetry={() => listings.refetch()}
-        />
-      ) : results.length === 0 ? (
-        <EmptyState
-          icon="search"
-          title="No listings match your filters"
-          description="Try widening your search or resetting filters."
-          action={
-            <Button
-              label="Reset filters"
-              onPress={onReset}
-              variant="secondary"
-            />
-          }
-        />
-      ) : (
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 8,
-            paddingBottom: 16,
-          }}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => {
-            const isOwnListing = item.farmerId === user?.id;
-            return (
-              <ListingCard
-                listing={item}
-                isInterested={expressedInterestIds.data?.has(item.id) ?? false}
-                onExpressInterest={
-                  isOwnListing ? undefined : handleToggleInterest
-                }
-                isSaved={savedListingIds.data?.has(item.id) ?? false}
-                onToggleSave={isOwnListing ? undefined : handleToggleSave}
-                onRequestMatch={
-                  isOwnListing
-                    ? undefined
-                    : (listing) =>
-                        navigation.navigate("ListingDetail", {
-                          listingId: listing.id,
-                        })
-                }
-                onPress={() =>
-                  navigation.navigate("ListingDetail", { listingId: item.id })
-                }
+            {CROP_TYPE_LIST.map((crop) => (
+              <Chip
+                key={crop}
+                label={formatCropLabel(crop)}
+                isSelected={formValues.cropType === crop}
+                icon="feather"
+                onPress={() => {
+                  setValue(
+                    "cropType",
+                    formValues.cropType === crop ? undefined : crop,
+                  );
+                  handleSubmit(onApply)();
+                }}
               />
-            );
-          }}
-          ListFooterComponent={
-            pagination && pagination.totalPages > 1 ? (
-              <View className="flex-row justify-center items-center py-6 gap-5">
-                <Pressable
-                  onPress={() => setPage((p) => p - 1)}
-                  disabled={!canGoPrev}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Previous page"
-                  style={({ pressed }) => ({
-                    opacity: !canGoPrev ? 0.3 : pressed ? 0.7 : 1,
-                    ...shadows.sm,
-                  })}
-                  className="w-10 h-10 rounded-xl bg-white border border-line items-center justify-center"
-                >
-                  <Feather name="chevron-left" size={18} color={colors.ink} />
-                </Pressable>
-                <Text className="text-[13px] font-semibold text-ink-muted">
-                  {pagination.page} / {pagination.totalPages}
-                </Text>
-                <Pressable
-                  onPress={() => setPage((p) => p + 1)}
-                  disabled={!canGoNext}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Next page"
-                  style={({ pressed }) => ({
-                    opacity: !canGoNext ? 0.3 : pressed ? 0.7 : 1,
-                    ...shadows.sm,
-                  })}
-                  className="w-10 h-10 rounded-xl bg-white border border-line items-center justify-center"
-                >
-                  <Feather name="chevron-right" size={18} color={colors.ink} />
-                </Pressable>
-              </View>
-            ) : null
-          }
-        />
-      )}
+            ))}
+          </ScrollView>
+        </View>
+
+        <View className="px-5 pt-2 pb-1">
+          <ListingFilters
+            value={formValues}
+            onQuantityUnitChange={(unit) => setValue("quantityUnit", unit)}
+            onLocationChange={(text) => setValue("location", text)}
+            onMinPriceChange={(text) => setValue("minPrice", text)}
+            onMaxPriceChange={(text) => setValue("maxPrice", text)}
+            errors={{
+              location: errors.location?.message,
+              minPrice: errors.minPrice?.message,
+              maxPrice: errors.maxPrice?.message,
+            }}
+            onApply={handleSubmit(onApply)}
+            onReset={onReset}
+          />
+        </View>
+
+        {listings.isLoading ? (
+          <LoadingState label="Loading listings…" />
+        ) : listings.isError ? (
+          <ErrorState
+            title="Couldn't load listings"
+            message={getErrorMessage(listings.error)}
+            onRetry={() => listings.refetch()}
+          />
+        ) : results.length === 0 ? (
+          <EmptyState
+            icon="search"
+            title="No listings match your filters"
+            description="Try widening your search or resetting filters."
+            action={
+              <Button
+                label="Reset filters"
+                onPress={onReset}
+                variant="secondary"
+              />
+            }
+          />
+        ) : (
+          <FlatList
+            data={results}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 8,
+              paddingBottom: 16,
+            }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => {
+              const isOwnListing = item.farmerId === user?.id;
+              return (
+                <ListingCard
+                  listing={item}
+                  isInterested={
+                    expressedInterestIds.data?.has(item.id) ?? false
+                  }
+                  onExpressInterest={
+                    isOwnListing ? undefined : handleToggleInterest
+                  }
+                  isSaved={savedListingIds.data?.has(item.id) ?? false}
+                  onToggleSave={isOwnListing ? undefined : handleToggleSave}
+                  onRequestMatch={
+                    isOwnListing
+                      ? undefined
+                      : (listing) =>
+                          navigation.navigate("ListingDetail", {
+                            listingId: listing.id,
+                          })
+                  }
+                  onPress={() =>
+                    navigation.navigate("ListingDetail", { listingId: item.id })
+                  }
+                />
+              );
+            }}
+            ListFooterComponent={
+              pagination && pagination.totalPages > 1 ? (
+                <View className="flex-row justify-center items-center py-6 gap-5">
+                  <Pressable
+                    onPress={() => setPage((p) => p - 1)}
+                    disabled={!canGoPrev}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Previous page"
+                    style={({ pressed }) => ({
+                      opacity: !canGoPrev ? 0.3 : pressed ? 0.7 : 1,
+                      ...shadows.sm,
+                    })}
+                    className="w-10 h-10 rounded-xl bg-white border border-line items-center justify-center"
+                  >
+                    <Feather name="chevron-left" size={18} color={colors.ink} />
+                  </Pressable>
+                  <Text className="text-[13px] font-semibold text-ink-muted">
+                    {pagination.page} / {pagination.totalPages}
+                  </Text>
+                  <Pressable
+                    onPress={() => setPage((p) => p + 1)}
+                    disabled={!canGoNext}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Next page"
+                    style={({ pressed }) => ({
+                      opacity: !canGoNext ? 0.3 : pressed ? 0.7 : 1,
+                      ...shadows.sm,
+                    })}
+                    className="w-10 h-10 rounded-xl bg-white border border-line items-center justify-center"
+                  >
+                    <Feather
+                      name="chevron-right"
+                      size={18}
+                      color={colors.ink}
+                    />
+                  </Pressable>
+                </View>
+              ) : null
+            }
+          />
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

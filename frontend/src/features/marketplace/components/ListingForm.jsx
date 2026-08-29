@@ -1,4 +1,12 @@
-import { View, Text, TextInput, ScrollView, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -223,328 +231,347 @@ export function ListingForm({
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={{ paddingBottom: 28 }}
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      className="flex-1"
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
-      <Card className="p-5">
-        {showStep1 ? (
-          <>
-            <FieldLabel>Title</FieldLabel>
-            <Controller
-              control={control}
-              name="title"
-              render={({ field: { value, onChange, onBlur } }) => (
-                <TextInput
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  placeholder="e.g. Fresh Tomatoes - Farm Gate"
-                  placeholderTextColor={colors.inkFaint}
-                  accessibilityLabel="Title"
-                  className={`${inputBase} ${errors.title ? "border-danger" : "border-line"}`}
-                />
-              )}
-            />
-            <FieldError>{errors.title?.message}</FieldError>
-
-            <View className="h-5" />
-
-            <FieldLabel>Description (optional)</FieldLabel>
-            <Controller
-              control={control}
-              name="description"
-              render={({ field: { value, onChange, onBlur } }) => (
-                <TextInput
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  placeholder="Describe your produce…"
-                  placeholderTextColor={colors.inkFaint}
-                  multiline
-                  numberOfLines={3}
-                  accessibilityLabel="Description"
-                  className={`${inputBase} min-h-[84px] ${errors.description ? "border-danger" : "border-line"}`}
-                  style={{ textAlignVertical: "top" }}
-                />
-              )}
-            />
-            <FieldError>{errors.description?.message}</FieldError>
-
-            <View className="h-6" />
-
-            <FieldLabel>Select Crop Type</FieldLabel>
-            <View className="flex-row flex-wrap gap-2.5 mb-1">
-              {CROP_TYPE_OPTIONS.map((crop) => (
-                <View key={crop} style={{ width: "22.5%" }}>
-                  <CropTile
-                    crop={crop}
-                    isSelected={cropType === crop}
-                    onPress={() => setValue("cropType", crop)}
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 28 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Card className="p-5">
+          {showStep1 ? (
+            <>
+              <FieldLabel>Title</FieldLabel>
+              <Controller
+                control={control}
+                name="title"
+                render={({ field: { value, onChange, onBlur } }) => (
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="e.g. Fresh Tomatoes - Farm Gate"
+                    placeholderTextColor={colors.inkFaint}
+                    accessibilityLabel="Title"
+                    className={`${inputBase} ${errors.title ? "border-danger" : "border-line"}`}
                   />
-                </View>
-              ))}
-            </View>
-            {errors.cropType ? (
-              <FieldError>{errors.cropType.message}</FieldError>
-            ) : (
-              <View className="h-5" />
-            )}
-
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <FieldLabel>Quantity</FieldLabel>
-                <Controller
-                  control={control}
-                  name="quantity"
-                  render={({ field: { value, onChange, onBlur } }) => (
-                    <TextInput
-                      value={value !== undefined ? String(value) : ""}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      placeholder="0"
-                      placeholderTextColor={colors.inkFaint}
-                      keyboardType="numeric"
-                      accessibilityLabel="Quantity"
-                      className={`${inputBase} ${errors.quantity ? "border-danger" : "border-line"}`}
-                    />
-                  )}
-                />
-                <FieldError>{errors.quantity?.message}</FieldError>
-              </View>
-
-              <View className="flex-1">
-                <FieldLabel>Price per Unit (GHS)</FieldLabel>
-                <Controller
-                  control={control}
-                  name="pricePerUnit"
-                  render={({ field: { value, onChange, onBlur } }) => (
-                    <TextInput
-                      value={value !== undefined ? String(value) : ""}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      placeholder="0.00"
-                      placeholderTextColor={colors.inkFaint}
-                      keyboardType="numeric"
-                      accessibilityLabel="Price per unit"
-                      className={`${inputBase} ${errors.pricePerUnit ? "border-danger" : "border-line"}`}
-                    />
-                  )}
-                />
-                <FieldError>{errors.pricePerUnit?.message}</FieldError>
-              </View>
-            </View>
-
-            <View className="h-6" />
-
-            <FieldLabel>Unit</FieldLabel>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="mb-1"
-            >
-              {QUANTITY_UNIT_OPTIONS.map((unit) => (
-                <Chip
-                  key={unit}
-                  label={formatLabel(unit)}
-                  isSelected={quantityUnit === unit}
-                  onPress={() => setValue("quantityUnit", unit)}
-                />
-              ))}
-            </ScrollView>
-            {errors.quantityUnit ? (
-              <FieldError>{errors.quantityUnit.message}</FieldError>
-            ) : (
-              <View className="h-5" />
-            )}
-
-            <FieldLabel>Location</FieldLabel>
-            <Controller
-              control={control}
-              name="location"
-              render={({ field: { value, onChange, onBlur } }) => (
-                <TextInput
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  placeholder="e.g. Techiman, Bono East"
-                  placeholderTextColor={colors.inkFaint}
-                  accessibilityLabel="Location"
-                  className={`${inputBase} ${errors.location ? "border-danger" : "border-line"}`}
-                />
-              )}
-            />
-            <FieldError>{errors.location?.message}</FieldError>
-
-            <FieldLabel>Harvest Date (optional)</FieldLabel>
-            <Pressable
-              onPress={() => setShowDatePicker(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Select harvest date"
-              className={`${inputBase} flex-row items-center justify-between ${errors.harvestDate ? "border-danger" : "border-line"}`}
-            >
-              <Text
-                className={
-                  harvestDate
-                    ? "text-[15px] text-ink"
-                    : "text-[15px] text-ink-faint"
-                }
-              >
-                {harvestDate
-                  ? new Date(harvestDate).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : "Select a date"}
-              </Text>
-              <Feather name="calendar" size={18} color={colors.inkMuted} />
-            </Pressable>
-            <FieldError>{errors.harvestDate?.message}</FieldError>
-
-            {showDatePicker ? (
-              <DateTimePicker
-                value={harvestDate ? new Date(harvestDate) : new Date()}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (event.type === "set" && selectedDate) {
-                    setValue("harvestDate", selectedDate);
-                  }
-                }}
+                )}
               />
-            ) : null}
+              <FieldError>{errors.title?.message}</FieldError>
 
-            <View className="h-6" />
-          </>
-        ) : null}
+              <View className="h-5" />
 
-        {showStep2 ? (
-          <>
-            <FieldLabel>Photos (optional, up to {MAX_IMAGES})</FieldLabel>
-            {images.length > 1 ? (
-              <Text className="text-[11.5px] text-ink-muted mb-2">
-                The first photo is what buyers see everywhere else. Tap another
-                photo's star to make it the cover.
-              </Text>
-            ) : null}
-            <View className="flex-row flex-wrap gap-3 mb-2">
-              {images.map((url, index) => (
-                <View key={index} className="w-[76px] h-[76px]">
-                  <Pressable
-                    onPress={() => makeCoverPhoto(index)}
-                    disabled={index === 0}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      index === 0
-                        ? "Cover photo"
-                        : `Make photo ${index + 1} the cover photo`
-                    }
-                    className="w-[76px] h-[76px] rounded-xl2 overflow-hidden border border-line bg-cream items-center justify-center"
-                  >
-                    <RemoteImage
-                      uri={url}
-                      className="w-full h-full"
-                      iconSize={18}
+              <FieldLabel>Description (optional)</FieldLabel>
+              <Controller
+                control={control}
+                name="description"
+                render={({ field: { value, onChange, onBlur } }) => (
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="Describe your produce…"
+                    placeholderTextColor={colors.inkFaint}
+                    multiline
+                    numberOfLines={3}
+                    accessibilityLabel="Description"
+                    className={`${inputBase} min-h-[84px] ${errors.description ? "border-danger" : "border-line"}`}
+                    style={{ textAlignVertical: "top" }}
+                  />
+                )}
+              />
+              <FieldError>{errors.description?.message}</FieldError>
+
+              <View className="h-6" />
+
+              <FieldLabel>Select Crop Type</FieldLabel>
+              <View className="flex-row flex-wrap gap-2.5 mb-1">
+                {CROP_TYPE_OPTIONS.map((crop) => (
+                  <View key={crop} style={{ width: "22.5%" }}>
+                    <CropTile
+                      crop={crop}
+                      isSelected={cropType === crop}
+                      onPress={() => setValue("cropType", crop)}
                     />
-                  </Pressable>
-                  {index === 0 ? (
-                    <View className="absolute -top-2 -left-2 rounded-full bg-primary px-2 py-0.5 border-2 border-white">
-                      <Text className="text-[9px] font-bold text-white">
-                        Cover
-                      </Text>
-                    </View>
-                  ) : (
+                  </View>
+                ))}
+              </View>
+              {errors.cropType ? (
+                <FieldError>{errors.cropType.message}</FieldError>
+              ) : (
+                <View className="h-5" />
+              )}
+
+              <View className="flex-row gap-3">
+                <View className="flex-1">
+                  <FieldLabel>Quantity</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="quantity"
+                    render={({ field: { value, onChange, onBlur } }) => (
+                      <TextInput
+                        value={value !== undefined ? String(value) : ""}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="0"
+                        placeholderTextColor={colors.inkFaint}
+                        keyboardType="numeric"
+                        accessibilityLabel="Quantity"
+                        className={`${inputBase} ${errors.quantity ? "border-danger" : "border-line"}`}
+                      />
+                    )}
+                  />
+                  <FieldError>{errors.quantity?.message}</FieldError>
+                </View>
+
+                <View className="flex-1">
+                  <FieldLabel>Price per Unit (GHS)</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="pricePerUnit"
+                    render={({ field: { value, onChange, onBlur } }) => (
+                      <TextInput
+                        value={value !== undefined ? String(value) : ""}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="0.00"
+                        placeholderTextColor={colors.inkFaint}
+                        keyboardType="numeric"
+                        accessibilityLabel="Price per unit"
+                        className={`${inputBase} ${errors.pricePerUnit ? "border-danger" : "border-line"}`}
+                      />
+                    )}
+                  />
+                  <FieldError>{errors.pricePerUnit?.message}</FieldError>
+                </View>
+              </View>
+
+              <View className="h-6" />
+
+              <FieldLabel>Unit</FieldLabel>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="mb-1"
+              >
+                {QUANTITY_UNIT_OPTIONS.map((unit) => (
+                  <Chip
+                    key={unit}
+                    label={formatLabel(unit)}
+                    isSelected={quantityUnit === unit}
+                    onPress={() => setValue("quantityUnit", unit)}
+                  />
+                ))}
+              </ScrollView>
+              {errors.quantityUnit ? (
+                <FieldError>{errors.quantityUnit.message}</FieldError>
+              ) : (
+                <View className="h-5" />
+              )}
+
+              <FieldLabel>Location</FieldLabel>
+              <Controller
+                control={control}
+                name="location"
+                render={({ field: { value, onChange, onBlur } }) => (
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="e.g. Techiman, Bono East"
+                    placeholderTextColor={colors.inkFaint}
+                    accessibilityLabel="Location"
+                    className={`${inputBase} ${errors.location ? "border-danger" : "border-line"}`}
+                  />
+                )}
+              />
+              <FieldError>{errors.location?.message}</FieldError>
+
+              <FieldLabel>Harvest Date (optional)</FieldLabel>
+              <Pressable
+                onPress={() => setShowDatePicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Select harvest date"
+                className={`${inputBase} flex-row items-center justify-between ${errors.harvestDate ? "border-danger" : "border-line"}`}
+              >
+                <Text
+                  className={
+                    harvestDate
+                      ? "text-[15px] text-ink"
+                      : "text-[15px] text-ink-faint"
+                  }
+                >
+                  {harvestDate
+                    ? new Date(harvestDate).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "Select a date"}
+                </Text>
+                <Feather name="calendar" size={18} color={colors.inkMuted} />
+              </Pressable>
+              <FieldError>{errors.harvestDate?.message}</FieldError>
+
+              {showDatePicker ? (
+                <DateTimePicker
+                  value={harvestDate ? new Date(harvestDate) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (event.type === "set" && selectedDate) {
+                      setValue("harvestDate", selectedDate);
+                    }
+                  }}
+                />
+              ) : null}
+
+              <View className="h-6" />
+            </>
+          ) : null}
+
+          {showStep2 ? (
+            <>
+              <FieldLabel>Photos (optional, up to {MAX_IMAGES})</FieldLabel>
+              {images.length > 1 ? (
+                <Text className="text-[11.5px] text-ink-muted mb-2">
+                  The first photo is what buyers see everywhere else. Tap
+                  another photo's star to make it the cover.
+                </Text>
+              ) : null}
+              <View className="flex-row flex-wrap gap-3 mb-2">
+                {images.map((url, index) => (
+                  <View key={index} className="w-[76px] h-[76px]">
                     <Pressable
                       onPress={() => makeCoverPhoto(index)}
+                      disabled={index === 0}
                       accessibilityRole="button"
-                      accessibilityLabel={`Make photo ${index + 1} the cover photo`}
-                      className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-white items-center justify-center shadow-sm border border-line"
+                      accessibilityLabel={
+                        index === 0
+                          ? "Cover photo"
+                          : `Make photo ${index + 1} the cover photo`
+                      }
+                      className="w-[76px] h-[76px] rounded-xl2 overflow-hidden border border-line bg-cream items-center justify-center"
                     >
-                      <Feather name="star" size={11} color={colors.inkMuted} />
+                      <RemoteImage
+                        uri={url}
+                        className="w-full h-full"
+                        iconSize={18}
+                      />
                     </Pressable>
-                  )}
+                    {index === 0 ? (
+                      <View className="absolute -top-2 -left-2 rounded-full bg-primary px-2 py-0.5 border-2 border-white">
+                        <Text className="text-[9px] font-bold text-white">
+                          Cover
+                        </Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() => makeCoverPhoto(index)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Make photo ${index + 1} the cover photo`}
+                        className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-white items-center justify-center shadow-sm border border-line"
+                      >
+                        <Feather
+                          name="star"
+                          size={11}
+                          color={colors.inkMuted}
+                        />
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={() => removeImageAt(index)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove photo ${index + 1}`}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-danger items-center justify-center shadow-sm border-2 border-white"
+                    >
+                      <Feather name="x" size={12} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                ))}
+                {images.length < MAX_IMAGES ? (
                   <Pressable
-                    onPress={() => removeImageAt(index)}
+                    onPress={handlePickImages}
+                    disabled={isPickingImages}
                     accessibilityRole="button"
-                    accessibilityLabel={`Remove photo ${index + 1}`}
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-danger items-center justify-center shadow-sm border-2 border-white"
+                    accessibilityLabel="Add photo from your gallery"
+                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                    className="w-[76px] h-[76px] rounded-xl2 border-2 border-dashed border-line items-center justify-center bg-white"
                   >
-                    <Feather name="x" size={12} color="#FFFFFF" />
+                    {isPickingImages ? (
+                      <Feather
+                        name="loader"
+                        size={18}
+                        color={colors.inkMuted}
+                      />
+                    ) : (
+                      <Feather
+                        name="camera"
+                        size={18}
+                        color={colors.inkMuted}
+                      />
+                    )}
+                    <Text className="text-[10.5px] font-medium text-ink-muted mt-1">
+                      Add photo
+                    </Text>
                   </Pressable>
-                </View>
-              ))}
-              {images.length < MAX_IMAGES ? (
-                <Pressable
-                  onPress={handlePickImages}
-                  disabled={isPickingImages}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add photo from your gallery"
-                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                  className="w-[76px] h-[76px] rounded-xl2 border-2 border-dashed border-line items-center justify-center bg-white"
-                >
-                  {isPickingImages ? (
-                    <Feather name="loader" size={18} color={colors.inkMuted} />
-                  ) : (
-                    <Feather name="camera" size={18} color={colors.inkMuted} />
-                  )}
-                  <Text className="text-[10.5px] font-medium text-ink-muted mt-1">
-                    Add photo
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-            <Text className="text-[11.5px] text-ink-muted mb-1">
-              Choose photos of your produce from your phone's gallery.
-            </Text>
-            <FieldError>{errors.images?.message}</FieldError>
-          </>
-        ) : null}
+                ) : null}
+              </View>
+              <Text className="text-[11.5px] text-ink-muted mb-1">
+                Choose photos of your produce from your phone's gallery.
+              </Text>
+              <FieldError>{errors.images?.message}</FieldError>
+            </>
+          ) : null}
 
-        <View className="h-7" />
+          <View className="h-7" />
 
-        <View className="flex-row gap-3">
-          {stepped && step === 2 ? (
-            <View className="flex-1">
-              <Button
-                label="Back"
-                onPress={() => goToStep(1)}
-                variant="secondary"
-              />
-            </View>
-          ) : (
-            <View className="flex-1">
-              <Button label="Cancel" onPress={onCancel} variant="secondary" />
-            </View>
-          )}
-
-          <View className="flex-1">
-            {stepped && step === 1 ? (
-              <Button
-                label="Next"
-                onPress={handleNextPress}
-                variant="primary"
-              />
+          <View className="flex-row gap-3">
+            {stepped && step === 2 ? (
+              <View className="flex-1">
+                <Button
+                  label="Back"
+                  onPress={() => goToStep(1)}
+                  variant="secondary"
+                />
+              </View>
             ) : (
-              <Button
-                label={mode === "edit" ? "Save Changes" : "Create Listing"}
-                onPress={handleSubmit(onSubmit)}
-                variant="primary"
-                isLoading={isSubmitting}
-              />
+              <View className="flex-1">
+                <Button label="Cancel" onPress={onCancel} variant="secondary" />
+              </View>
             )}
-          </View>
-        </View>
 
-        <View className="h-4" />
-        <View className="flex-row items-center justify-center gap-1.5">
-          <Feather name="wifi-off" size={12} color={colors.inkFaint} />
-          <Text className="text-[11.5px] text-ink-muted text-center">
-            Works offline. We'll sync when you're back online.
-          </Text>
-        </View>
-      </Card>
-    </ScrollView>
+            <View className="flex-1">
+              {stepped && step === 1 ? (
+                <Button
+                  label="Next"
+                  onPress={handleNextPress}
+                  variant="primary"
+                />
+              ) : (
+                <Button
+                  label={mode === "edit" ? "Save Changes" : "Create Listing"}
+                  onPress={handleSubmit(onSubmit)}
+                  variant="primary"
+                  isLoading={isSubmitting}
+                />
+              )}
+            </View>
+          </View>
+
+          <View className="h-4" />
+          <View className="flex-row items-center justify-center gap-1.5">
+            <Feather name="wifi-off" size={12} color={colors.inkFaint} />
+            <Text className="text-[11.5px] text-ink-muted text-center">
+              Works offline. We'll sync when you're back online.
+            </Text>
+          </View>
+        </Card>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

@@ -6,6 +6,8 @@ import {
   ScrollView,
   Pressable,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useForm, Controller } from "react-hook-form";
@@ -209,194 +211,202 @@ export function WelcomePage() {
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <StatusBar style="dark" />
-      <ScrollView
+      <KeyboardAvoidingView
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Hero section */}
-        <View className="relative">
-          <Image
-            source={require("../../../../assets/sign_cover_photo.jpg")}
-            className="w-full h-[260px]"
-            resizeMode="cover"
-          />
-          <View className="absolute inset-0 bg-primary-dark/55" />
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Hero section */}
+          <View className="relative">
+            <Image
+              source={require("../../../../assets/sign_cover_photo.jpg")}
+              className="w-full h-[260px]"
+              resizeMode="cover"
+            />
+            <View className="absolute inset-0 bg-primary-dark/55" />
 
-          <View
-            className="absolute left-5 flex-row items-center"
-            style={{ top: insets.top - 8 }}
-          >
             <View
-              className="h-10 w-10 rounded-xl bg-white items-center justify-center overflow-hidden"
-              style={shadows.sm}
+              className="absolute left-5 flex-row items-center"
+              style={{ top: insets.top - 8 }}
             >
-              <Image
-                source={require("../../../../assets/icon.png")}
-                resizeMode="contain"
-                className="h-8 w-8"
-              />
+              <View
+                className="h-10 w-10 rounded-xl bg-white items-center justify-center overflow-hidden"
+                style={shadows.sm}
+              >
+                <Image
+                  source={require("../../../../assets/icon.png")}
+                  resizeMode="contain"
+                  className="h-8 w-8"
+                />
+              </View>
+              <View className="ml-2.5">
+                <Text className="text-[16px] font-extrabold text-white tracking-[-0.3px]">
+                  HarvestLink
+                </Text>
+              </View>
             </View>
-            <View className="ml-2.5">
-              <Text className="text-[16px] font-extrabold text-white tracking-[-0.3px]">
-                HarvestLink
+
+            <View className="absolute inset-x-0 bottom-0 px-5 pb-8">
+              <Text className="text-white text-[28px] leading-[32px] font-extrabold tracking-[-0.5px]">
+                Fresh produce, direct markets
               </Text>
             </View>
           </View>
 
-          <View className="absolute inset-x-0 bottom-0 px-5 pb-8">
-            <Text className="text-white text-[28px] leading-[32px] font-extrabold tracking-[-0.5px]">
-              Fresh produce, direct markets
-            </Text>
-          </View>
-        </View>
+          {/* Form sheet — dramatic overlap */}
+          <View
+            className="flex-1 px-5 pt-7 bg-surface rounded-t-xl3 -mt-8"
+            style={{ paddingBottom: insets.bottom + 24, ...shadows.lg }}
+          >
+            <AuthModeToggle mode={mode} onChange={handleModeChange} />
 
-        {/* Form sheet — dramatic overlap */}
-        <View
-          className="flex-1 px-5 pt-7 bg-surface rounded-t-xl3 -mt-8"
-          style={{ paddingBottom: insets.bottom + 24, ...shadows.lg }}
-        >
-          <AuthModeToggle mode={mode} onChange={handleModeChange} />
-
-          {/* Phone input — single focal point */}
-          <View className="mt-5">
-            <View
-              className="flex-row items-stretch overflow-hidden rounded-xl2 border-2 border-primary/30 bg-white"
-              style={shadows.md}
-            >
-              <View className="flex-row items-center gap-2 px-4 py-4 border-r border-line bg-cream">
-                <View className="h-8 w-8 rounded-lg bg-primary-muted items-center justify-center">
-                  <Text className="text-[10px] font-extrabold text-primary">
-                    GH
-                  </Text>
+            {/* Phone input — single focal point */}
+            <View className="mt-5">
+              <View
+                className="flex-row items-stretch overflow-hidden rounded-xl2 border-2 border-primary/30 bg-white"
+                style={shadows.md}
+              >
+                <View className="flex-row items-center gap-2 px-4 py-4 border-r border-line bg-cream">
+                  <View className="h-8 w-8 rounded-lg bg-primary-muted items-center justify-center">
+                    <Text className="text-[10px] font-extrabold text-primary">
+                      GH
+                    </Text>
+                  </View>
+                  <Text className="text-[17px] font-bold text-ink">+233</Text>
                 </View>
-                <Text className="text-[17px] font-bold text-ink">+233</Text>
+
+                <Controller
+                  control={control}
+                  name="phone"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <PhoneField
+                      value={value}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                    />
+                  )}
+                />
               </View>
 
-              <Controller
-                control={control}
-                name="phone"
-                render={({ field: { value, onChange, onBlur } }) => (
-                  <PhoneField
-                    value={value}
-                    onChange={onChange}
-                    onBlur={onBlur}
-                  />
-                )}
-              />
-            </View>
-
-            {errors.phone?.message ? (
-              <Text
-                className="mt-1.5 text-[12px] text-danger"
-                accessibilityRole="alert"
-              >
-                {errors.phone.message}
-              </Text>
-            ) : null}
-
-            {requestOtp.isError ? (
-              <View className="mt-2">
+              {errors.phone?.message ? (
                 <Text
-                  className="text-[12px] text-danger"
+                  className="mt-1.5 text-[12px] text-danger"
                   accessibilityRole="alert"
                 >
-                  {getErrorMessage(requestOtp.error)}
+                  {errors.phone.message}
                 </Text>
-                {requestOtp.error?.code === "AUTH_PHONE_ALREADY_REGISTERED" ? (
-                  <Pressable
-                    onPress={handleSwitchToSignIn}
-                    accessibilityRole="button"
-                    accessibilityLabel="Switch to Sign In"
-                    className="mt-2 self-start"
+              ) : null}
+
+              {requestOtp.isError ? (
+                <View className="mt-2">
+                  <Text
+                    className="text-[12px] text-danger"
+                    accessibilityRole="alert"
                   >
-                    <Text className="text-[13px] font-semibold text-primary">
-                      Switch to Sign In →
-                    </Text>
-                  </Pressable>
+                    {getErrorMessage(requestOtp.error)}
+                  </Text>
+                  {requestOtp.error?.code ===
+                  "AUTH_PHONE_ALREADY_REGISTERED" ? (
+                    <Pressable
+                      onPress={handleSwitchToSignIn}
+                      accessibilityRole="button"
+                      accessibilityLabel="Switch to Sign In"
+                      className="mt-2 self-start"
+                    >
+                      <Text className="text-[13px] font-semibold text-primary">
+                        Switch to Sign In →
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+
+            {mode === "register" ? (
+              <View className="mt-4">
+                <Text className="text-[12px] text-ink-muted mb-2">I am a…</Text>
+                <View className="flex-row gap-2">
+                  {ROLE_OPTIONS.map((option) => (
+                    <RolePill
+                      key={option.value}
+                      selected={role === option.value}
+                      label={option.label}
+                      icon={option.icon}
+                      onPress={() => {
+                        setRoleTouched(true);
+                        setRole((current) =>
+                          current === option.value ? undefined : option.value,
+                        );
+                      }}
+                    />
+                  ))}
+                </View>
+                {roleTouched && !role ? (
+                  <Text
+                    className="mt-2 text-[12px] text-danger"
+                    accessibilityRole="alert"
+                  >
+                    Choose whether you're a farmer or a buyer to continue.
+                  </Text>
                 ) : null}
               </View>
             ) : null}
-          </View>
 
-          {mode === "register" ? (
-            <View className="mt-4">
-              <Text className="text-[12px] text-ink-muted mb-2">I am a…</Text>
-              <View className="flex-row gap-2">
-                {ROLE_OPTIONS.map((option) => (
-                  <RolePill
-                    key={option.value}
-                    selected={role === option.value}
-                    label={option.label}
-                    icon={option.icon}
-                    onPress={() => {
-                      setRoleTouched(true);
-                      setRole((current) =>
-                        current === option.value ? undefined : option.value,
-                      );
-                    }}
-                  />
-                ))}
-              </View>
-              {roleTouched && !role ? (
-                <Text
-                  className="mt-2 text-[12px] text-danger"
-                  accessibilityRole="alert"
-                >
-                  Choose whether you're a farmer or a buyer to continue.
-                </Text>
-              ) : null}
+            <View className="mt-5">
+              <AuthButton
+                label={mode === "register" ? "Send OTP" : "Sign In"}
+                onPress={onSubmit}
+                isLoading={requestOtp.isPending}
+              />
             </View>
-          ) : null}
 
-          <View className="mt-5">
-            <AuthButton
-              label={mode === "register" ? "Send OTP" : "Sign In"}
-              onPress={onSubmit}
-              isLoading={requestOtp.isPending}
-            />
-          </View>
+            <View className="flex-row items-center mt-5">
+              <View className="flex-1 h-px bg-line" />
+              <Text className="mx-3 text-[11px] font-semibold text-ink-faint uppercase tracking-wider">
+                Or
+              </Text>
+              <View className="flex-1 h-px bg-line" />
+            </View>
 
-          <View className="flex-row items-center mt-5">
-            <View className="flex-1 h-px bg-line" />
-            <Text className="mx-3 text-[11px] font-semibold text-ink-faint uppercase tracking-wider">
-              Or
+            <Pressable
+              onPress={() => navigation.navigate("GoogleSignIn")}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.85 : 1,
+                ...shadows.sm,
+              })}
+              className="flex-row items-center justify-center rounded-xl2 border border-line bg-white py-3 mt-4"
+            >
+              <MaterialCommunityIcons
+                name="google"
+                size={18}
+                color={colors.inkSecondary}
+              />
+              <Text className="ml-2.5 text-[14px] font-semibold text-ink">
+                Continue with Google
+              </Text>
+            </Pressable>
+
+            <Text className="mt-5 text-center text-[11px] leading-[16px] text-ink-faint px-2">
+              By continuing, you agree to HarvestLink's{" "}
+              <Text className="font-semibold text-ink-muted">
+                Terms of Service
+              </Text>{" "}
+              and{" "}
+              <Text className="font-semibold text-ink-muted">
+                Privacy Policy
+              </Text>
+              .
             </Text>
-            <View className="flex-1 h-px bg-line" />
           </View>
-
-          <Pressable
-            onPress={() => navigation.navigate("GoogleSignIn")}
-            accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.85 : 1,
-              ...shadows.sm,
-            })}
-            className="flex-row items-center justify-center rounded-xl2 border border-line bg-white py-3 mt-4"
-          >
-            <MaterialCommunityIcons
-              name="google"
-              size={18}
-              color={colors.inkSecondary}
-            />
-            <Text className="ml-2.5 text-[14px] font-semibold text-ink">
-              Continue with Google
-            </Text>
-          </Pressable>
-
-          <Text className="mt-5 text-center text-[11px] leading-[16px] text-ink-faint px-2">
-            By continuing, you agree to HarvestLink's{" "}
-            <Text className="font-semibold text-ink-muted">
-              Terms of Service
-            </Text>{" "}
-            and{" "}
-            <Text className="font-semibold text-ink-muted">Privacy Policy</Text>
-            .
-          </Text>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
