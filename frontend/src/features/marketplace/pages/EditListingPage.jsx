@@ -36,10 +36,13 @@ export function EditListingPage() {
   async function handleFormSubmit(updates) {
     try {
       await updateListing.mutateAsync({ listingId, updates });
-      // Same nested-navigator fix as CreateListingPage — "Listings" lives
-      // inside ProtectedTabNavigator, so it must be reached via the parent
-      // "ProtectedTabs" stack screen, not navigated to directly.
-      navigation.navigate("ProtectedTabs", { screen: "Listings" });
+      // Unlike CreateListingPage (only ever reached from the Farmer-only
+      // "Listings" tab), this screen can also be reached by a listing's
+      // owner from ListingDetailPage regardless of their account's
+      // current role — so we can't assume a "Listings" tab exists to
+      // navigate back to. goBack() correctly returns to wherever the
+      // edit was actually started from, for either entry point.
+      navigation.goBack();
     } catch {
       // Already captured in updateListing.error and rendered below.
     }

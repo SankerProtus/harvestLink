@@ -17,7 +17,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.sanker_protus.harvestlinkmobile",
-      "softInputMode": "adjustResize"
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/favicon.png"

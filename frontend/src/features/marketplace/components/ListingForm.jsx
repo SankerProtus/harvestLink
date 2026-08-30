@@ -176,11 +176,6 @@ export function ListingForm({
 
   const [isPickingImages, setIsPickingImages] = useState(false);
 
-  // Opens the device photo library so a farmer can pick crop photos
-  // directly instead of typing an image URL by hand. Local library assets
-  // come back as file:// (iOS) or content:// (Android) URIs, which are
-  // valid per the images[].url() validation and get uploaded as-is when
-  // the listing is submitted.
   async function handlePickImages() {
     const remainingSlots = MAX_IMAGES - images.length;
     if (remainingSlots <= 0) return;
@@ -219,9 +214,6 @@ export function ListingForm({
     );
   }
 
-  // Buyers always see images[0] first on the listing detail screen, so
-  // let a farmer promote any photo to the front — the same "make cover
-  // photo" convention shopping apps use for multi-angle product photos.
   function makeCoverPhoto(index) {
     if (index === 0) return;
     const next = [...images];

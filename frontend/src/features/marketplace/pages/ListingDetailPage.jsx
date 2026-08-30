@@ -619,7 +619,13 @@ export function ListingDetailPage() {
           onPress={() => navigation.goBack()}
         />
         {isOwnListing ? (
-          <View />
+          <FloatingIconButton
+            icon="edit-2"
+            accessibilityLabel="Edit listing"
+            onPress={() =>
+              navigation.navigate("EditListing", { listingId: data.id })
+            }
+          />
         ) : (
           <Pressable
             onPress={handleToggleSave}

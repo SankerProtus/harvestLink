@@ -95,9 +95,6 @@ function formatDate(isoString) {
   });
 }
 
-// Short relative timestamp for the review card ("2 days ago") — falls
-// back to the absolute date once it's old enough that "N weeks ago"
-// stops being more useful than just reading the date.
 function timeAgo(isoString) {
   if (!isoString) return "";
   const diffMs = Date.now() - new Date(isoString).getTime();

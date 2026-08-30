@@ -142,10 +142,6 @@ export function MatchResultsPage() {
   const navigation = useNavigation();
   const { isAuthenticated } = useAuth();
   const [submittedFilters, setSubmittedFilters] = useState(null);
-  // Once a search runs, the form collapses into a compact summary bar so
-  // results get the space — tapping the bar re-expands it to edit, the
-  // same pattern flight/hotel search apps use. Session-only for now (no
-  // local persistence layer wired up yet), so it resets on app restart.
   const [isFormExpanded, setIsFormExpanded] = useState(true);
   const [recentSearches, setRecentSearches] = useState([]);
 

@@ -14,7 +14,7 @@ export async function findReviewById(reviewId) {
 
 export async function findFarmerById(farmerId) {
   return prisma.user.findFirst({
-    where: { id: farmerId, role: "FARMER", deletedAt: null },
+    where: { id: farmerId, deletedAt: null },
     select: { id: true, fullName: true, profileImageUrl: true },
   });
 }
@@ -101,9 +101,6 @@ export async function createReviewComment({ reviewId, authorId, body }) {
   });
 }
 
-// Aggregates real rating + review count per farmer in a single grouped
-// query — powers the "★ 4.8 (24)" shown on listings, computed from
-// actual delivered-order reviews rather than any invented number.
 export async function getRatingSummaryForFarmers(farmerIds) {
   if (!farmerIds || farmerIds.length === 0) return new Map();
 
