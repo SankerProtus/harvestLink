@@ -15,7 +15,8 @@ import { AuthButton } from "../components/AuthButton.jsx";
 import { OTPInput } from "../components/OTPInput.jsx";
 import { OTP_PURPOSES, OTP_CONFIG } from "../schemas/authSchemas.js";
 import { useVerifyOtp, useLogin, useRequestOtp } from "../hooks/authHooks.js";
-import { getErrorMessage } from "../../../lib/errorMap.js";
+import { getErrorMessage, getRateLimitMessage } from "../../../lib/errorMap.js";
+import { useRetryCountdown } from "../../../hooks/useRetryCountdown.js";
 import { getDeviceInfo } from "../../../lib/deviceInfo.js";
 import { BackButton } from "../../../components/ui/InlinePageHeader.jsx";
 
@@ -103,6 +104,7 @@ export function OtpVerifyPage() {
 
   const displayError = verifyOtp.error ?? login.error;
   const isBusy = verifyOtp.isPending || login.isPending;
+  const rateLimitSeconds = useRetryCountdown(displayError);
 
   useEffect(() => {
     if (code.length === OTP_CONFIG.CODE_LENGTH && !isBusy && !displayError) {
@@ -127,7 +129,7 @@ export function OtpVerifyPage() {
 
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           className="flex-1"
@@ -146,7 +148,13 @@ export function OtpVerifyPage() {
             <OTPInput
               value={code}
               onChangeText={setCode}
-              error={displayError ? getErrorMessage(displayError) : undefined}
+              error={
+                displayError
+                  ? displayError.code === "RATE_LIMIT_EXCEEDED"
+                    ? getRateLimitMessage(rateLimitSeconds)
+                    : getErrorMessage(displayError)
+                  : undefined
+              }
             />
           </View>
 
@@ -159,7 +167,10 @@ export function OtpVerifyPage() {
             onPress={handleSubmit}
             variant="primary"
             isLoading={isBusy}
-            disabled={code.length !== OTP_CONFIG.CODE_LENGTH}
+            disabled={
+              code.length !== OTP_CONFIG.CODE_LENGTH ||
+              (rateLimitSeconds != null && rateLimitSeconds > 0)
+            }
           />
 
           <View className="mt-6 items-center">

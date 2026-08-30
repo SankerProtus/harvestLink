@@ -14,7 +14,8 @@ import { StatusBar } from "expo-status-bar";
 import { AuthButton } from "../components/AuthButton.jsx";
 import { registerSchema } from "../schemas/authSchemas.js";
 import { useRegister } from "../hooks/authHooks.js";
-import { getErrorMessage } from "../../../lib/errorMap.js";
+import { getErrorMessage, getRateLimitMessage } from "../../../lib/errorMap.js";
+import { useRetryCountdown } from "../../../hooks/useRetryCountdown.js";
 import { getDeviceInfo } from "../../../lib/deviceInfo.js";
 import { BackButton } from "../../../components/ui/InlinePageHeader.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -27,6 +28,7 @@ export function CompleteRegistrationPage() {
   const { phone, role, otpVerificationToken } = route.params;
 
   const register = useRegister();
+  const rateLimitSeconds = useRetryCountdown(register.error);
 
   const {
     control,
@@ -68,7 +70,7 @@ export function CompleteRegistrationPage() {
 
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           className="flex-1"
@@ -112,6 +114,7 @@ export function CompleteRegistrationPage() {
             onPress={handleSubmit(onSubmit)}
             isLoading={register.isPending}
             icon="arrow-right"
+            disabled={rateLimitSeconds != null && rateLimitSeconds > 0}
           />
 
           {register.isError ? (
@@ -119,7 +122,9 @@ export function CompleteRegistrationPage() {
               className="text-[13px] text-danger mt-4 text-center"
               accessibilityRole="alert"
             >
-              {getErrorMessage(register.error)}
+              {register.error?.code === "RATE_LIMIT_EXCEEDED"
+                ? getRateLimitMessage(rateLimitSeconds)
+                : getErrorMessage(register.error)}
             </Text>
           ) : null}
         </ScrollView>

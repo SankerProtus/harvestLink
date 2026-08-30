@@ -192,7 +192,7 @@ export function BrowseListingsPage() {
 
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View className="pt-4">
           <ScrollView

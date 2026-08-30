@@ -94,6 +94,26 @@ export function getErrorMessage(error) {
   return ERROR_MESSAGES[error.code] ?? FALLBACK_MESSAGE;
 }
 
+// Formats a rate-limit error with a live "try again in Xm Ys" countdown
+// in place of the static fallback message. `remainingSeconds` should
+// come from useRetryCountdown(error); pass null/undefined to fall back
+// to the plain message (e.g. before the hook has initialized).
+export function getRateLimitMessage(remainingSeconds) {
+  if (remainingSeconds == null) {
+    return ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+  }
+  if (remainingSeconds <= 0) {
+    return "You can try again now.";
+  }
+
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  const formatted =
+    minutes > 0 ? `${minutes}m ${String(seconds).padStart(2, "0")}s` : `${seconds}s`;
+
+  return `Too many attempts. Try again in ${formatted}.`;
+}
+
 export function isValidationError(error) {
   return error?.code === "VALIDATION_ERROR";
 }

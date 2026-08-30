@@ -19,7 +19,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { requestOtpSchema, OTP_PURPOSES } from "../schemas/authSchemas.js";
 import { useRequestOtp } from "../hooks/authHooks.js";
-import { getErrorMessage } from "../../../lib/errorMap.js";
+import { getErrorMessage, getRateLimitMessage } from "../../../lib/errorMap.js";
+import { useRetryCountdown } from "../../../hooks/useRetryCountdown.js";
 import { AuthButton } from "../components/AuthButton.jsx";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
@@ -148,6 +149,7 @@ function RolePill({ selected, label, icon, onPress }) {
 export function WelcomePage() {
   const navigation = useNavigation();
   const requestOtp = useRequestOtp();
+  const rateLimitSeconds = useRetryCountdown(requestOtp.error);
   const [mode, setMode] = useState("register");
   const [role, setRole] = useState(undefined);
   const [roleTouched, setRoleTouched] = useState(false);
@@ -213,7 +215,7 @@ export function WelcomePage() {
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           className="flex-1"
@@ -308,7 +310,9 @@ export function WelcomePage() {
                     className="text-[12px] text-danger"
                     accessibilityRole="alert"
                   >
-                    {getErrorMessage(requestOtp.error)}
+                    {requestOtp.error?.code === "RATE_LIMIT_EXCEEDED"
+                      ? getRateLimitMessage(rateLimitSeconds)
+                      : getErrorMessage(requestOtp.error)}
                   </Text>
                   {requestOtp.error?.code ===
                   "AUTH_PHONE_ALREADY_REGISTERED" ? (
@@ -362,6 +366,7 @@ export function WelcomePage() {
                 label={mode === "register" ? "Send OTP" : "Sign In"}
                 onPress={onSubmit}
                 isLoading={requestOtp.isPending}
+                disabled={rateLimitSeconds != null && rateLimitSeconds > 0}
               />
             </View>
 

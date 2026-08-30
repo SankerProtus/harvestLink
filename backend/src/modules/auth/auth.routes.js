@@ -27,15 +27,15 @@ const router = Router();
 // Rate limiters for different routes, using either IP-based or user-based strategies.
 const strictOtpLimiter = rateLimiter({
   routeName: "otp",
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  windowMs: 10 * 60 * 1000, // 10 minutes (was 1 hour)
+  max: 6,
   strategy: "ip",
 });
 
 const strictLoginLimiter = rateLimiter({
   routeName: "login",
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  windowMs: 5 * 60 * 1000, // 5 minutes (was 15 minutes)
+  max: 8,
   strategy: "ip",
 });
 
@@ -48,7 +48,7 @@ const strictChangePhoneLimiter = rateLimiter({
 
 const moderateLimiter = rateLimiter({
   routeName: "moderate",
-  windowMs: 15 * 60 * 1000,
+  windowMs: 10 * 60 * 1000, // 10 minutes (was 15 minutes)
   max: 30,
   strategy: "ip",
 });
