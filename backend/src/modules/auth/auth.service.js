@@ -114,12 +114,6 @@ import { logger } from "../../common/utils/logger.js";
 const smsProvider = resolveSmsProvider();
 const OTP_VERIFICATION_TOKEN_TTL_MINUTES = 10;
 
-// Demo/debug fallback — NEVER enable this in a real deployment. When set,
-// the raw OTP code is echoed back in the API response so the app can show
-// it on-screen if SMS delivery is unavailable (e.g. no SMS provider
-// configured for a demo build). It also makes OTP requests resilient: a
-// failed SMS send no longer blocks the flow, since the code is still
-// visible in-app. Controlled entirely by env var, off by default.
 const OTP_DEBUG_EXPOSE = process.env.OTP_DEBUG_EXPOSE === "true";
 
 function issueSessionTokens({ userId, role }) {
@@ -209,7 +203,9 @@ export async function requestOtp({ phone, purpose, ipAddress }) {
     windowStart,
   );
   if (recentRequestCount >= RATE_LIMIT_CONFIG.OTP_REQUEST_MAX) {
-    throw new RateLimitError("Too many OTP requests. Please try again later.");
+    throw new RateLimitError("Too many OTP requests. Please try again later.", {
+      retryAfterSeconds: RATE_LIMIT_CONFIG.OTP_REQUEST_WINDOW_MINUTES * 60,
+    });
   }
 
   const activeCode = await findLatestActiveOtpCode(phone, purpose);
@@ -559,10 +555,13 @@ export async function resendOtp({ phone, purpose }) {
     }
   }
 
-  const windowStart = new Date(Date.now() - 60 * 60 * 1000);
+  const RESEND_WINDOW_MINUTES = 2; // was 60
+  const windowStart = new Date(Date.now() - RESEND_WINDOW_MINUTES * 60 * 1000);
   const recentCount = await countOtpRequestsSince(phone, purpose, windowStart);
   if (recentCount >= OTP_CONFIG.MAX_RESENDS_PER_HOUR) {
-    throw new RateLimitError("Maximum OTP resends reached for this hour.");
+    throw new RateLimitError("Too many OTP resends. Please try again shortly.", {
+      retryAfterSeconds: RESEND_WINDOW_MINUTES * 60,
+    });
   }
 
   return requestOtp({ phone, purpose, ipAddress: null });
@@ -806,7 +805,6 @@ export async function revokeSession({ userId, refreshTokenId }) {
   return { success: true };
 }
 
-// Shared access-token verification utility for any flow that needs to validate an access token and extract its claims.
 export function verifyAccessTokenClaims({ accessToken }) {
   try {
     return verifyAccessTokenJwt(accessToken);

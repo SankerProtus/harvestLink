@@ -320,7 +320,11 @@ export function VerifyPhonePage() {
                 ) : (
                   <Pressable
                     onPress={handleResend}
-                    disabled={requestOtp.isPending}
+                    disabled={
+                      requestOtp.isPending ||
+                      (requestRateLimitSeconds != null &&
+                        requestRateLimitSeconds > 0)
+                    }
                     accessibilityRole="button"
                     accessibilityLabel="Resend verification code"
                     hitSlop={8}
@@ -330,6 +334,17 @@ export function VerifyPhonePage() {
                     </Text>
                   </Pressable>
                 )}
+
+                {requestOtp.isError ? (
+                  <Text
+                    className="text-[12px] text-danger mt-2 text-center"
+                    accessibilityRole="alert"
+                  >
+                    {requestOtp.error?.code === "RATE_LIMIT_EXCEEDED"
+                      ? getRateLimitMessage(requestRateLimitSeconds)
+                      : getErrorMessage(requestOtp.error)}
+                  </Text>
+                ) : null}
               </View>
             </>
           )}
