@@ -84,6 +84,19 @@ const STEP_LABELS = {
   DELIVERED: "Delivered",
 };
 
+const STATUS_SHARE_ICONS = {
+  PENDING: "🕒",
+  CONFIRMED: "✅",
+  IN_TRANSIT: "🚚",
+  DELIVERED: "📦",
+  CANCELLED: "❌",
+};
+
+function shortOrderRef(id) {
+  if (!id) return "———";
+  return id.replace(/-/g, "").slice(-8).toUpperCase();
+}
+
 function formatDate(isoString) {
   if (!isoString) return "—";
   return new Date(isoString).toLocaleString("en-GB", {
@@ -315,13 +328,28 @@ export function OrderDetailPage() {
   }
 
   async function handleSharePress() {
+    const statusLabel = STEP_LABELS[data.status] ?? data.status;
+    const statusIcon = STATUS_SHARE_ICONS[data.status] ?? "•";
+    const ref = shortOrderRef(data.id);
+    const counterpartLine = counterpart
+      ? `${isBuyer ? "Farmer" : "Buyer"}:  ${counterpart.name}\n`
+      : "";
+
+    const message =
+      `🌾 HarvestLink Order #${ref}\n` +
+      `─────────────────────\n` +
+      `${data.listing?.title ?? "Order"}\n` +
+      `Qty:  ${data.quantity}\n` +
+      `Total:  ${formatCurrency(total)}\n` +
+      `Status:  ${statusIcon} ${statusLabel}\n\n` +
+      counterpartLine +
+      `Ordered:  ${formatDate(data.createdAt)}\n\n` +
+      `Sent via HarvestLink`;
+
     try {
       await Share.share({
-        title: "HarvestLink Order",
-        message:
-          `${data.listing?.title ?? "Order"} — Status: ${STEP_LABELS[data.status] ?? data.status}\n` +
-          `Quantity: ${data.quantity}\n` +
-          `Ordered: ${formatDate(data.createdAt)}`,
+        title: `HarvestLink Order #${ref}`,
+        message,
       });
     } catch {
       // User dismissed the share sheet — nothing to do.
