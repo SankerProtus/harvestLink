@@ -29,7 +29,10 @@ import {
 } from "../hooks/authHooks.js";
 import { getErrorMessage, getRateLimitMessage } from "../../../lib/errorMap.js";
 import { useRetryCountdown } from "../../../hooks/useRetryCountdown.js";
-import { BackButton } from "../../../components/ui/InlinePageHeader.jsx";
+import {
+  ScreenHeader,
+  HeaderActionButton,
+} from "../../../components/ui/ScreenHeader.jsx";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
 
@@ -180,30 +183,28 @@ export function VerifyPhonePage() {
 
   const isVerifyBusy = verifyOtp.isPending || changePhoneNumber.isPending;
 
+  const backAction = (
+    <HeaderActionButton
+      icon="arrow-left"
+      size={20}
+      accessibilityLabel="Go back"
+      onPress={() => (step === "otp" ? setStep("phone") : navigation.goBack())}
+    />
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <StatusBar style="dark" />
 
-      <View className="px-5 pt-2 pb-3">
-        <BackButton
-          onPress={() =>
-            step === "otp" ? setStep("phone") : navigation.goBack()
-          }
-        />
-        <Text className="text-[28px] font-extrabold text-ink tracking-[-0.5px] mt-4">
-          {step === "phone" ? "Verify your phone" : "Enter the code"}
-        </Text>
-        <Text className="text-[14px] text-ink-muted mt-1.5 leading-5">
-          {step === "phone" ? (
-            "We'll text you a code to confirm this number"
-          ) : (
-            <>
-              Code sent to{" "}
-              <Text className="font-semibold text-ink">{phone}</Text>
-            </>
-          )}
-        </Text>
-      </View>
+      <ScreenHeader
+        title={step === "phone" ? "Verify your phone" : "Enter the code"}
+        subtitle={
+          step === "phone"
+            ? "We'll text you a code to confirm this number"
+            : `Code sent to ${phone}`
+        }
+        leftAction={backAction}
+      />
 
       <KeyboardAvoidingView
         className="flex-1"
