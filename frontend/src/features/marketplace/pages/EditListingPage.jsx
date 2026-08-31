@@ -36,12 +36,6 @@ export function EditListingPage() {
   async function handleFormSubmit(updates) {
     try {
       await updateListing.mutateAsync({ listingId, updates });
-      // Unlike CreateListingPage (only ever reached from the Farmer-only
-      // "Listings" tab), this screen can also be reached by a listing's
-      // owner from ListingDetailPage regardless of their account's
-      // current role — so we can't assume a "Listings" tab exists to
-      // navigate back to. goBack() correctly returns to wherever the
-      // edit was actually started from, for either entry point.
       navigation.goBack();
     } catch {
       // Already captured in updateListing.error and rendered below.
@@ -66,11 +60,8 @@ export function EditListingPage() {
             changeStatus.mutate(
               { listingId, status: "SOLD" },
               {
+                onSuccess: () => navigation.goBack(),
                 onError: (error) => setStatusActionError(error),
-                // No manual refetch/invalidation here — useChangeListingStatus
-                // already invalidates this listing's query and myListings
-                // internally; useListing(listingId) above will pick up the
-                // updated status automatically once that invalidation runs.
               },
             );
           },

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
 import { ListingForm } from "../components/ListingForm.jsx";
@@ -23,25 +23,31 @@ export function CreateListingPage() {
   const createListing = useCreateListing();
   const [step, setStep] = useState(1);
 
+  const [formKey, setFormKey] = useState(0);
+  const hasMountedRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasMountedRef.current) {
+        // Skip the very first focus (initial mount already gives us a
+        // fresh form) so we don't remount it twice on first load.
+        hasMountedRef.current = true;
+        return;
+      }
+      setFormKey((k) => k + 1);
+      setStep(1);
+    }, []),
+  );
+
   async function handleSubmit(values) {
     try {
       await createListing.mutateAsync(values);
-      // "Listings" is a tab registered inside the nested
-      // ProtectedTabNavigator, not a screen on this Stack (ProtectedStack)
-      // — navigating to it by name directly fails with "was not handled by
-      // any navigator". Target the parent tab navigator explicitly and ask
-      // it to switch to that tab. This works the same whether this screen
-      // is currently a pushed stack screen or the "Sell" tab's own root.
       navigation.navigate("ProtectedTabs", { screen: "Listings" });
     } catch {
       // Already captured in createListing.error and rendered below.
     }
   }
 
-  // This component doubles as both a pushed stack screen (from "Log New
-  // Harvest" CTAs elsewhere) and the root of the "Sell" tab. A tab root has
-  // nothing to go back to, so guard against a dead back button / inert
-  // cancel affordance when there's no history to unwind.
   const canGoBack = navigation.canGoBack();
 
   function handleCancel() {
@@ -49,8 +55,6 @@ export function CreateListingPage() {
       navigation.goBack();
       return;
     }
-    // No history to unwind (this is the "Sell" tab's own root) — send the
-    // farmer back to Home instead of leaving the button inert.
     navigation.navigate("ProtectedTabs", { screen: "Home" });
   }
 
@@ -86,6 +90,7 @@ export function CreateListingPage() {
 
       <View className="px-5 flex-1 pt-5">
         <ListingForm
+          key={formKey}
           mode="create"
           stepped
           onStepChange={setStep}
