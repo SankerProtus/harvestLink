@@ -18,13 +18,13 @@ import { useVerifyOtp, useLogin, useRequestOtp } from "../hooks/authHooks.js";
 import { getErrorMessage, getRateLimitMessage } from "../../../lib/errorMap.js";
 import { useRetryCountdown } from "../../../hooks/useRetryCountdown.js";
 import { getDeviceInfo } from "../../../lib/deviceInfo.js";
-import { BackButton } from "../../../components/ui/InlinePageHeader.jsx";
+import {
+  ScreenHeader,
+  HeaderActionButton,
+} from "../../../components/ui/ScreenHeader.jsx";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
-// Demo-mode banner: only rendered when the backend echoes back a debugCode,
-// which only happens when OTP_DEBUG_EXPOSE=true on the server (demo builds
-// with no working SMS provider). Invisible in a normal deployment.
 function DemoOtpBanner({ code }) {
   if (!code) return null;
 
@@ -117,15 +117,22 @@ export function OtpVerifyPage() {
     <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <StatusBar style="dark" />
 
-      <View className="px-5 pt-2 pb-3">
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text className="text-[28px] font-extrabold text-ink tracking-[-0.5px] mt-4">
-          Verify your number
-        </Text>
-        <Text className="text-[14px] text-ink-muted mt-1.5 leading-5">
-          Code sent to <Text className="font-semibold text-ink">{phone}</Text>
-        </Text>
-      </View>
+      <ScreenHeader
+        title={
+          purpose === OTP_PURPOSES.REGISTRATION
+            ? "Verify your number"
+            : "Log in with phone"
+        }
+        subtitle={`Code sent to ${phone}`}
+        leftAction={
+          <HeaderActionButton
+            icon="arrow-left"
+            size={20}
+            accessibilityLabel="Go back"
+            onPress={() => navigation.goBack()}
+          />
+        }
+      />
 
       <KeyboardAvoidingView
         className="flex-1"
