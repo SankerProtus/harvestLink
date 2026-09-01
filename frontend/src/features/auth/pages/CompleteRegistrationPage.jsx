@@ -17,7 +17,10 @@ import { useRegister } from "../hooks/authHooks.js";
 import { getErrorMessage, getRateLimitMessage } from "../../../lib/errorMap.js";
 import { useRetryCountdown } from "../../../hooks/useRetryCountdown.js";
 import { getDeviceInfo } from "../../../lib/deviceInfo.js";
-import { BackButton } from "../../../components/ui/InlinePageHeader.jsx";
+import {
+  ScreenHeader,
+  HeaderActionButton,
+} from "../../../components/ui/ScreenHeader.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
 
 const fullNameSchema = registerSchema.pick({ fullName: true });
@@ -58,15 +61,18 @@ export function CompleteRegistrationPage() {
     <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <StatusBar style="dark" />
 
-      <View className="px-5 pt-2 pb-3">
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text className="text-[28px] font-extrabold text-ink tracking-[-0.5px] mt-4">
-          One last step
-        </Text>
-        <Text className="text-[14px] text-ink-muted mt-1.5 leading-5">
-          What should we call you?
-        </Text>
-      </View>
+      <ScreenHeader
+        title="One last step"
+        subtitle="What should we call you?"
+        leftAction={
+          <HeaderActionButton
+            icon="arrow-left"
+            size={20}
+            accessibilityLabel="Go back"
+            onPress={() => navigation.goBack()}
+          />
+        }
+      />
 
       <KeyboardAvoidingView
         className="flex-1"
