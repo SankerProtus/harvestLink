@@ -89,7 +89,18 @@ export function useCreateListing() {
       const online = await isOnline();
 
       if (online) {
-        const remoteListing = await marketplaceApi.createListing(payload);
+        const uploadedImages = await Promise.all(
+          (payload.images ?? []).map(async (imageUri) => {
+            if (/^https?:\/\//i.test(imageUri)) return imageUri;
+
+            const uploaded = await marketplaceApi.uploadListingPhoto(imageUri);
+            return uploaded.url;
+          }),
+        );
+        const remoteListing = await marketplaceApi.createListing({
+          ...payload,
+          images: uploadedImages,
+        });
 
         try {
           await createLocalListing({
