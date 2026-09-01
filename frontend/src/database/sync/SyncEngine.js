@@ -17,7 +17,9 @@ import {
   updateListingQuantity as updateRemoteListingQuantity,
   changeListingStatus as changeRemoteListingStatus,
   getListing as getRemoteListing,
+  uploadListingPhoto,
 } from "../../api/marketplace.api.js";
+import { normalizeListingImageUrls } from "../../features/marketplace/lib/normalizeListingImageUrls.js";
 
 export const OPERATION_TYPES = Object.freeze({
   CREATE_LISTING: "CREATE_LISTING",
@@ -47,7 +49,15 @@ function extractEditableFields(listing) {
 
 async function handleCreateListing(operation) {
   // No conflict possible: this listing has never existed remotely.
-  const remoteListing = await createRemoteListing(operation.payload);
+  const normalizedPayload = {
+    ...operation.payload,
+    images: await normalizeListingImageUrls(
+      operation.payload.images,
+      uploadListingPhoto,
+    ),
+  };
+
+  const remoteListing = await createRemoteListing(normalizedPayload);
 
   await updateLocalListing(operation.entityLocalId, {
     remoteId: remoteListing.id,
@@ -68,9 +78,17 @@ async function handleUpdateListing(operation) {
 
   const merged = resolveConflict(localListing, remoteListing);
 
+  const editableFields = extractEditableFields(merged);
+  const normalizedEditableFields = {
+    ...editableFields,
+    images: editableFields.images
+      ? await normalizeListingImageUrls(editableFields.images, uploadListingPhoto)
+      : editableFields.images,
+  };
+
   const updatedRemoteListing = await updateRemoteListing(
     localListing.remoteId,
-    extractEditableFields(merged),
+    normalizedEditableFields,
   );
 
   await updateLocalListing(operation.entityLocalId, {

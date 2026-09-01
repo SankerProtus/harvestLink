@@ -10,6 +10,7 @@ import {
 } from "../../../database/repositories/ListingRepository.js";
 import { enqueue as enqueueOperation } from "../../../database/sync/SyncQueue.js";
 import { OPERATION_TYPES } from "../../../database/sync/SyncEngine.js";
+import { normalizeListingImageUrls } from "../lib/normalizeListingImageUrls.js";
 
 export const marketplaceQueryKeys = {
   listingsRoot: ["marketplace", "listings"],
@@ -89,13 +90,9 @@ export function useCreateListing() {
       const online = await isOnline();
 
       if (online) {
-        const uploadedImages = await Promise.all(
-          (payload.images ?? []).map(async (imageUri) => {
-            if (/^https?:\/\//i.test(imageUri)) return imageUri;
-
-            const uploaded = await marketplaceApi.uploadListingPhoto(imageUri);
-            return uploaded.url;
-          }),
+        const uploadedImages = await normalizeListingImageUrls(
+          payload.images,
+          marketplaceApi.uploadListingPhoto,
         );
         const remoteListing = await marketplaceApi.createListing({
           ...payload,
@@ -174,9 +171,19 @@ export function useUpdateListing() {
       const online = await isOnline();
 
       if (online) {
+        const normalizedUpdates = updates.images
+          ? {
+              ...updates,
+              images: await normalizeListingImageUrls(
+                updates.images,
+                marketplaceApi.uploadListingPhoto,
+              ),
+            }
+          : updates;
+
         const remoteListing = await marketplaceApi.updateListing(
           listingId,
-          updates,
+          normalizedUpdates,
         );
 
         // Mirror into local storage if a local copy of this listing
@@ -188,7 +195,7 @@ export function useUpdateListing() {
           const localMatch = await getLocalListingByRemoteId(listingId);
           if (localMatch) {
             await updateLocalListing(localMatch.localId, {
-              ...updates,
+              ...normalizedUpdates,
               status: remoteListing.status,
               syncStatus: "synced",
               updatedAt: remoteListing.updatedAt,
