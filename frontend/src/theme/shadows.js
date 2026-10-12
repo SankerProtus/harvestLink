@@ -4,14 +4,14 @@ export const shadows = {
   none: {},
 
   // Elevation 1: Subtle depth for cards
-  sm: Platform.select({
+    sm: Platform.select({
     ios: {
-      shadowColor: "#000000",
-      shadowOpacity: 0.08,
-      shadowRadius: 2,
+      shadowColor: "#0F172A",
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },
     },
-    android: { elevation: 2 },
+    android: { elevation: 1 },
     default: {},
   }),
 
@@ -40,14 +40,14 @@ export const shadows = {
   }),
 
   // Card elevation (Elevation 1)
-  card: Platform.select({
+    card: Platform.select({
     ios: {
-      shadowColor: "#000000",
-      shadowOpacity: 0.08,
-      shadowRadius: 2,
-      shadowOffset: { width: 0, height: 2 },
+      shadowColor: "#0F172A",
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
     },
-    android: { elevation: 2 },
+    android: { elevation: 1 },
     default: {},
   }),
 

@@ -1,4 +1,5 @@
-import { View, Text, FlatList } from "react-native";
+import { View, FlatList } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -69,7 +70,7 @@ export function ListingInterestPage() {
   const results = interest.data?.results ?? [];
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <ScreenHeader
         title="Interested Buyers"
         subtitle={listingTitle}

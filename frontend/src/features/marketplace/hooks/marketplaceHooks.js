@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as marketplaceApi from "../../../api/marketplace.api.js";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { isOnline } from "../../../lib/networkMonitor.js";
@@ -23,6 +23,19 @@ export function useListings(filters) {
   return useQuery({
     queryKey: marketplaceQueryKeys.listings(filters),
     queryFn: () => marketplaceApi.searchListings(filters),
+  });
+}
+
+export function useInfiniteListings(filters) {
+  return useInfiniteQuery({
+    queryKey: [...marketplaceQueryKeys.listingsRoot, "infinite", filters],
+    queryFn: ({ pageParam }) =>
+      marketplaceApi.searchListings({ ...filters, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
   });
 }
 

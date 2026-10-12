@@ -1,4 +1,5 @@
-import { Pressable, Text } from "react-native";
+import { Pressable } from "react-native";
+import { Text } from "./AppText.jsx";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "../../theme/colors.js";
 

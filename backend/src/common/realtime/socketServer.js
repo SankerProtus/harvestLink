@@ -1,5 +1,6 @@
 import { Server as SocketIOServer } from "socket.io";
 
+import { resolveCorsOriginConfig } from "../config/cors.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { logger } from "../utils/logger.js";
 
@@ -17,11 +18,9 @@ function reviewRoom(reviewId) {
 // currently has that review's thread open, so both sides see replies
 // appear without polling or refreshing.
 export function initSocketServer(httpServer) {
-  const corsOrigin = process.env.CORS_ORIGIN;
-
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: corsOrigin ? corsOrigin.split(",") : true,
+      origin: resolveCorsOriginConfig(),
     },
   });
 

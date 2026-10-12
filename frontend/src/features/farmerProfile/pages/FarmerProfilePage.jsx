@@ -1,10 +1,10 @@
 import {
   View,
-  Text,
   FlatList,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
@@ -22,6 +22,7 @@ import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { ReviewCard } from "../../../components/ui/ReviewCard.jsx";
 import { getErrorMessage } from "../../../lib/errorMap.js";
 import { useFarmerReviews } from "../../deliveryTracking/hooks/reviewHooks.js";
+import { Button } from "../../../components/ui/Button.jsx";
 
 function FarmerSummaryHeader({ farmer }) {
   return (
@@ -53,7 +54,7 @@ export function FarmerProfilePage() {
   const farmer = reviews.data?.farmer;
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <ScreenHeader
         title="Farmer Profile"
         leftAction={
@@ -91,7 +92,23 @@ export function FarmerProfilePage() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={
-              farmer ? <FarmerSummaryHeader farmer={farmer} /> : null
+              farmer ? (
+                <>
+                  <FarmerSummaryHeader farmer={farmer} />
+                  <Button
+                    label="Report this account"
+                    variant="secondary"
+                    icon="flag"
+                    className="mb-5"
+                    onPress={() =>
+                      navigation.navigate("ReportUser", {
+                        userId: farmer.id,
+                        userName: farmer.name,
+                      })
+                    }
+                  />
+                </>
+              ) : null
             }
             ListEmptyComponent={
               <EmptyState

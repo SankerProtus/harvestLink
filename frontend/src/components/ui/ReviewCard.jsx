@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, TextInput } from "react-native";
+import { View, Pressable } from "react-native";
+import { Text, TextInput } from "./AppText.jsx";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 

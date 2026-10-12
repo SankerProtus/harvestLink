@@ -1,14 +1,13 @@
 import { useState } from "react";
 import {
   View,
-  Text,
   ScrollView,
   Linking,
   Share,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -19,7 +18,6 @@ import { Feather } from "@expo/vector-icons";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
-import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 import { MapPin } from "../../../components/ui/MapPin.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
@@ -41,11 +39,14 @@ import { useReviewForOrder, useCreateReview } from "../hooks/reviewHooks.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
 import { colors } from "../../../theme/colors.js";
 import { formatCurrency } from "../../../lib/currency.js";
-import { PriceText } from "../../../components/ui/PriceText.jsx";
 import {
   OSM_RASTER_STYLE,
   DEFAULT_DELIVERY_MAP_ZOOM,
 } from "../../../lib/mapStyle.js";
+import { OrderTrustPanel } from "../../trust/components/OrderTrustPanel.jsx";
+import { OrderStatusHero } from "../components/OrderStatusHero.jsx";
+import { PaymentProtectionCard } from "../../trust/components/PaymentProtectionCard.jsx";
+import { getOrderStatusMeta } from "../lib/orderStatus.js";
 
 const TRANSITIONS = [
   { from: "PENDING", to: "CONFIRMED", actor: "farmer", label: "Confirm Order" },
@@ -55,12 +56,6 @@ const TRANSITIONS = [
     actor: "farmer",
     label: "Start Delivery",
   },
-  {
-    from: "IN_TRANSIT",
-    to: "DELIVERED",
-    actor: "farmer",
-    label: "Mark Delivered",
-  },
   { from: "PENDING", to: "CANCELLED", actor: "either", label: "Cancel Order" },
   {
     from: "CONFIRMED",
@@ -68,21 +63,14 @@ const TRANSITIONS = [
     actor: "either",
     label: "Cancel Order",
   },
-  {
-    from: "IN_TRANSIT",
-    to: "CANCELLED",
-    actor: "either",
-    label: "Cancel Order",
-  },
 ];
 
-const STEP_ORDER = ["PENDING", "CONFIRMED", "IN_TRANSIT", "DELIVERED"];
-const STEP_LABELS = {
-  PENDING: "Requested",
-  CONFIRMED: "Confirmed",
-  IN_TRANSIT: "In Transit",
-  DELIVERED: "Delivered",
-};
+const BUYER_CANCEL_GRACE_MS = 30 * 60 * 1000;
+
+function buyerWithinCancelGrace(confirmedAt) {
+  if (!confirmedAt) return false;
+  return Date.now() - new Date(confirmedAt).getTime() <= BUYER_CANCEL_GRACE_MS;
+}
 
 const STATUS_SHARE_ICONS = {
   PENDING: "🕒",
@@ -132,57 +120,6 @@ const RATING_LABELS = {
   5: "Excellent",
 };
 
-function StatusStepper({ status }) {
-  const currentIndex = STEP_ORDER.indexOf(status);
-
-  return (
-    <View className="flex-row items-center mb-1">
-      {STEP_ORDER.map((step, index) => {
-        const isComplete = index <= currentIndex;
-        const isCurrent = index === currentIndex;
-        return (
-          <View key={step} className="flex-1 flex-row items-center">
-            <View className="items-center flex-1">
-              <View
-                className={`w-7 h-7 rounded-full items-center justify-center ${
-                  isComplete ? "bg-primary" : "bg-line"
-                }`}
-              >
-                {isComplete ? (
-                  <Feather
-                    name={isCurrent ? "circle" : "check"}
-                    size={13}
-                    color="#FFFFFF"
-                  />
-                ) : null}
-              </View>
-              <Text
-                className={`text-[10.5px] mt-1.5 font-semibold ${
-                  isCurrent
-                    ? "text-primary"
-                    : isComplete
-                      ? "text-ink"
-                      : "text-ink-muted"
-                }`}
-                numberOfLines={1}
-              >
-                {STEP_LABELS[step]}
-              </Text>
-            </View>
-            {index < STEP_ORDER.length - 1 ? (
-              <View
-                className={`h-[2px] flex-1 -mt-4 ${
-                  index < currentIndex ? "bg-primary" : "bg-line"
-                }`}
-              />
-            ) : null}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 function InfoRow({ label, value, isLast = false }) {
   return (
     <View
@@ -230,7 +167,7 @@ export function OrderDetailPage() {
 
   if (order.isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
         <ScreenHeader title="Order details" leftAction={backAction} />
         <LoadingState label="Loading order…" />
       </SafeAreaView>
@@ -239,7 +176,7 @@ export function OrderDetailPage() {
 
   if (order.isError) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
         <ScreenHeader title="Order details" leftAction={backAction} />
         <ErrorState
           title="Couldn't load order"
@@ -255,7 +192,7 @@ export function OrderDetailPage() {
 
   if (!data) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
         <ScreenHeader title="Order details" leftAction={backAction} />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-ink-muted text-center">
@@ -271,7 +208,16 @@ export function OrderDetailPage() {
 
   const availableActions = TRANSITIONS.filter((t) => {
     if (t.from !== data.status) return false;
+    if (data.status === "CANCELLATION_REQUESTED") return false;
     if (t.actor === "farmer") return isFarmer;
+    if (
+      t.to === "CANCELLED" &&
+      t.from === "CONFIRMED" &&
+      isBuyer &&
+      !isFarmer
+    ) {
+      return buyerWithinCancelGrace(data.confirmedAt);
+    }
     return isBuyer || isFarmer;
   });
 
@@ -328,7 +274,7 @@ export function OrderDetailPage() {
   }
 
   async function handleSharePress() {
-    const statusLabel = STEP_LABELS[data.status] ?? data.status;
+    const statusLabel = getOrderStatusMeta(data.status).label;
     const statusIcon = STATUS_SHARE_ICONS[data.status] ?? "•";
     const ref = shortOrderRef(data.id);
     const counterpartLine = counterpart
@@ -366,7 +312,7 @@ export function OrderDetailPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
       <ScreenHeader
         title="Order details"
         leftAction={backAction}
@@ -388,49 +334,42 @@ export function OrderDetailPage() {
           contentContainerStyle={{ paddingBottom: 28 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="px-5 pt-4">
-            <Card className="p-4">
-              <View className="flex-row gap-3">
-                <View className="w-12 h-12 rounded-xl overflow-hidden bg-primary-muted">
-                  <RemoteImage
-                    uri={data.listing?.images?.[0]}
-                    className="w-full h-full"
-                    iconSize={16}
-                    icon="package"
-                  />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="text-[14.5px] font-bold text-ink"
-                    numberOfLines={1}
-                  >
-                    {data.listing?.title ?? "Order"}
-                  </Text>
-                  <Text className="text-[11.5px] text-ink-muted mt-0.5">
-                    {formatDate(data.createdAt)}
-                  </Text>
-                </View>
-                <PriceText amount={total} size="sm" />
-              </View>
-
-              {data.status === "CANCELLED" ? (
-                <View className="flex-row items-center justify-between mt-4 pt-4 border-t border-line/70">
-                  <Text className="text-[13px] font-semibold text-ink-muted">
-                    Status
-                  </Text>
-                  <View className="rounded-full px-3 py-1.5 bg-line">
-                    <Text className="text-[11.5px] font-bold text-ink-muted">
-                      Cancelled
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <View className="mt-5 pt-4 border-t border-line/70">
-                  <StatusStepper status={data.status} />
-                </View>
-              )}
-            </Card>
+          <View className="px-5 pt-4 gap-3">
+            <OrderStatusHero
+              order={data}
+              total={total}
+              isFarmer={isFarmer}
+              orderRef={shortOrderRef(data.id)}
+              dateLabel={formatDate(data.createdAt)}
+            />
+            <PaymentProtectionCard order={data} isBuyer={isBuyer} />
           </View>
+
+          {availableActions.length > 0 ? (
+            <View className="px-5 mt-6">
+              <SectionLabel>Update status</SectionLabel>
+              <Card className="p-5">
+                {updateStatus.isError ? (
+                  <Text
+                    className="text-[13px] text-danger mb-3"
+                    accessibilityRole="alert"
+                  >
+                    {getErrorMessage(updateStatus.error)}
+                  </Text>
+                ) : null}
+                {availableActions.map((action, index) => (
+                  <View key={action.to} className={index > 0 ? "mt-2.5" : ""}>
+                    <Button
+                      label={action.label}
+                      onPress={() => handleTransitionPress(action)}
+                      variant={action.to === "CANCELLED" ? "danger" : "primary"}
+                      isLoading={updateStatus.isPending}
+                    />
+                  </View>
+                ))}
+              </Card>
+            </View>
+          ) : null}
 
           <View className="px-5 mt-6">
             <SectionLabel>Order summary</SectionLabel>
@@ -548,31 +487,17 @@ export function OrderDetailPage() {
             </Card>
           </View>
 
-          {availableActions.length > 0 ? (
-            <View className="px-5 mt-6">
-              <SectionLabel>Update status</SectionLabel>
-              <Card className="p-5">
-                {updateStatus.isError ? (
-                  <Text
-                    className="text-[13px] text-danger mb-3"
-                    accessibilityRole="alert"
-                  >
-                    {getErrorMessage(updateStatus.error)}
-                  </Text>
-                ) : null}
-                {availableActions.map((action, index) => (
-                  <View key={action.to} className={index > 0 ? "mt-2.5" : ""}>
-                    <Button
-                      label={action.label}
-                      onPress={() => handleTransitionPress(action)}
-                      variant={action.to === "CANCELLED" ? "danger" : "primary"}
-                      isLoading={updateStatus.isPending}
-                    />
-                  </View>
-                ))}
-              </Card>
-            </View>
-          ) : null}
+          <OrderTrustPanel
+            orderId={orderId}
+            orderStatus={data.status}
+            userId={user?.id}
+            isBuyer={isBuyer}
+            isFarmer={isFarmer}
+            onDisputePress={() =>
+              navigation.navigate("OpenDispute", { orderId })
+            }
+            onOrderUpdated={() => order.refetch()}
+          />
 
           {data.status === "DELIVERED" && (isBuyer || isFarmer) ? (
             <View className="px-5 mt-6">

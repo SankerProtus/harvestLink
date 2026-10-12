@@ -1,4 +1,5 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
+import { Text } from "./AppText.jsx";
 import { shadows } from "../../theme/shadows.js";
 
 export function SegmentedControl({ options, value, onChange }) {

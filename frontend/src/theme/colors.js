@@ -1,40 +1,36 @@
 export const colors = Object.freeze({
-  // Primary Brand Green - Trust, agriculture, growth
-  primary: "#2D7A3B",        // Brand Green
-  primaryHover: "#4A9D56",   // Hover state
-  primaryActive: "#1A4823",  // Active/pressed state
-  primaryLight: "#E8F4ED",   // Light background
+  primary: "#2E7D32",
+  primaryHover: "#43A047",
+  primaryActive: "#1B5E20",
+  primaryLight: "#E8F3E9",
 
-  // Secondary Accent Orange - Urgency, energy, action
-  accent: "#E8731B",
-  accentLight: "#F9DCC4",
+  accent: "#C96A3D",
+  accentLight: "#F7E6DC",
+  accentDark: "#A4511F", // use for text / filled buttons (white on this is ~5.9:1)
 
-  // Backgrounds
-  surface: "#F8F8F8",        // Secondary background
-  surfaceElevated: "#FFFFFF",// Main surface
-  cream: "#FAFAF7",
+  surface: "#F8F9FA",
+  surfaceElevated: "#FFFFFF",
+  cream: "#FBF8F2",
   card: "#FFFFFF",
 
-  // Status Colors
-  success: "#27AE60",        // Order confirmed, delivery completed
-  successMuted: "#E8F4ED",   // Light success background
-  warning: "#F39C12",        // Pending, in transit
-  warningMuted: "#F9DCC4",   // Light warning background
-  danger: "#E74C3C",         // Cancelled, issues
-  dangerMuted: "#FFF5F3",    // Light error background
-  info: "#3498DB",           // Informational
-  infoMuted: "#DBEAFE",      // Light info background
+  success: "#27AE60",
+  successMuted: "#E8F3E9",
+  warning: "#F39C12",
+  warningMuted: "#FDF1D8",
+  danger: "#E74C3C",
+  dangerMuted: "#FFF5F3",
+  info: "#3498DB",
+  infoMuted: "#DBEAFE",
 
-  // Text - WCAG 2.2 AA Compliant
-  ink: "#1A1A1A",            // Primary text
-  inkSecondary: "#5A5A5A",   // Secondary text
-  inkMuted: "#A0A0A0",       // Disabled, tertiary
-  inkFaint: "#A0A0A0",       // Placeholders, hints
+  ink: "#1A1A1A",
+  inkSecondary: "#4B5563",
+  inkMuted: "#6B7280",
+  inkFaint: "#8B929C", // placeholders / inactive icons
 
-  // Borders & Dividers
-  line: "#E0E0E0",           // Default border
-  lineStrong: "#CBD5E1",     // Strong border
+  line: "#E5E7EB",
+  lineStrong: "#CBD5E1",
+  skeleton: "#ECEEF0",
 
   white: "#FFFFFF",
-  overlay: "rgba(0, 0, 0, 0.4)",  // Modal overlay per design
+  overlay: "rgba(0, 0, 0, 0.4)",
 });

@@ -16,6 +16,7 @@ import {
   getListing as getListingService,
   getFarmerListings as getFarmerListingsService,
   searchListings as searchListingsService,
+  listCrops as listCropsService,
   uploadListingPhoto as uploadListingPhotoService,
 } from "./marketplace.service.js";
 
@@ -120,6 +121,17 @@ export async function searchListings(req, res, next) {
   try {
     const filters = parseOrThrow(listingSearchSchema, req.query);
     const result = await searchListingsService(filters);
+    return sendSuccess(res, 200, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listCrops(req, res, next) {
+  try {
+    const search =
+      typeof req.query.search === "string" ? req.query.search : undefined;
+    const result = await listCropsService({ search });
     return sendSuccess(res, 200, result);
   } catch (err) {
     next(err);

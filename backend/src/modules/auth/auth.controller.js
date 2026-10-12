@@ -11,6 +11,7 @@ import {
   linkGoogleAccountSchema,
   changePhoneNumberSchema,
   sessionIdParamSchema,
+  deleteAccountSchema
 } from "./auth.validators.js";
 
 import {
@@ -31,6 +32,8 @@ import {
 
 import { uploadProfilePhoto as uploadProfilePhotoService } from "./auth.service.js";
 import { BadRequestError } from "../../errors/commonErrors.js";
+
+import { deleteOwnAccount } from "./auth.deletion.service.js";
 
 // Transport helper — pure response shaping, not business logic.
 
@@ -194,6 +197,16 @@ export async function uploadProfilePhoto(req, res, next) {
       userId: req.user.id,
       fileBuffer: req.file.buffer,
     });
+    return sendSuccess(res, 200, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteAccount(req, res, next) {
+  try {
+    parseOrThrow(deleteAccountSchema, req.body);
+    const result = await deleteOwnAccount({ userId: req.user.id });
     return sendSuccess(res, 200, result);
   } catch (err) {
     next(err);

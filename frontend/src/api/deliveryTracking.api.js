@@ -32,3 +32,7 @@ export function getMyOrdersAsFarmer(filters) {
     params: filters,
   });
 }
+
+export function getFarmerSummary() {
+  return apiClient.get("/delivery-tracking/orders/mine/farmer/summary");
+}

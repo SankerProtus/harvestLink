@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View, FlatList } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -126,7 +127,7 @@ export function SessionsPage() {
 
   if (sessions.isLoading || currentDeviceId === null) {
     return (
-      <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+      <SafeAreaView className="flex-1 bg-surface" edges={[]}>
         <ScreenHeader title="Devices & Sessions" leftAction={backAction} />
         <LoadingState label="Loading sessions…" />
       </SafeAreaView>
@@ -135,7 +136,7 @@ export function SessionsPage() {
 
   if (sessions.isError) {
     return (
-      <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+      <SafeAreaView className="flex-1 bg-surface" edges={[]}>
         <ScreenHeader title="Devices & Sessions" leftAction={backAction} />
         <ErrorState
           title="Couldn't load sessions"
@@ -150,7 +151,7 @@ export function SessionsPage() {
 
   if (sessionList.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+      <SafeAreaView className="flex-1 bg-surface" edges={[]}>
         <ScreenHeader title="Devices & Sessions" leftAction={backAction} />
         <EmptyState
           icon="shield"
@@ -162,7 +163,7 @@ export function SessionsPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <ScreenHeader title="Devices & Sessions" leftAction={backAction} />
 
       {revokeSession.isError ? (

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text } from "react-native";
+import { View } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
@@ -124,7 +125,7 @@ export function GoogleSignInScreen() {
     : getErrorMessage(displayError);
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
       <StatusBar style="dark" />
       <ScreenHeader
         title={pendingIdToken ? "One last step" : "Sign in with Google"}

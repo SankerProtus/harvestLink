@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text, ScrollView } from "react-native";
+import { View, ScrollView } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -72,7 +73,7 @@ export function EditListingPage() {
 
   if (listing.isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
         <ScreenHeader
           title="Edit Listing"
           leftAction={
@@ -91,7 +92,7 @@ export function EditListingPage() {
 
   if (listing.isError) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
         <ScreenHeader
           title="Edit Listing"
           leftAction={
@@ -116,7 +117,7 @@ export function EditListingPage() {
 
   if (!data) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
         <ScreenHeader
           title="Edit Listing"
           leftAction={
@@ -138,7 +139,7 @@ export function EditListingPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
       <ScreenHeader
         title="Edit Listing"
         subtitle={data.title}

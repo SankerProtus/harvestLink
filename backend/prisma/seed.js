@@ -1,8 +1,11 @@
 import { PrismaClient } from "../src/generated/client/index.js";
+import { createHash } from "node:crypto";
+import { CROP_CATALOGUE } from "./crops.data.js";
 
 const prisma = new PrismaClient();
 
 const IDS = {
+  admin: "90000000-0000-4000-8000-000000000001",
   farmers: [
     "10000000-0000-4000-8000-000000000001",
     "10000000-0000-4000-8000-000000000002",
@@ -50,6 +53,20 @@ const IDS = {
     "60000000-0000-4000-8000-000000000003",
     "60000000-0000-4000-8000-000000000004",
     "60000000-0000-4000-8000-000000000005",
+  ],
+
+  payments: [
+    "70000000-0000-4000-8000-000000000001",
+    "70000000-0000-4000-8000-000000000002",
+    "70000000-0000-4000-8000-000000000003",
+    "70000000-0000-4000-8000-000000000004",
+  ],
+
+  disputes: [
+    "80000000-0000-4000-8000-000000000001",
+  ],
+  reports: [
+    "81000000-0000-4000-8000-000000000001",
   ],
 };
 
@@ -227,6 +244,14 @@ const buyers = [
     lastLoginAt: daysAgo(1),
   },
 ];
+
+const admin = {
+  id: IDS.admin,
+  fullName: "HarvestLink Support Admin",
+  phone: "+233200000999",
+  profileImageUrl: IMG.farmer1,
+  lastLoginAt: daysAgo(0.2),
+};
 
 const listingData = [
   {
@@ -528,16 +553,48 @@ async function upsertUser(user, role) {
 async function main() {
   console.log("🌱 Seeding HarvestLink demo data...");
 
-  /*
-   * Remove only the deterministic demo records.
-   */
-
   await prisma.notification.deleteMany({
     where: {
       userId: {
         in: [...IDS.farmers, ...IDS.buyers],
       },
     },
+  });
+
+  await prisma.payout.deleteMany({
+    where: { orderId: { in: IDS.orders } },
+  });
+  await prisma.refund.deleteMany({
+    where: { orderId: { in: IDS.orders } },
+  });
+  await prisma.escrow.deleteMany({
+    where: { orderId: { in: IDS.orders } },
+  });
+  await prisma.payment.deleteMany({
+    where: { orderId: { in: IDS.orders } },
+  });
+  await prisma.deliveryHandoverCode.deleteMany({
+    where: { orderId: { in: IDS.orders } },
+  });
+  await prisma.cancellationRequest.deleteMany({
+    where: { orderId: { in: IDS.orders } },
+  });
+  await prisma.dispute.deleteMany({
+    where: { orderId: { in: IDS.orders } },
+  });
+  await prisma.userReport.deleteMany({
+    where: { id: { in: IDS.reports } },
+  });
+  await prisma.auditLog.deleteMany({
+    where: {
+      entityId: { in: [...IDS.orders, ...IDS.disputes, ...IDS.payments] },
+    },
+  });
+  await prisma.verificationRecord.deleteMany({
+    where: { userId: { in: [...IDS.farmers, ...IDS.buyers, IDS.admin] } },
+  });
+  await prisma.reliabilityMetric.deleteMany({
+    where: { userId: { in: IDS.farmers } },
   });
 
   await prisma.reviewComment.deleteMany({
@@ -599,6 +656,36 @@ async function main() {
   for (const buyer of buyers) {
     await upsertUser(buyer, "BUYER");
   }
+  await upsertUser(admin, "ADMIN");
+
+  /*
+   * CROPS
+   */
+
+  for (const crop of CROP_CATALOGUE) {
+    await prisma.crop.upsert({
+      where: { slug: crop.slug },
+      create: {
+        name: crop.name,
+        slug: crop.slug,
+        category: crop.category,
+        localNames: crop.localNames ?? undefined,
+        defaultUnit: crop.defaultUnit,
+        active: true,
+      },
+      update: {
+        name: crop.name,
+        category: crop.category,
+        localNames: crop.localNames ?? undefined,
+        defaultUnit: crop.defaultUnit,
+        active: true,
+      },
+    });
+  }
+
+  const cropsBySlug = Object.fromEntries(
+    (await prisma.crop.findMany()).map((c) => [c.slug, c.id]),
+  );
 
   /*
    * LISTINGS
@@ -606,11 +693,18 @@ async function main() {
 
   for (let i = 0; i < listingData.length; i++) {
     const listing = listingData[i];
+    const { cropType, ...rest } = listing;
+    const cropId = cropsBySlug[cropType];
+    if (!cropId) {
+      throw new Error(`Missing crop seed for slug ${cropType}`);
+    }
 
     await prisma.listing.create({
       data: {
-        ...listing,
+        ...rest,
+        cropId,
         status: "ACTIVE",
+        priceReviewRequired: listing.id === IDS.listings[1],
         createdAt: daysAgo(25 - i),
       },
     });
@@ -692,7 +786,298 @@ async function main() {
         quantity: 10,
         pricePerUnitAtOrder: 450,
         status: "DELIVERED",
+        deliveryVerifiedAt: daysAgo(12),
+        protectionEndsAt: daysAgo(10),
         createdAt: daysAgo(14),
+      },
+    ],
+  });
+
+  /*
+   * TRUST, PAYMENT AND DISPUTE DEMO DATA
+   */
+
+  await prisma.order.update({
+    where: { id: IDS.orders[0] },
+    data: {
+      deliveryVerifiedAt: daysAgo(6),
+      protectionEndsAt: daysAgo(4),
+    },
+  });
+
+  await prisma.order.update({
+    where: { id: IDS.orders[4] },
+    data: {
+      status: "DISPUTED",
+      deliveryVerifiedAt: daysAgo(2),
+      protectionEndsAt: daysAgo(0.5),
+    },
+  });
+
+  await prisma.payment.createMany({
+    data: [
+      {
+        id: IDS.payments[0],
+        orderId: IDS.orders[0],
+        buyerId: IDS.buyers[0],
+        provider: "MOBILE_MONEY",
+        providerPaymentId: "DEMO-PAY-001",
+        amount: 950,
+        currency: "GHS",
+        status: "RELEASED",
+        capturedAt: daysAgo(7),
+        authorizedAt: daysAgo(7),
+        createdAt: daysAgo(7),
+      },
+      {
+        id: IDS.payments[1],
+        orderId: IDS.orders[1],
+        buyerId: IDS.buyers[1],
+        provider: "PAYSTACK",
+        providerPaymentId: "DEMO-PAY-002",
+        amount: 504,
+        currency: "GHS",
+        status: "HELD",
+        capturedAt: daysAgo(2),
+        authorizedAt: daysAgo(2),
+        createdAt: daysAgo(2),
+      },
+      {
+        id: IDS.payments[2],
+        orderId: IDS.orders[4],
+        buyerId: IDS.buyers[1],
+        provider: "PAYSTACK",
+        providerPaymentId: "DEMO-PAY-003",
+        amount: 9250,
+        currency: "GHS",
+        status: "REFUND_PENDING",
+        capturedAt: daysAgo(2),
+        authorizedAt: daysAgo(2),
+        createdAt: daysAgo(2),
+      },
+      {
+        id: IDS.payments[3],
+        orderId: IDS.orders[8],
+        buyerId: IDS.buyers[2],
+        provider: "MOBILE_MONEY",
+        providerPaymentId: "DEMO-PAY-004",
+        amount: 4500,
+        currency: "GHS",
+        status: "RELEASED",
+        capturedAt: daysAgo(13),
+        authorizedAt: daysAgo(13),
+        createdAt: daysAgo(13),
+      },
+    ],
+  });
+
+  await prisma.escrow.createMany({
+    data: [
+      {
+        orderId: IDS.orders[0],
+        paymentId: IDS.payments[0],
+        provider: "MOBILE_MONEY",
+        providerEscrowId: "DEMO-ESCROW-001",
+        amount: 950,
+        currency: "GHS",
+        status: "RELEASED",
+        fundedAt: daysAgo(7),
+        releasedAt: daysAgo(4),
+      },
+      {
+        orderId: IDS.orders[1],
+        paymentId: IDS.payments[1],
+        provider: "PAYSTACK",
+        providerEscrowId: "DEMO-ESCROW-002",
+        amount: 504,
+        currency: "GHS",
+        status: "FUNDED",
+        fundedAt: daysAgo(2),
+      },
+      {
+        orderId: IDS.orders[4],
+        paymentId: IDS.payments[2],
+        provider: "PAYSTACK",
+        providerEscrowId: "DEMO-ESCROW-003",
+        amount: 9250,
+        currency: "GHS",
+        status: "FROZEN",
+        fundedAt: daysAgo(2),
+      },
+      {
+        orderId: IDS.orders[8],
+        paymentId: IDS.payments[3],
+        provider: "MOBILE_MONEY",
+        providerEscrowId: "DEMO-ESCROW-004",
+        amount: 4500,
+        currency: "GHS",
+        status: "RELEASED",
+        fundedAt: daysAgo(13),
+        releasedAt: daysAgo(10),
+      },
+    ],
+  });
+
+  await prisma.payout.createMany({
+    data: [
+      {
+        orderId: IDS.orders[0],
+        paymentId: IDS.payments[0],
+        farmerId: IDS.farmers[0],
+        provider: "MOBILE_MONEY",
+        providerPayoutId: "DEMO-PAYOUT-001",
+        amount: 950,
+        currency: "GHS",
+        status: "SUCCEEDED",
+        processedAt: daysAgo(4),
+      },
+      {
+        orderId: IDS.orders[8],
+        paymentId: IDS.payments[3],
+        farmerId: IDS.farmers[4],
+        provider: "MOBILE_MONEY",
+        providerPayoutId: "DEMO-PAYOUT-002",
+        amount: 4500,
+        currency: "GHS",
+        status: "PENDING",
+      },
+    ],
+  });
+
+  await prisma.refund.create({
+    data: {
+      orderId: IDS.orders[4],
+      paymentId: IDS.payments[2],
+      provider: "PAYSTACK",
+      providerRefundId: "DEMO-REFUND-001",
+      amount: 9250,
+      currency: "GHS",
+      status: "PENDING",
+      reason: "Buyer reported damaged goods; admin review approved buyer refund.",
+    },
+  });
+
+  await prisma.dispute.create({
+    data: {
+      id: IDS.disputes[0],
+      orderId: IDS.orders[4],
+      openedById: IDS.buyers[1],
+      reason: "DAMAGED_GOODS",
+      description:
+        "Several cocoa sacks arrived torn and the beans were visibly wet. Evidence attached for admin review.",
+      evidenceUrls: [
+        "https://res.cloudinary.com/demo/image/upload/harvestlink/dispute-evidence/demo-damaged-cocoa.jpg",
+      ],
+      evidenceExpiresAt: new Date(now.getTime() + 90 * 86400000),
+      status: "OPEN",
+      createdAt: daysAgo(0.4),
+    },
+  });
+
+  await prisma.userReport.create({
+    data: {
+      id: IDS.reports[0],
+      reporterId: IDS.buyers[0],
+      reportedUserId: IDS.farmers[1],
+      reason: "FRAUD",
+      description:
+        "The account requested an off-platform payment and the delivered quantity did not match the listing. Please review the messages and order history.",
+      evidenceUrls: [],
+      status: "OPEN",
+      createdAt: daysAgo(0.2),
+    },
+  });
+
+  await prisma.deliveryHandoverCode.create({
+    data: {
+      orderId: IDS.orders[1],
+      codeHash: createHash("sha256").update("583214").digest("hex"),
+      expiresAt: new Date(now.getTime() + 30 * 60000),
+      attempts: 0,
+    },
+  });
+
+  await prisma.cancellationRequest.create({
+    data: {
+      orderId: IDS.orders[2],
+      requesterId: IDS.buyers[2],
+      reason: "Buyer no longer needs the confirmed order.",
+      status: "PENDING",
+      createdAt: daysAgo(0.2),
+    },
+  });
+
+  await prisma.verificationRecord.createMany({
+    data: [
+      {
+        userId: IDS.farmers[0],
+        provider: "MANUAL",
+        providerReference: "DEMO-KYC-001",
+        status: "APPROVED",
+        tierRequested: 2,
+        notes: "Farmer group and identity documents reviewed.",
+        reviewedById: IDS.admin,
+        reviewedAt: daysAgo(12),
+      },
+      {
+        userId: IDS.farmers[1],
+        provider: "MANUAL",
+        providerReference: "DEMO-KYC-002",
+        status: "PENDING",
+        tierRequested: 1,
+        notes: "Awaiting identity review.",
+      },
+    ],
+  });
+
+  await prisma.user.update({
+    where: { id: IDS.farmers[0] },
+    data: { verificationLevel: 2 },
+  });
+
+  await prisma.reliabilityMetric.createMany({
+    data: [
+      {
+        userId: IDS.farmers[0],
+        metricType: "CANCELLATION_RATE",
+        periodStart: new Date("2026-08-01T00:00:00.000Z"),
+        periodEnd: new Date("2026-08-31T00:00:00.000Z"),
+        value: 0.05,
+        sampleSize: 20,
+      },
+      {
+        userId: IDS.farmers[3],
+        metricType: "ON_TIME_DELIVERY_RATE",
+        periodStart: new Date("2026-08-01T00:00:00.000Z"),
+        periodEnd: new Date("2026-08-31T00:00:00.000Z"),
+        value: 0.82,
+        sampleSize: 11,
+      },
+    ],
+  });
+
+  await prisma.auditLog.createMany({
+    data: [
+      {
+        actorId: IDS.buyers[0],
+        action: "DELIVERY_VERIFIED",
+        entityType: "ORDER",
+        entityId: IDS.orders[0],
+        metadata: { demo: true, protectionEndsAt: daysAgo(4).toISOString() },
+      },
+      {
+        actorId: IDS.buyers[1],
+        action: "DISPUTE_OPENED",
+        entityType: "ORDER",
+        entityId: IDS.orders[4],
+        metadata: { demo: true, disputeId: IDS.disputes[0] },
+      },
+      {
+        actorId: IDS.admin,
+        action: "PRICE_REVIEW_FLAGGED",
+        entityType: "LISTING",
+        entityId: IDS.listings[1],
+        metadata: { demo: true, reason: "Outside reference price band" },
       },
     ],
   });
@@ -740,17 +1125,11 @@ async function main() {
 
   /*
    * REVIEW COMMENTS
-   *
-   * A reply thread on a review is restricted at the service layer to
-   * just the two people the review is between — the buyer who wrote it
-   * and the farmer it's about. Not every review gets a reply (reviews[3]
-   * is left untouched below), which is closer to how this actually looks
-   * in production than commenting on 100% of reviews.
    */
 
   await prisma.reviewComment.createMany({
     data: [
-      // Review 1 (tomatoes, 5★) — farmer thanks the buyer, buyer replies.
+      // Review 1
       {
         reviewId: IDS.reviews[0],
         authorId: IDS.farmers[0],
@@ -764,7 +1143,7 @@ async function main() {
         createdAt: daysAgo(0.4),
       },
 
-      // Review 2 (cocoa, 4★) — farmer follows up on the feedback.
+      // Review 2
       {
         reviewId: IDS.reviews[1],
         authorId: IDS.farmers[3],
@@ -772,7 +1151,7 @@ async function main() {
         createdAt: daysAgo(4.5),
       },
 
-      // Review 3 (cassava, 5★) — short back-and-forth.
+      // Review 3
       {
         reviewId: IDS.reviews[2],
         authorId: IDS.farmers[1],
@@ -786,7 +1165,7 @@ async function main() {
         createdAt: daysAgo(11.2),
       },
 
-      // Review 5 (maize, 4★) — farmer acknowledges the feedback.
+      // Review 5
       {
         reviewId: IDS.reviews[4],
         authorId: IDS.farmers[4],
@@ -1035,13 +1414,21 @@ async function main() {
 
   console.log("");
   console.log(
-    "Created: 12 listings with 5 images each, 9 orders, 5 reviews, 6 review comments, 7 saved listings, 6 interests and 10 notifications."
+    "Created: 12 listings with 5 images each, 9 orders, 4 protected payments, 4 escrows, 2 payouts, 1 refund, 1 open dispute, 2 verification records, 2 reliability metrics, 1 pending cancellation and 3 audit events."
   );
 
   console.log("");
   console.log(
     "The first image in every listing.images array is the cover photo."
   );
+
+  console.log("");
+  console.log("Trust demo scenarios:");
+  console.log(`  In-transit order with handover code 583214: ${IDS.orders[1]}`);
+  console.log(`  Open damaged-goods dispute for admin review: ${IDS.disputes[0]}`);
+  console.log(`  Pending verification request: ${IDS.farmers[1]}`);
+  console.log(`  Price-review listing: ${IDS.listings[1]}`);
+  console.log(`  Pending buyer cancellation request: ${IDS.orders[2]}`);
 }
 
 main()

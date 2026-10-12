@@ -7,6 +7,7 @@ import {
   getOrder,
   listMyOrdersAsBuyer,
   listMyOrdersAsFarmer,
+  getMyFarmerSummary
 } from "./deliveryTracking.controller.js";
 
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
@@ -41,6 +42,12 @@ router.get(
   authMiddleware,
   lightLimiter,
   listMyOrdersAsFarmer,
+);
+router.get(
+  "/orders/mine/farmer/summary",
+  authMiddleware,
+  lightLimiter,
+  getMyFarmerSummary,
 );
 
 router.post("/orders", authMiddleware, moderateLimiter, createOrder);

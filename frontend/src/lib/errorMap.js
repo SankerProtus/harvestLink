@@ -73,6 +73,12 @@ export const ERROR_MESSAGES = Object.freeze({
   DELIVERY_LOCATION_REPORTING_NOT_ALLOWED:
     "Location can only be reported while a delivery is in transit.",
 
+  // ─── Trust: User reports ─────────────────────────────────
+  REPORT_SELF: "You cannot report your own account.",
+  REPORTED_USER_NOT_FOUND: "This account could not be found.",
+  REPORT_ALREADY_EXISTS:
+    "You already have an active report for this account.",
+
   // ─── Generic / Common ─────────────────────────────────────
   BAD_REQUEST: "That request could not be processed.",
   VALIDATION_ERROR: "Please check the highlighted fields and try again.",
@@ -91,7 +97,7 @@ const FALLBACK_MESSAGE = "Something went wrong. Please try again.";
 
 export function getErrorMessage(error) {
   if (!error?.code) return FALLBACK_MESSAGE;
-  return ERROR_MESSAGES[error.code] ?? FALLBACK_MESSAGE;
+  return ERROR_MESSAGES[error.code] ?? error.message ?? FALLBACK_MESSAGE;
 }
 
 // Formats a rate-limit error with a live "try again in Xm Ys" countdown

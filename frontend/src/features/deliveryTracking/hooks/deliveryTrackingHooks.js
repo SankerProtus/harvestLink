@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as deliveryTrackingApi from "../../../api/deliveryTracking.api.js";
 
 export const deliveryTrackingQueryKeys = {
@@ -67,6 +67,16 @@ export function useUpdateOrderStatus() {
         queryKey: ["deliveryTracking", "myOrders", "farmer"],
       });
     },
+    onError: (error, variables) => {
+      if (error?.status === 409) {
+        queryClient.invalidateQueries({
+          queryKey: deliveryTrackingQueryKeys.order(variables.orderId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["deliveryTracking", "myOrders"],
+        });
+      }
+    },
   });
 }
 
@@ -81,5 +91,41 @@ export function useReportLocation() {
         queryKey: deliveryTrackingQueryKeys.order(variables.orderId),
       });
     },
+  });
+}
+
+export function useFarmerSummary({ enabled = true } = {}) {
+  return useQuery({
+    queryKey: ["deliveryTracking", "myOrders", "farmer", "summary"],
+    queryFn: () => deliveryTrackingApi.getFarmerSummary(),
+    enabled,
+  });
+}
+
+function nextOrderPage(lastPage) {
+  return lastPage.pagination.page < lastPage.pagination.totalPages
+    ? lastPage.pagination.page + 1
+    : undefined;
+}
+
+export function useInfiniteBuyerOrders(filters, { enabled = true } = {}) {
+  return useInfiniteQuery({
+    queryKey: ["deliveryTracking", "myOrders", "buyer", "infinite", filters],
+    queryFn: ({ pageParam }) =>
+      deliveryTrackingApi.getMyOrdersAsBuyer({ ...filters, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: nextOrderPage,
+    enabled,
+  });
+}
+
+export function useInfiniteFarmerOrders(filters, { enabled = true } = {}) {
+  return useInfiniteQuery({
+    queryKey: ["deliveryTracking", "myOrders", "farmer", "infinite", filters],
+    queryFn: ({ pageParam }) =>
+      deliveryTrackingApi.getMyOrdersAsFarmer({ ...filters, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: nextOrderPage,
+    enabled,
   });
 }

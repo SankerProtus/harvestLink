@@ -1,8 +1,10 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
 import { PriceText } from "../../../components/ui/PriceText.jsx";
+import { TrustBadge } from "../../../components/ui/TrustBadge.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
@@ -74,9 +76,9 @@ function CompactCard({
       <View className="h-[108px] bg-primary-muted relative">
         <RemoteImage uri={imageUri} className="w-full h-full" iconSize={20} />
         <View className="absolute top-2 left-2">
-          <View className={`rounded-full px-1.5 py-0.5 ${statusStyle.bg}`}>
+          <View className={`rounded-full px-2 py-1 ${statusStyle.bg}`}>
             <Text
-              className={`text-[8px] font-bold uppercase ${statusStyle.text}`}
+              className={`text-[10px] font-bold uppercase ${statusStyle.text}`}
             >
               {statusStyle.label}
             </Text>
@@ -88,7 +90,7 @@ function CompactCard({
               e.stopPropagation?.();
               onToggleSave(listing);
             }}
-            hitSlop={6}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={isSaved ? "Remove from saved" : "Save listing"}
             className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/95 items-center justify-center"
@@ -99,6 +101,11 @@ function CompactCard({
               color={isSaved ? colors.danger : colors.inkFaint}
             />
           </Pressable>
+        ) : null}
+        {listing.farmer?.isVerified ? (
+          <View className="absolute bottom-2 left-2">
+            <TrustBadge type="verifiedFarmer" size="sm" label="Verified" />
+          </View>
         ) : null}
       </View>
 
@@ -272,9 +279,9 @@ export function ListingCard({
         <View className="absolute inset-x-0 top-0 h-16 bg-black/10" />
 
         <View className="absolute top-3 left-3 flex-row gap-2">
-          <View className={`rounded-full px-2.5 py-1 ${statusStyle.bg}`}>
+          <View className={`rounded-full px-2 py-1 ${statusStyle.bg}`}>
             <Text
-              className={`text-[10px] font-bold uppercase tracking-wide ${statusStyle.text}`}
+              className={`text-[10px] font-bold uppercase ${statusStyle.text}`}
             >
               {statusStyle.label}
             </Text>

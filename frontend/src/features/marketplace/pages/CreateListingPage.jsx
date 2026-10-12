@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
-import { View, Text } from "react-native";
+import { View } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -59,7 +60,7 @@ export function CreateListingPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <ScreenHeader
         title={canGoBack ? "Create New Listing" : "Sell Your Harvest"}
         subtitle={STEP_SUBTITLES[step]}

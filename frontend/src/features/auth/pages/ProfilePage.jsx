@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   Image,
   ActivityIndicator,
   Animated,
 } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -16,10 +16,6 @@ import { Feather } from "@expo/vector-icons";
 import { AuthButton } from "../components/AuthButton.jsx";
 import { useProfile, useLogout } from "../hooks/authHooks.js";
 import { useMyListings } from "../../marketplace/hooks/marketplaceHooks.js";
-import {
-  useBuyerOrders,
-  useFarmerOrders,
-} from "../../deliveryTracking/hooks/deliveryTrackingHooks.js";
 import { useUnreadNotificationCount } from "../../notifications/hooks/notificationHooks.js";
 import { useSyncStatus } from "../../../lib/useSyncStatus.js";
 import { syncPendingOperations } from "../../../database/sync/SyncEngine.js";
@@ -37,6 +33,14 @@ import { shadows } from "../../../theme/shadows.js";
 
 import * as ImagePicker from "expo-image-picker";
 import { useUploadProfilePhoto } from "../hooks/authHooks.js";
+
+import {
+  useBuyerOrders,
+  useFarmerSummary,
+} from "../../deliveryTracking/hooks/deliveryTrackingHooks.js";
+import { useSavedListingIds } from "../../marketplace/hooks/savedListingHooks.js";
+import { useExpressedInterestIds } from "../../marketplace/hooks/listingInterestHooks.js";
+import { TrustBadge } from "../../../components/ui/TrustBadge.jsx";
 
 function GroupCard({ children }) {
   return (
@@ -163,14 +167,13 @@ function StatCell({ label, value, icon, isLast = false }) {
   );
 }
 
-// Small trust/status pill under the name — the only account-status signal
-// shown, and it's built entirely from real fields already on the user
-// record (phoneVerifiedAt, accountStatus). No fabricated "profile
-// strength" percentage: the profile has exactly one optional field
-// (photo), which isn't enough real signal to justify a progress meter.
 function StatusPill({ isVerified }) {
+  const label = isVerified ? "Phone verified" : "Phone not verified";
+
   return (
     <View
+      accessibilityRole="text"
+      accessibilityLabel={label}
       className={`flex-row items-center gap-1.5 px-3 py-1.5 rounded-full mt-2.5 ${
         isVerified ? "bg-primary-muted" : "bg-warning-muted"
       }`}
@@ -184,16 +187,13 @@ function StatusPill({ isVerified }) {
         className="text-[11px] font-semibold"
         style={{ color: isVerified ? colors.primary : colors.warning }}
       >
-        {isVerified ? "Verified account" : "Verification pending"}
+        {label}
       </Text>
     </View>
   );
 }
 
-// --- Loading skeleton ---------------------------------------------
-// Mirrors the real layout (header, avatar, stat row, two list blocks)
-// so the screen doesn't jump when data arrives, per production loading-
-// state guidance — no bare "Loading…" text.
+// --- Loading skeleton
 
 function Shimmer({ className, style }) {
   const opacity = useRef(new Animated.Value(0.4)).current;
@@ -227,13 +227,13 @@ function Shimmer({ className, style }) {
 
 function ProfileSkeleton() {
   return (
-    <SafeAreaView className="flex-1 bg-surface">
-      <ScreenHeader title="My account" />
+    <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
+      <ScreenHeader title="My account" tone="tinted" overlap={40} />
       <ScrollView
         contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="items-center" style={{ marginTop: -34 }}>
+        <View className="items-center" style={{ marginTop: -40 }}>
           <Shimmer
             className="rounded-full"
             style={{
@@ -326,10 +326,13 @@ export function ProfilePage() {
   const logout = useLogout();
 
   const isFarmer = profile.data?.role === "FARMER";
+  const isAdmin = profile.data?.role === "ADMIN";
 
   const myListings = useMyListings();
-  const farmerOrders = useFarmerOrders();
-  const buyerOrders = useBuyerOrders();
+  const farmerSummary = useFarmerSummary({ enabled: isFarmer });
+  const buyerOrders = useBuyerOrders({ limit: 1 });
+  const savedIds = useSavedListingIds();
+  const interestIds = useExpressedInterestIds();
 
   const { pendingCount, isOnline, refresh } = useSyncStatus();
 
@@ -349,7 +352,7 @@ export function ProfilePage() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -392,8 +395,8 @@ export function ProfilePage() {
 
   if (profile.isError) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
-        <ScreenHeader title="My account" />
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
+        <ScreenHeader title="My account" tone="tinted" overlap={40} />
         <ErrorState
           title="Unable to load your profile"
           message={getErrorMessage(profile.error)}
@@ -407,62 +410,59 @@ export function ProfilePage() {
   const isVerified =
     Boolean(user.phoneVerifiedAt) && user.accountStatus === "ACTIVE";
 
-  // Real, computed stats — no placeholders. Farmers see revenue/deliveries
-  // from their own DELIVERED orders; buyers see spend/orders from theirs.
-  let stats;
+  const roleLabel = isAdmin ? "Administrator" : isFarmer ? "Farmer" : "Buyer";
+
+  let stats = [];
   if (isFarmer) {
-    const orders = farmerOrders.data?.results ?? [];
-    const delivered = orders.filter((o) => o.status === "DELIVERED");
-    const revenue = delivered.reduce(
-      (sum, o) => sum + Number(o.quantity) * Number(o.pricePerUnitAtOrder),
-      0,
-    );
+    const money = farmerSummary.data?.money ?? [];
+    const m = money.find((x) => x.currency === "GHS") ?? money[0];
     const activeListings = (myListings.data ?? []).filter(
       (l) => l.status === "ACTIVE",
     ).length;
     stats = [
       {
-        label: "Revenue, GHS",
-        value: formatMoney(revenue),
+        label: `Paid out, ${m?.currency ?? "GHS"}`,
+        value: formatMoney(m?.paidOut ?? 0),
         icon: "trending-up",
       },
-      { label: "Deliveries", value: String(delivered.length), icon: "truck" },
+      {
+        label: "Deliveries",
+        value: String(farmerSummary.data?.statusCounts?.DELIVERED ?? 0),
+        icon: "truck",
+      },
       {
         label: "Active listings",
         value: String(activeListings),
         icon: "package",
       },
     ];
-  } else {
-    const orders = buyerOrders.data?.results ?? [];
-    const delivered = orders.filter((o) => o.status === "DELIVERED");
-    const spent = delivered.reduce(
-      (sum, o) => sum + Number(o.quantity) * Number(o.pricePerUnitAtOrder),
-      0,
-    );
-    const pending = orders.filter((o) =>
-      ["PENDING", "CONFIRMED", "IN_TRANSIT"].includes(o.status),
-    ).length;
+  } else if (!isAdmin) {
     stats = [
       {
-        label: "Spent, GHS",
-        value: formatMoney(spent),
-        icon: "credit-card",
+        label: "Orders placed",
+        value: String(buyerOrders.data?.pagination?.total ?? 0),
+        icon: "clipboard",
       },
       {
-        label: "Orders completed",
-        value: String(delivered.length),
-        icon: "check-circle",
+        label: "Saved",
+        value: String(savedIds.data?.size ?? 0),
+        icon: "bookmark",
       },
-      { label: "Orders pending", value: String(pending), icon: "clock" },
+      {
+        label: "Interested",
+        value: String(interestIds.data?.size ?? 0),
+        icon: "heart",
+      },
     ];
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <ScreenHeader
         title="My account"
-        subtitle={isFarmer ? "Farmer profile" : "Buyer profile"}
+        tone="tinted"
+        overlap={40}
+        subtitle={roleLabel || "Profile"}
         rightAction={
           <HeaderActionButton
             icon="bell"
@@ -526,27 +526,18 @@ export function ProfilePage() {
             {user.fullName}
           </Text>
           <Text className="text-[13px] text-ink-muted mt-0.5">
-            {isFarmer ? "Farmer" : "Buyer"} · HarvestLink
+            {roleLabel} · HarvestLink
           </Text>
 
           <StatusPill isVerified={isVerified} />
+          {isFarmer && (user.verificationLevel ?? 0) >= 1 ? (
+            <View className="mt-2">
+              <TrustBadge type="verifiedFarmer" />
+            </View>
+          ) : null}
         </View>
 
         <View className="px-5 mt-6">
-          <GroupCard>
-            <View className="flex-row">
-              {stats.map((stat, index) => (
-                <StatCell
-                  key={stat.label}
-                  label={stat.label}
-                  value={stat.value}
-                  icon={stat.icon}
-                  isLast={index === stats.length - 1}
-                />
-              ))}
-            </View>
-          </GroupCard>
-
           <View className="mt-6">
             <SectionLabel>Activity</SectionLabel>
             <GroupCard>
@@ -557,7 +548,17 @@ export function ProfilePage() {
                   icon="package"
                   onPress={() => navigation.navigate("Listings")}
                 />
-              ) : null}
+              ) : (
+                <NavRow
+                  label="Saved listings"
+                  description="Products you've bookmarked"
+                  icon="bookmark"
+                  value={
+                    savedIds.data?.size ? String(savedIds.data.size) : undefined
+                  }
+                  onPress={() => navigation.navigate("SavedListings")}
+                />
+              )}
               <NavRow
                 label="My Orders"
                 description={
@@ -603,6 +604,45 @@ export function ProfilePage() {
                   variant="secondary"
                 />
               </View>
+            </GroupCard>
+          </View>
+
+          <View className="mt-6">
+            <SectionLabel>Trust &amp; safety</SectionLabel>
+            <GroupCard>
+              <NavRow
+                label="My disputes"
+                description="Track issues on your orders"
+                icon="alert-circle"
+                onPress={() => navigation.navigate("MyDisputes")}
+              />
+              {isFarmer ? (
+                <NavRow
+                  label="Request verification"
+                  description="Upgrade your verified farmer tier"
+                  icon="award"
+                  onPress={() => navigation.navigate("VerificationRequest")}
+                />
+              ) : null}
+              {isAdmin ? (
+                <NavRow
+                  label="Admin moderation"
+                  description="Verification, pricing, disputes"
+                  icon="sliders"
+                  onPress={() => navigation.navigate("AdminModeration")}
+                  isLast
+                />
+              ) : (
+                !isFarmer && (
+                  <NavRow
+                    label="Request verification"
+                    description="Submit identity for manual review"
+                    icon="award"
+                    onPress={() => navigation.navigate("VerificationRequest")}
+                    isLast
+                  />
+                )
+              )}
             </GroupCard>
           </View>
 
@@ -653,6 +693,13 @@ export function ProfilePage() {
                 description="Inspect the local sync queue"
                 icon="activity"
                 onPress={() => navigation.navigate("SyncDiagnostics")}
+              />
+              <NavRow
+                label="Delete account"
+                description="Permanently remove your account"
+                icon="trash-2"
+                tone="danger"
+                onPress={() => navigation.navigate("AccountDelete")}
                 isLast
               />
             </GroupCard>

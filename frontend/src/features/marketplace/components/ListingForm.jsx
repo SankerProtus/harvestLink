@@ -1,12 +1,11 @@
 import {
   View,
-  Text,
-  TextInput,
   ScrollView,
   Pressable,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,7 +35,7 @@ const MAX_IMAGES = 5;
 const CROP_ICONS = {
   TOMATO: "food-apple-outline",
   MAIZE: "corn",
-  CASSAVA: "root",
+  CASSAVA: "food-variant",
   PLANTAIN: "food-drumstick-outline",
   YAM: "sprout-outline",
   PEPPER: "chili-mild-outline",
@@ -192,7 +191,7 @@ export function ListingForm({
     setIsPickingImages(true);
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsMultipleSelection: true,
         selectionLimit: remainingSlots,
         quality: 0.8,

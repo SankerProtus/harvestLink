@@ -5,11 +5,15 @@ jest.unstable_mockModule(
   "../../../modules/deliveryTracking/deliveryTracking.repository.js",
   () => ({
     createOrder: jest.fn(),
+    createOrderWithListingLock: jest.fn(),
     findOrderById: jest.fn(),
+    findOrderByIdWithRelations: jest.fn(),
+    applyOrderStatusTransition: jest.fn(),
     updateOrderStatus: jest.fn(),
     updateOrderLocation: jest.fn(),
     listOrdersByBuyerId: jest.fn(),
     listOrdersByFarmerId: jest.fn(),
+    getFarmerSummaryData: jest.fn(),
   }),
 );
 
@@ -41,6 +45,13 @@ jest.unstable_mockModule(
     getListing: jest.fn(),
     confirmListingReservation: jest.fn(),
     releaseListingReservation: jest.fn(),
+  }),
+);
+
+jest.unstable_mockModule(
+  "../../../modules/notifications/notifications.service.js",
+  () => ({
+    createNotification: jest.fn(),
   }),
 );
 
@@ -93,30 +104,34 @@ beforeEach(() => {
 
 // ─────────────────────────────────────────────────────────────
 describe("createOrder", () => {
-  test("derives farmerId from the listing, never from client input", async () => {
+  test("derives farmerId from the listing lock, never from client input", async () => {
     const listing = fakeListing({ farmerId: "real-farmer" });
     marketplaceService.getListing.mockResolvedValue(listing);
-    repo.createOrder.mockResolvedValue(fakeOrder({ farmerId: "real-farmer" }));
+    repo.createOrderWithListingLock.mockResolvedValue({
+      ok: true,
+      order: fakeOrder({ farmerId: "real-farmer" }),
+      listing: { id: listing.id, title: "t", quantityUnit: "BAG" },
+    });
 
-    // Note: no farmerId is passed into the service call at all — the
-    // input shape itself proves the client cannot supply one.
     await service.createOrder({
       buyerId: "buyer-1",
       listingId: listing.id,
       quantity: 10,
     });
 
-    expect(repo.createOrder).toHaveBeenCalledWith(
-      expect.objectContaining({ farmerId: "real-farmer", buyerId: "buyer-1" }),
+    expect(repo.createOrderWithListingLock).toHaveBeenCalledWith(
+      expect.objectContaining({ buyerId: "buyer-1", listingId: listing.id }),
     );
   });
 
   test("snapshots pricePerUnitAtOrder from the listing price at creation time", async () => {
     const listing = fakeListing({ pricePerUnit: 87.25 });
     marketplaceService.getListing.mockResolvedValue(listing);
-    repo.createOrder.mockResolvedValue(
-      fakeOrder({ pricePerUnitAtOrder: 87.25 }),
-    );
+    repo.createOrderWithListingLock.mockResolvedValue({
+      ok: true,
+      order: fakeOrder({ pricePerUnitAtOrder: 87.25 }),
+      listing: { id: listing.id, title: "t", quantityUnit: "BAG" },
+    });
 
     await service.createOrder({
       buyerId: "buyer-1",
@@ -124,14 +139,18 @@ describe("createOrder", () => {
       quantity: 5,
     });
 
-    expect(repo.createOrder).toHaveBeenCalledWith(
+    expect(repo.createOrderWithListingLock).toHaveBeenCalledWith(
       expect.objectContaining({ pricePerUnitAtOrder: 87.25 }),
     );
   });
 
   test("creates the order with initial status PENDING", async () => {
     marketplaceService.getListing.mockResolvedValue(fakeListing());
-    repo.createOrder.mockResolvedValue(fakeOrder());
+    repo.createOrderWithListingLock.mockResolvedValue({
+      ok: true,
+      order: fakeOrder({ status: ORDER_STATUS.PENDING }),
+      listing: { id: "listing-1", title: "t", quantityUnit: "BAG" },
+    });
 
     await service.createOrder({
       buyerId: "buyer-1",
@@ -139,14 +158,16 @@ describe("createOrder", () => {
       quantity: 10,
     });
 
-    expect(repo.createOrder).toHaveBeenCalledWith(
-      expect.objectContaining({ status: ORDER_STATUS.PENDING }),
-    );
+    expect(repo.createOrderWithListingLock).toHaveBeenCalled();
   });
 
-  test("does NOT reserve inventory at creation — confirmListingReservation is never called", async () => {
+  test("does NOT reserve inventory at creation", async () => {
     marketplaceService.getListing.mockResolvedValue(fakeListing());
-    repo.createOrder.mockResolvedValue(fakeOrder());
+    repo.createOrderWithListingLock.mockResolvedValue({
+      ok: true,
+      order: fakeOrder(),
+      listing: { id: "listing-1", title: "t", quantityUnit: "BAG" },
+    });
 
     await service.createOrder({
       buyerId: "buyer-1",
@@ -160,7 +181,11 @@ describe("createOrder", () => {
 
   test("emits OrderCreatedEvent on success", async () => {
     marketplaceService.getListing.mockResolvedValue(fakeListing());
-    repo.createOrder.mockResolvedValue(fakeOrder());
+    repo.createOrderWithListingLock.mockResolvedValue({
+      ok: true,
+      order: fakeOrder(),
+      listing: { id: "listing-1", title: "t", quantityUnit: "BAG" },
+    });
 
     await service.createOrder({
       buyerId: "buyer-1",
@@ -172,8 +197,6 @@ describe("createOrder", () => {
   });
 
   test("propagates ListingNotFoundError from marketplace.service.getListing unmodified", async () => {
-    // Simulates Marketplace's own real error class to confirm this
-    // service does not swallow or re-wrap a cross-module error.
     class FakeListingNotFoundError extends Error {}
     marketplaceService.getListing.mockRejectedValue(
       new FakeListingNotFoundError("not found"),
@@ -186,16 +209,16 @@ describe("createOrder", () => {
         quantity: 10,
       }),
     ).rejects.toBeInstanceOf(FakeListingNotFoundError);
-    expect(repo.createOrder).not.toHaveBeenCalled();
+    expect(repo.createOrderWithListingLock).not.toHaveBeenCalled();
   });
 
-  test("does not pre-validate listing status or quantity — a PENDING order can be created regardless", async () => {
-    // Documents the deliberate design: availability is checked only
-    // at confirmation time, not creation time.
-    marketplaceService.getListing.mockResolvedValue(
-      fakeListing({ status: "SOLD" }),
-    );
-    repo.createOrder.mockResolvedValue(fakeOrder());
+  test("maps NOT_ACTIVE lock failure to ListingUnavailableError", async () => {
+    marketplaceService.getListing.mockResolvedValue(fakeListing());
+    repo.createOrderWithListingLock.mockResolvedValue({
+      ok: false,
+      reason: "NOT_ACTIVE",
+      listingStatus: "SOLD",
+    });
 
     await expect(
       service.createOrder({
@@ -203,7 +226,10 @@ describe("createOrder", () => {
         listingId: "listing-1",
         quantity: 10,
       }),
-    ).resolves.toBeDefined();
+    ).rejects.toBeInstanceOf(
+      (await import("../../../modules/marketplace/marketplace.errors.js"))
+        .ListingAlreadySoldError,
+    );
   });
 });
 
@@ -380,100 +406,114 @@ describe("listMyOrdersAsFarmer", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('updateOrderStatus — legal transitions', () => {
-  test('PENDING → CONFIRMED (farmer only): calls confirmListingReservation and emits OrderConfirmedEvent', async () => {
+  test('PENDING → CONFIRMED (farmer only): atomic confirm inventory action', async () => {
     const order = fakeOrder({ status: ORDER_STATUS.PENDING, farmerId: 'farmer-1', quantity: 10 });
     repo.findOrderById.mockResolvedValue(order);
-    repo.updateOrderStatus.mockResolvedValue({ ...order, status: ORDER_STATUS.CONFIRMED });
+    repo.applyOrderStatusTransition.mockResolvedValue({ ok: true, order: { ...order, status: ORDER_STATUS.CONFIRMED } });
 
     await service.updateOrderStatus({ orderId: order.id, userId: 'farmer-1', newStatus: ORDER_STATUS.CONFIRMED });
 
-    expect(marketplaceService.confirmListingReservation).toHaveBeenCalledWith({
-      listingId: order.listingId,
-      quantity: order.quantity,
-    });
-    expect(marketplaceService.releaseListingReservation).not.toHaveBeenCalled();
-    expect(repo.updateOrderStatus).toHaveBeenCalledWith(order.id, ORDER_STATUS.CONFIRMED);
+    expect(repo.applyOrderStatusTransition).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderId: order.id,
+        fromStatus: ORDER_STATUS.PENDING,
+        toStatus: ORDER_STATUS.CONFIRMED,
+        inventoryAction: 'confirm',
+      }),
+    );
     expect(events.createOrderConfirmedEvent).toHaveBeenCalled();
   });
 
-  test('CONFIRMED → IN_TRANSIT (farmer only): no Marketplace call, emits OrderInTransitEvent', async () => {
+  test('CONFIRMED → IN_TRANSIT (farmer only): emits OrderInTransitEvent', async () => {
     const order = fakeOrder({ status: ORDER_STATUS.CONFIRMED, farmerId: 'farmer-1' });
     repo.findOrderById.mockResolvedValue(order);
-    repo.updateOrderStatus.mockResolvedValue({ ...order, status: ORDER_STATUS.IN_TRANSIT });
+    repo.applyOrderStatusTransition.mockResolvedValue({ ok: true, order: { ...order, status: ORDER_STATUS.IN_TRANSIT } });
 
     await service.updateOrderStatus({ orderId: order.id, userId: 'farmer-1', newStatus: ORDER_STATUS.IN_TRANSIT });
 
-    expect(marketplaceService.confirmListingReservation).not.toHaveBeenCalled();
-    expect(marketplaceService.releaseListingReservation).not.toHaveBeenCalled();
+    expect(repo.applyOrderStatusTransition).toHaveBeenCalledWith(
+      expect.objectContaining({ inventoryAction: null }),
+    );
     expect(events.createOrderInTransitEvent).toHaveBeenCalled();
   });
 
-  test('IN_TRANSIT → DELIVERED (farmer only): no Marketplace call, emits OrderDeliveredEvent', async () => {
+  test('IN_TRANSIT → DELIVERED (farmer only): emits OrderDeliveredEvent', async () => {
     const order = fakeOrder({ status: ORDER_STATUS.IN_TRANSIT, farmerId: 'farmer-1' });
     repo.findOrderById.mockResolvedValue(order);
-    repo.updateOrderStatus.mockResolvedValue({ ...order, status: ORDER_STATUS.DELIVERED });
+    repo.applyOrderStatusTransition.mockResolvedValue({ ok: true, order: { ...order, status: ORDER_STATUS.DELIVERED } });
 
     await service.updateOrderStatus({ orderId: order.id, userId: 'farmer-1', newStatus: ORDER_STATUS.DELIVERED });
 
-    expect(marketplaceService.confirmListingReservation).not.toHaveBeenCalled();
-    expect(marketplaceService.releaseListingReservation).not.toHaveBeenCalled();
     expect(events.createOrderDeliveredEvent).toHaveBeenCalled();
   });
 
-  test('PENDING → CANCELLED (buyer): no Marketplace call (nothing was reserved yet), emits OrderCancelledEvent with cancelledBy', async () => {
+  test('PENDING → CANCELLED (buyer): no inventory release, emits OrderCancelledEvent', async () => {
     const order = fakeOrder({ status: ORDER_STATUS.PENDING, buyerId: 'buyer-1', farmerId: 'farmer-1' });
     repo.findOrderById.mockResolvedValue(order);
-    repo.updateOrderStatus.mockResolvedValue({ ...order, status: ORDER_STATUS.CANCELLED });
+    repo.applyOrderStatusTransition.mockResolvedValue({ ok: true, order: { ...order, status: ORDER_STATUS.CANCELLED } });
 
     await service.updateOrderStatus({ orderId: order.id, userId: 'buyer-1', newStatus: ORDER_STATUS.CANCELLED });
 
-    expect(marketplaceService.releaseListingReservation).not.toHaveBeenCalled();
+    expect(repo.applyOrderStatusTransition).toHaveBeenCalledWith(
+      expect.objectContaining({ inventoryAction: null }),
+    );
     expect(events.createOrderCancelledEvent).toHaveBeenCalledWith(
       expect.objectContaining({ cancelledBy: 'buyer-1', previousStatus: ORDER_STATUS.PENDING })
     );
   });
 
-  test('PENDING → CANCELLED (farmer): also permitted (actor: either)', async () => {
+  test('PENDING → CANCELLED (farmer): permitted', async () => {
     const order = fakeOrder({ status: ORDER_STATUS.PENDING, buyerId: 'buyer-1', farmerId: 'farmer-1' });
     repo.findOrderById.mockResolvedValue(order);
-    repo.updateOrderStatus.mockResolvedValue({ ...order, status: ORDER_STATUS.CANCELLED });
+    repo.applyOrderStatusTransition.mockResolvedValue({ ok: true, order: { ...order, status: ORDER_STATUS.CANCELLED } });
 
     await expect(
       service.updateOrderStatus({ orderId: order.id, userId: 'farmer-1', newStatus: ORDER_STATUS.CANCELLED })
     ).resolves.toBeDefined();
   });
 
-  test('CONFIRMED → CANCELLED (buyer): calls releaseListingReservation, emits OrderCancelledEvent', async () => {
-    const order = fakeOrder({ status: ORDER_STATUS.CONFIRMED, buyerId: 'buyer-1', farmerId: 'farmer-1', quantity: 7 });
+  test('CONFIRMED → CANCELLED (buyer within grace): release inventory', async () => {
+    const order = fakeOrder({
+      status: ORDER_STATUS.CONFIRMED,
+      buyerId: 'buyer-1',
+      farmerId: 'farmer-1',
+      quantity: 7,
+      confirmedAt: new Date(),
+    });
     repo.findOrderById.mockResolvedValue(order);
-    repo.updateOrderStatus.mockResolvedValue({ ...order, status: ORDER_STATUS.CANCELLED });
+    repo.applyOrderStatusTransition.mockResolvedValue({ ok: true, order: { ...order, status: ORDER_STATUS.CANCELLED } });
 
     await service.updateOrderStatus({ orderId: order.id, userId: 'buyer-1', newStatus: ORDER_STATUS.CANCELLED });
 
-    expect(marketplaceService.releaseListingReservation).toHaveBeenCalledWith({
-      listingId: order.listingId,
-      quantity: 7,
-    });
-    expect(marketplaceService.confirmListingReservation).not.toHaveBeenCalled();
+    expect(repo.applyOrderStatusTransition).toHaveBeenCalledWith(
+      expect.objectContaining({ inventoryAction: 'release' }),
+    );
     expect(events.createOrderCancelledEvent).toHaveBeenCalledWith(
       expect.objectContaining({ previousStatus: ORDER_STATUS.CONFIRMED })
     );
   });
 
-  test('IN_TRANSIT → CANCELLED (farmer): calls releaseListingReservation, emits OrderCancelledEvent', async () => {
-    const order = fakeOrder({ status: ORDER_STATUS.IN_TRANSIT, buyerId: 'buyer-1', farmerId: 'farmer-1', quantity: 3 });
+  test('CONFIRMED → CANCELLED (farmer): release inventory', async () => {
+    const order = fakeOrder({ status: ORDER_STATUS.CONFIRMED, buyerId: 'buyer-1', farmerId: 'farmer-1', quantity: 3 });
     repo.findOrderById.mockResolvedValue(order);
-    repo.updateOrderStatus.mockResolvedValue({ ...order, status: ORDER_STATUS.CANCELLED });
+    repo.applyOrderStatusTransition.mockResolvedValue({ ok: true, order: { ...order, status: ORDER_STATUS.CANCELLED } });
 
     await service.updateOrderStatus({ orderId: order.id, userId: 'farmer-1', newStatus: ORDER_STATUS.CANCELLED });
 
-    expect(marketplaceService.releaseListingReservation).toHaveBeenCalledWith({
-      listingId: order.listingId,
-      quantity: 3,
-    });
-    expect(events.createOrderCancelledEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ previousStatus: ORDER_STATUS.IN_TRANSIT })
+    expect(repo.applyOrderStatusTransition).toHaveBeenCalledWith(
+      expect.objectContaining({ inventoryAction: 'release' }),
     );
+  });
+
+  test('IN_TRANSIT → CANCELLED is blocked', async () => {
+    const order = fakeOrder({ status: ORDER_STATUS.IN_TRANSIT, buyerId: 'buyer-1', farmerId: 'farmer-1' });
+    repo.findOrderById.mockResolvedValue(order);
+
+    await expect(
+      service.updateOrderStatus({ orderId: order.id, userId: 'farmer-1', newStatus: ORDER_STATUS.CANCELLED })
+    ).rejects.toBeInstanceOf(deliveryErrors.OrderCancellationNotAllowedError);
+
+    expect(repo.applyOrderStatusTransition).not.toHaveBeenCalled();
   });
 });
 

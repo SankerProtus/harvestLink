@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as savedListingsApi from "../../../api/savedListings.api.js";
 
 export const savedListingQueryKeys = {
@@ -13,15 +13,6 @@ export function useSavedListingIds() {
   });
 }
 
-// Toggling the heart previously waited on the network twice before the
-// icon changed at all: once for the save/unsave request itself, then
-// again for the invalidateQueries()-triggered refetch of the saved-ids
-// list, since that refetch was the only thing that ever updated the
-// cache. On a slow connection that's a very noticeable delay for what
-// should feel instant. These now update the cached id list immediately
-// in onMutate (optimistic update — the standard pattern for a like/heart
-// button), roll back on failure, and only reconcile with the server
-// quietly in the background via onSettled.
 export function useSaveListing() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -73,5 +64,18 @@ export function useUnsaveListing() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: savedListingQueryKeys.mine });
     },
+  });
+}
+
+export function useInfiniteSavedListings() {
+  return useInfiniteQuery({
+    queryKey: [...savedListingQueryKeys.mine, "list"],
+    queryFn: ({ pageParam }) =>
+      savedListingsApi.getMySavedListings({ page: pageParam, limit: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
   });
 }

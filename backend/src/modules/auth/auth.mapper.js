@@ -23,6 +23,7 @@ export function toUserProfile(user) {
     role: user.role,
     phone: user.phone ?? null,
     phoneVerifiedAt: serializeDate(user.phoneVerifiedAt),
+    verificationLevel: user.verificationLevel ?? 0,
     accountStatus: user.accountStatus,
     profileImageUrl: user.profileImageUrl ?? null,
     lastLoginAt: serializeDate(user.lastLoginAt),

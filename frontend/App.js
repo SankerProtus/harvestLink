@@ -12,6 +12,19 @@ import {
 } from "./src/lib/networkMonitor.js";
 import { syncPendingOperations } from "./src/database/sync/SyncEngine.js";
 import { AppAlert } from "./src/components/ui/AppAlert.jsx";
+import * as SplashScreen from "expo-splash-screen";
+import { AppErrorBoundary } from "./src/components/ui/AppErrorBoundary.jsx";
+
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from "@expo-google-fonts/inter";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function OfflineSyncBridge() {
   const { isAuthenticated } = useAuth();
@@ -51,15 +64,27 @@ function OfflineSyncBridge() {
 }
 
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+
+  if (!fontsLoaded && !fontError) return null;
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <OfflineSyncBridge />
-          <AppNavigator />
-          <AppAlert />
-        </AuthProvider>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <OfflineSyncBridge />
+            <AppNavigator />
+            <AppAlert />
+          </AuthProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }

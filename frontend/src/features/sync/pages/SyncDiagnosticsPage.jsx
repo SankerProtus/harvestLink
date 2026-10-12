@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Share } from "react-native";
+import { View, ScrollView, Share } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -154,7 +155,7 @@ export function SyncDiagnosticsPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
       <ScreenHeader
         title="Sync & System Diagnostics"
         leftAction={

@@ -14,6 +14,7 @@ import {
   getOrder as getOrderService,
   listMyOrdersAsBuyer as listMyOrdersAsBuyerService,
   listMyOrdersAsFarmer as listMyOrdersAsFarmerService,
+  getFarmerSummary as getFarmerSummaryService
 } from "./deliveryTracking.service.js";
 
 function sendSuccess(res, statusCode, data) {
@@ -95,6 +96,15 @@ export async function listMyOrdersAsFarmer(req, res, next) {
       filters,
     });
     return sendSuccess(res, 200, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getMyFarmerSummary(req, res, next) {
+  try {
+    const data = await getFarmerSummaryService({ farmerId: req.user.id });
+    return sendSuccess(res, 200, data);
   } catch (err) {
     next(err);
   }

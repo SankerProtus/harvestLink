@@ -43,6 +43,34 @@ export class InvalidOrderStatusTransitionError extends AppError {
   }
 }
 
+export class OrderCancellationNotAllowedError extends AppError {
+  constructor(
+    message = "This order cannot be cancelled in its current state",
+    details = null,
+  ) {
+    super(message, {
+      statusCode: 409,
+      code: "DELIVERY_ORDER_CANCELLATION_NOT_ALLOWED",
+      isOperational: true,
+      details,
+    });
+  }
+}
+
+export class SelfOrderNotAllowedError extends AppError {
+  constructor(
+    message = "You cannot place an order on your own listing",
+    details = null,
+  ) {
+    super(message, {
+      statusCode: 403,
+      code: "DELIVERY_SELF_ORDER_NOT_ALLOWED",
+      isOperational: true,
+      details,
+    });
+  }
+}
+
 //  Inventory Errors
 
 export class InsufficientListingQuantityError extends AppError {

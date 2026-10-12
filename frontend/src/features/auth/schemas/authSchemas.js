@@ -6,7 +6,7 @@ const PHONE_CONFIG = Object.freeze({
 });
 
 export const OTP_CONFIG = Object.freeze({
-  CODE_LENGTH: 4,
+  CODE_LENGTH: 6,
 });
 
 export const USER_ROLES = Object.freeze({

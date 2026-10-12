@@ -21,6 +21,21 @@ enum AccountStatus {
   DELETED
 }
 
+enum UserReportStatus {
+  OPEN
+  UNDER_REVIEW
+  DISMISSED
+  CONFIRMED
+}
+
+enum UserReportReason {
+  FRAUD
+  HARASSMENT
+  IMPERSONATION
+  UNSAFE_BEHAVIOR
+  OTHER
+}
+
 enum OtpPurpose {
   REGISTRATION
   LOGIN
@@ -45,6 +60,9 @@ model User {
   phone           String?   @unique @db.VarChar(20)
   phoneVerifiedAt DateTime?
 
+  /// 0 = phone OTP only, 1 = identity KYC, 2 = farmer-specific trust
+  verificationLevel Int @default(0)
+
   accountStatus AccountStatus @default(PENDING_VERIFICATION)
 
   profileImageUrl String? @db.VarChar(500)
@@ -56,22 +74,100 @@ model User {
   deletedAt DateTime?
 
   listings     Listing[]
-  buyerOrders  Order[] @relation("BuyerOrders")
-  farmerOrders Order[] @relation("FarmerOrders")
+  buyerOrders  Order[]   @relation("BuyerOrders")
+  farmerOrders Order[]   @relation("FarmerOrders")
 
   expressedInterests ListingInterest[]
-  refreshTokens RefreshToken[]
-  devices       Device[]
-  oauthAccounts OAuthAccount[]
+  refreshTokens      RefreshToken[]
+  devices            Device[]
+  oauthAccounts      OAuthAccount[]
 
-  reviewsGiven    Review[]       @relation("BuyerReviews")
-  reviewsReceived Review[]       @relation("FarmerReviews")
+  reviewsGiven    Review[]        @relation("BuyerReviews")
+  reviewsReceived Review[]        @relation("FarmerReviews")
   reviewComments  ReviewComment[]
-  savedListings   SavedListing[] @relation("BuyerSavedListings")
+  savedListings   SavedListing[]  @relation("BuyerSavedListings")
   notifications   Notification[]
 
+  verificationRecords   VerificationRecord[]  @relation("UserVerificationRecords")
+  verificationReviews   VerificationRecord[]  @relation("VerificationReviewer")
+  cancellationRequests  CancellationRequest[] @relation("CancellationRequesters")
+  cancellationDecisions CancellationRequest[] @relation("CancellationRequestDeciders")
+  openedDisputes        Dispute[]             @relation("DisputeOpeners")
+  resolvedDisputes      Dispute[]             @relation("DisputeResolvers")
+  reliabilityMetrics    ReliabilityMetric[]
+  auditLogs             AuditLog[]
+  idempotencyKeys       IdempotencyKey[]
+  payments              Payment[]             @relation("BuyerPayments")
+  farmerPayouts         Payout[]              @relation("FarmerPayouts")
+  reportsMade           UserReport[]        @relation("ReportsMade")
+  reportsReceived       UserReport[]        @relation("ReportsReceived")
+  reportsResolved       UserReport[]        @relation("ReportsResolved")
+
   @@index([accountStatus])
+  @@index([verificationLevel])
   @@map("users")
+}
+
+model UserReport {
+  id String @id @default(uuid()) @db.Uuid
+
+  reporterId String
+  reporter   User @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Restrict)
+  reportedUserId String
+  reportedUser User @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Restrict)
+  resolvedById String?
+  resolvedBy User? @relation("ReportsResolved", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  reason UserReportReason
+  description String @db.VarChar(1000)
+  evidenceUrls String[]
+  status UserReportStatus @default(OPEN)
+  resolutionNotes String? @db.VarChar(1000)
+  resolvedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([reportedUserId, status])
+  @@index([reporterId])
+  @@map("user_reports")
+}
+
+enum VerificationProvider {
+  MANUAL
+  SMILE_ID
+  DOJAH
+  OTHER
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model VerificationRecord {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+  user   User   @relation("UserVerificationRecords", fields: [userId], references: [id], onDelete: Cascade)
+
+  provider          VerificationProvider
+  providerReference String?              @db.VarChar(255)
+  status            VerificationStatus   @default(PENDING)
+  tierRequested     Int
+  notes             String?              @db.VarChar(500)
+
+  reviewedById String?   @db.Uuid
+  reviewedBy   User?     @relation("VerificationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("verification_records")
 }
 
 model OAuthAccount {
@@ -124,7 +220,7 @@ model RefreshToken {
   deviceId String? @db.Uuid
   device   Device? @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
-  issuedAt  DateTime @default(now())
+  issuedAt  DateTime  @default(now())
   expiresAt DateTime
   revokedAt DateTime?
 
@@ -176,17 +272,14 @@ model OtpVerificationToken {
   @@map("otp_verification_tokens")
 }
 
-enum CropType {
-  TOMATO
-  MAIZE
-  CASSAVA
-  PLANTAIN
-  YAM
-  PEPPER
-  ONION
-  RICE
-  GROUNDNUT
-  COCOA
+enum CropCategory {
+  GRAIN
+  TUBER
+  VEGETABLE
+  FRUIT
+  LEGUME
+  CASH_CROP
+  OTHER
 }
 
 enum QuantityUnit {
@@ -205,16 +298,63 @@ enum ListingStatus {
   REMOVED
 }
 
+model Crop {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @db.VarChar(80)
+  slug        String       @unique @db.VarChar(80)
+  category    CropCategory
+  localNames  Json?
+  defaultUnit QuantityUnit
+  active      Boolean      @default(true)
+
+  listings     Listing[]
+  marketPrices MarketPrice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+  @@index([category])
+  @@map("crops")
+}
+
+model MarketPrice {
+  id String @id @default(uuid()) @db.Uuid
+
+  cropId String @db.Uuid
+  crop   Crop   @relation(fields: [cropId], references: [id], onDelete: Cascade)
+
+  region             String       @db.VarChar(120)
+  quantityUnit       QuantityUnit
+  referenceMinGhs    Decimal      @db.Decimal(10, 2)
+  referenceMaxGhs    Decimal      @db.Decimal(10, 2)
+  /// Typical weight in kg represented by one quantityUnit (for fair comparisons).
+  estimatedKgPerUnit Decimal?     @db.Decimal(10, 2)
+
+  effectiveFrom DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([cropId, region, quantityUnit])
+  @@index([cropId])
+  @@map("market_prices")
+}
+
 model Listing {
   id String @id @default(uuid()) @db.Uuid
 
   farmerId String @db.Uuid
   farmer   User   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
 
-  title       String   @db.VarChar(120)
-  description String?  @db.VarChar(1000)
+  title       String  @db.VarChar(120)
+  description String? @db.VarChar(1000)
 
-  cropType     CropType
+  cropId String @db.Uuid
+  crop   Crop   @relation(fields: [cropId], references: [id], onDelete: Restrict)
+
+  /// When the crop is not yet in the catalogue; requires admin approval before going live.
+  customCropName      String? @db.VarChar(80)
+  priceReviewRequired Boolean @default(false)
+
   quantity     Decimal      @db.Decimal(10, 2)
   quantityUnit QuantityUnit
   pricePerUnit Decimal      @db.Decimal(10, 2)
@@ -225,7 +365,7 @@ model Listing {
 
   status ListingStatus @default(ACTIVE)
 
-  orders Order[]
+  orders    Order[]
   interests ListingInterest[]
   savedBy   SavedListing[]
 
@@ -233,7 +373,7 @@ model Listing {
   updatedAt DateTime @updatedAt
 
   @@index([farmerId])
-  @@index([cropType])
+  @@index([cropId])
   @@index([status])
   @@index([location])
   @@map("listings")
@@ -261,7 +401,33 @@ enum OrderStatus {
   CONFIRMED
   IN_TRANSIT
   DELIVERED
+  DISPUTED
+  CANCELLATION_REQUESTED
   CANCELLED
+}
+
+enum CancellationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+}
+
+enum DisputeReason {
+  NON_DELIVERY
+  DAMAGED_GOODS
+  WRONG_QUANTITY
+  OTHER
+}
+
+enum ReliabilityMetricType {
+  CANCELLATION_RATE
+  ON_TIME_DELIVERY_RATE
 }
 
 model Order {
@@ -281,11 +447,22 @@ model Order {
 
   status OrderStatus @default(PENDING)
 
-  latestLatitude     Float?
-  latestLongitude    Float?
-  locationReportedAt DateTime?
+  confirmedAt DateTime?
+  deliveryVerifiedAt DateTime?
+  protectionEndsAt   DateTime?
 
-  review Review?
+  latestLatitude       Float?
+  latestLongitude      Float?
+  locationReportedAt   DateTime?
+  handoverCode         DeliveryHandoverCode?
+  cancellationRequests CancellationRequest[]
+  disputes             Dispute[]
+
+  review   Review?
+  payments Payment[]
+  escrow   Escrow?
+  refunds  Refund[]
+  payouts  Payout[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -295,6 +472,86 @@ model Order {
   @@index([listingId])
   @@index([status])
   @@map("orders")
+}
+
+model DeliveryHandoverCode {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId String @unique @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  codeHash  String    @db.VarChar(128)
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([expiresAt])
+  @@map("delivery_handover_codes")
+}
+
+model CancellationRequest {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId      String  @db.Uuid
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  requesterId  String  @db.Uuid
+  requester    User    @relation("CancellationRequesters", fields: [requesterId], references: [id], onDelete: Restrict)
+  decisionById String? @db.Uuid
+  decisionBy   User?   @relation("CancellationRequestDeciders", fields: [decisionById], references: [id], onDelete: SetNull)
+
+  reason    String?                   @db.VarChar(500)
+  status    CancellationRequestStatus @default(PENDING)
+  decidedAt DateTime?
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  @@index([orderId, status])
+  @@index([requesterId])
+  @@map("cancellation_requests")
+}
+
+model Dispute {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId      String  @db.Uuid
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  openedById   String  @db.Uuid
+  openedBy     User    @relation("DisputeOpeners", fields: [openedById], references: [id], onDelete: Restrict)
+  resolvedById String? @db.Uuid
+  resolvedBy   User?   @relation("DisputeResolvers", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  reason       DisputeReason
+  description  String        @db.VarChar(1000)
+  evidenceUrls String[]
+  evidenceExpiresAt DateTime?
+  status       DisputeStatus @default(OPEN)
+  resolution   String?       @db.VarChar(1000)
+  resolvedAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([orderId, status])
+  @@index([openedById])
+  @@map("disputes")
+}
+
+model ReliabilityMetric {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId      String                @db.Uuid
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metricType  ReliabilityMetricType
+  periodStart DateTime              @db.Date
+  periodEnd   DateTime              @db.Date
+  value       Decimal               @db.Decimal(8, 4)
+  sampleSize  Int
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([userId, metricType, periodStart])
+  @@index([userId, metricType])
+  @@map("reliability_metrics")
 }
 
 // One review per completed order — the buyer rates the farmer after
@@ -401,4 +658,231 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  action     String   @db.VarChar(100)
+  entityType String   @db.VarChar(100)
+  entityId   String   @db.VarChar(255)
+  metadata   Json?
+  ipAddress  String?  @db.VarChar(45)
+  userAgent  String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+enum IdempotencyStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model IdempotencyKey {
+  id String @id @default(uuid()) @db.Uuid
+
+  key    String  @db.VarChar(255)
+  scope  String  @db.VarChar(100)
+  userId String? @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  requestHash  String            @db.VarChar(255)
+  status       IdempotencyStatus @default(PROCESSING)
+  responseCode Int?
+  responseBody Json?
+  expiresAt    DateTime
+  completedAt  DateTime?
+  createdAt    DateTime          @default(now())
+
+  @@unique([scope, key])
+  @@index([expiresAt])
+  @@index([userId])
+  @@map("idempotency_keys")
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+model OutboxEvent {
+  id String @id @default(uuid()) @db.Uuid
+
+  aggregateType String            @db.VarChar(100)
+  aggregateId   String            @db.VarChar(100)
+  eventType     String            @db.VarChar(150)
+  payload       Json
+  status        OutboxEventStatus @default(PENDING)
+  attempts      Int               @default(0)
+  availableAt   DateTime          @default(now())
+  processedAt   DateTime?
+  lastError     String?           @db.VarChar(2000)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([status, availableAt])
+  @@index([aggregateType, aggregateId])
+  @@index([eventType, createdAt])
+  @@map("outbox_events")
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYSTACK
+  FLUTTERWAVE
+  MOBILE_MONEY
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  HELD
+  RELEASE_PENDING
+  RELEASED
+  REFUND_PENDING
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId String @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  buyerId String @db.Uuid
+  buyer   User   @relation("BuyerPayments", fields: [buyerId], references: [id], onDelete: Restrict)
+
+  provider          PaymentProvider
+  providerPaymentId String?         @db.VarChar(255)
+  amount            Decimal         @db.Decimal(18, 2)
+  currency          String          @db.Char(3)
+  status            PaymentStatus   @default(PENDING)
+  metadata          Json?
+  authorizedAt      DateTime?
+  capturedAt        DateTime?
+  failedAt          DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  escrow  Escrow?
+  refunds Refund[]
+  payouts Payout[]
+
+  @@unique([provider, providerPaymentId])
+  @@index([orderId, status])
+  @@index([buyerId])
+  @@map("payments")
+}
+
+enum EscrowStatus {
+  PENDING
+  FUNDED
+  RELEASED
+  FROZEN
+  REFUNDED
+  FAILED
+}
+
+model Escrow {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId   String  @unique @db.Uuid
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  paymentId String  @unique @db.Uuid
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  provider         PaymentProvider
+  providerEscrowId String?         @db.VarChar(255)
+  amount           Decimal         @db.Decimal(18, 2)
+  currency         String          @db.Char(3)
+  status           EscrowStatus    @default(PENDING)
+  fundedAt         DateTime?
+  releasedAt       DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([provider, providerEscrowId])
+  @@index([status])
+  @@map("escrows")
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model Payout {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId   String  @db.Uuid
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  paymentId String  @db.Uuid
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  farmerId  String  @db.Uuid
+  farmer    User    @relation("FarmerPayouts", fields: [farmerId], references: [id], onDelete: Restrict)
+
+  provider         PaymentProvider
+  providerPayoutId String?      @db.VarChar(255)
+  amount           Decimal      @db.Decimal(18, 2)
+  currency         String       @db.Char(3)
+  status           PayoutStatus @default(PENDING)
+  failureReason    String?      @db.VarChar(500)
+  processedAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([provider, providerPayoutId])
+  @@unique([orderId])
+  @@index([farmerId, status])
+  @@map("payouts")
+}
+
+model Refund {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId   String  @db.Uuid
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  paymentId String  @db.Uuid
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  provider         PaymentProvider
+  providerRefundId String?         @db.VarChar(255)
+  amount           Decimal         @db.Decimal(18, 2)
+  currency         String          @db.Char(3)
+  status           RefundStatus    @default(PENDING)
+  reason           String?         @db.VarChar(500)
+  processedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([provider, providerRefundId])
+  @@unique([paymentId])
+  @@index([orderId, status])
+  @@index([paymentId])
+  @@map("refunds")
 }

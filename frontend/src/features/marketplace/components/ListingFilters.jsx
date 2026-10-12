@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text, TextInput, ScrollView, Pressable } from "react-native";
+import { View, ScrollView, Pressable } from "react-native";
+import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { Feather } from "@expo/vector-icons";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";

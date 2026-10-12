@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ValidationError } from "../../errors/commonErrors.js";
 
+import { SAVED_LISTING_CONFIG } from "./savedListings.constants.js";
+
 export const listingIdParamSchema = z
   .object({
     listingId: z.string().uuid("Invalid listing ID"),
@@ -19,3 +21,15 @@ export function parseOrThrow(schema, payload) {
   }
   return result.data;
 }
+
+export const savedListQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(SAVED_LISTING_CONFIG.DEFAULT_PAGE),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(SAVED_LISTING_CONFIG.MAX_PAGE_SIZE)
+      .default(SAVED_LISTING_CONFIG.DEFAULT_PAGE_SIZE),
+  })
+  .strict();

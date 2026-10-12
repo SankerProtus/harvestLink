@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { ValidationError } from "../../errors/commonErrors.js";
 import {
-  CROP_TYPES,
   QUANTITY_UNITS,
   LISTING_STATUS,
   LISTING_CONFIG,
@@ -30,18 +29,14 @@ const descriptionSchema = z
     `Description must be at most ${LISTING_CONFIG.DESCRIPTION_MAX_LENGTH} characters`,
   );
 
-const cropTypeSchema = z.enum([
-  CROP_TYPES.TOMATO,
-  CROP_TYPES.MAIZE,
-  CROP_TYPES.CASSAVA,
-  CROP_TYPES.PLANTAIN,
-  CROP_TYPES.YAM,
-  CROP_TYPES.PEPPER,
-  CROP_TYPES.ONION,
-  CROP_TYPES.RICE,
-  CROP_TYPES.GROUNDNUT,
-  CROP_TYPES.COCOA,
-]);
+/** Legacy API field name — value is the crop catalogue slug (e.g. TOMATO). */
+const cropTypeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .min(1, "Crop type is required")
+  .max(80, "Crop type is too long")
+  .regex(/^[A-Z][A-Z0-9_]*$/, "Invalid crop type");
 
 const quantityUnitSchema = z.enum([
   QUANTITY_UNITS.KILOGRAM,
@@ -164,6 +159,16 @@ export const listingSearchSchema = z
       .number()
       .positive("maxPrice must be greater than zero")
       .optional(),
+        q: z
+      .string()
+      .trim()
+      .min(2, "Search must be at least 2 characters")
+      .max(60)
+      .optional(),
+    sort: z
+      .enum(["newest", "price_asc", "price_desc"])
+      .optional()
+      .default("newest"),
     page: z.coerce
       .number()
       .int()

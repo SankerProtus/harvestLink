@@ -1,19 +1,30 @@
 import {
-  createOrder as createOrderRepo,
+  createOrderWithListingLock,
   findOrderById,
   findOrderByIdWithRelations,
-  updateOrderStatus as updateOrderStatusRepo,
+  applyOrderStatusTransition,
   updateOrderLocation as updateOrderLocationRepo,
   listOrdersByBuyerId,
   listOrdersByFarmerId,
+  getFarmerSummaryData
 } from "./deliveryTracking.repository.js";
 
 import {
   OrderNotFoundError,
   UnauthorizedOrderAccessError,
   InvalidOrderStatusTransitionError,
+  OrderCancellationNotAllowedError,
   LocationReportingNotAllowedError,
+  SelfOrderNotAllowedError,
 } from "./deliveryTracking.errors.js";
+
+import {
+  ListingNotFoundError,
+  ListingUnavailableError,
+  ListingAlreadySoldError,
+  InsufficientListingQuantityError,
+} from "../marketplace/marketplace.errors.js";
+import { LISTING_STATUS } from "../marketplace/marketplace.constants.js";
 
 import {
   createOrderCreatedEvent,
@@ -32,16 +43,12 @@ import {
   toReportLocationResponse,
 } from "./deliveryTracking.mapper.js";
 
-import { ORDER_STATUS } from "./deliveryTracking.constants.js";
+import { ORDER_STATUS, ORDER_CONFIG } from "./deliveryTracking.constants.js";
 
-// Cross-module: service-to-service only, per the corrected layering.
-import {
-  getListing,
-  confirmListingReservation,
-  releaseListingReservation,
-} from "../marketplace/marketplace.service.js";
+import { getListing } from "../marketplace/marketplace.service.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { NOTIFICATION_TYPE } from "../notifications/notifications.constants.js";
+import { recordCancellationMetric } from "../trust/trust.service.js";
 
 // Private helpers
 
@@ -59,7 +66,6 @@ function assertOrderParticipant(order, userId) {
   }
 }
 
-// Status Transitions
 const TRANSITIONS = {
   [`${ORDER_STATUS.PENDING}->${ORDER_STATUS.CONFIRMED}`]: {
     actor: "farmer",
@@ -73,32 +79,67 @@ const TRANSITIONS = {
     actor: "farmer",
     action: null,
   },
-  [`${ORDER_STATUS.PENDING}->${ORDER_STATUS.CANCELLED}`]: {
-    actor: "either",
-    action: null,
-  },
-  [`${ORDER_STATUS.CONFIRMED}->${ORDER_STATUS.CANCELLED}`]: {
-    actor: "either",
-    action: "release",
-  },
-  [`${ORDER_STATUS.IN_TRANSIT}->${ORDER_STATUS.CANCELLED}`]: {
-    actor: "either",
-    action: "release",
-  },
 };
+
+function resolveCancellationRule(currentStatus, userId, order) {
+  if (currentStatus === ORDER_STATUS.PENDING) {
+    return { actor: "either", action: null };
+  }
+
+  if (currentStatus === ORDER_STATUS.CONFIRMED) {
+    if (userId === order.farmerId) {
+      return { actor: "farmer", action: "release" };
+    }
+    if (userId === order.buyerId) {
+      const anchor =
+        order.confirmedAt ?? order.updatedAt ?? order.createdAt ?? new Date(0);
+      const confirmedMs =
+        anchor instanceof Date ? anchor.getTime() : new Date(anchor).getTime();
+      const withinGrace =
+        Date.now() - confirmedMs <= ORDER_CONFIG.BUYER_CANCEL_GRACE_MS;
+      if (!withinGrace) {
+        throw new OrderCancellationNotAllowedError(
+          "Confirmed orders can only be cancelled by the buyer within 30 minutes, or with farmer approval (coming soon)",
+        );
+      }
+      return { actor: "buyer", action: "release" };
+    }
+    return null;
+  }
+
+  return null;
+}
 
 // Public Service Functions
 export async function createOrder({ buyerId, listingId, quantity }) {
-  const listing = await getListing({ listingId }); // throws ListingNotFoundError if absent
+  const listingPreview = await getListing({ listingId });
 
-  const order = await createOrderRepo({
+  const result = await createOrderWithListingLock({
     listingId,
     buyerId,
-    farmerId: listing.farmerId,
     quantity,
-    pricePerUnitAtOrder: listing.pricePerUnit,
-    status: ORDER_STATUS.PENDING,
+    pricePerUnitAtOrder: listingPreview.pricePerUnit,
   });
+
+  if (!result.ok) {
+    switch (result.reason) {
+      case "NOT_FOUND":
+        throw new ListingNotFoundError();
+      case "SELF_ORDER":
+        throw new SelfOrderNotAllowedError();
+      case "NOT_ACTIVE":
+        if (result.listingStatus === LISTING_STATUS.SOLD) {
+          throw new ListingAlreadySoldError();
+        }
+        throw new ListingUnavailableError();
+      case "INSUFFICIENT":
+        throw new InsufficientListingQuantityError();
+      default:
+        throw new InvalidOrderStatusTransitionError();
+    }
+  }
+
+  const { order, listing } = result;
 
   const event = createOrderCreatedEvent({
     orderId: order.id,
@@ -127,12 +168,34 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
   const order = await requireOrder(orderId);
   const currentStatus = order.status;
 
-  const rule = TRANSITIONS[`${currentStatus}->${newStatus}`];
-  if (!rule) {
-    throw new InvalidOrderStatusTransitionError();
+  let rule;
+  if (newStatus === ORDER_STATUS.CANCELLED) {
+    if (
+      currentStatus === ORDER_STATUS.DELIVERED ||
+      currentStatus === ORDER_STATUS.CANCELLED
+    ) {
+      throw new InvalidOrderStatusTransitionError();
+    }
+    rule = resolveCancellationRule(currentStatus, userId, order);
+    if (!rule) {
+      throw new OrderCancellationNotAllowedError();
+    }
+  } else {
+    if (newStatus === ORDER_STATUS.DELIVERED) {
+      throw new InvalidOrderStatusTransitionError(
+        "Delivery must be verified with the buyer handover code",
+      );
+    }
+    rule = TRANSITIONS[`${currentStatus}->${newStatus}`];
+    if (!rule) {
+      throw new InvalidOrderStatusTransitionError();
+    }
   }
 
   if (rule.actor === "farmer" && userId !== order.farmerId) {
+    throw new UnauthorizedOrderAccessError();
+  }
+  if (rule.actor === "buyer" && userId !== order.buyerId) {
     throw new UnauthorizedOrderAccessError();
   }
   if (
@@ -143,19 +206,27 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
     throw new UnauthorizedOrderAccessError();
   }
 
-  if (rule.action === "confirm") {
-    await confirmListingReservation({
-      listingId: order.listingId,
-      quantity: order.quantity,
-    });
-  } else if (rule.action === "release") {
-    await releaseListingReservation({
-      listingId: order.listingId,
-      quantity: order.quantity,
-    });
+  const transitionResult = await applyOrderStatusTransition({
+    orderId,
+    fromStatus: currentStatus,
+    toStatus: newStatus,
+    inventoryAction: rule.action,
+  });
+
+  if (!transitionResult.ok) {
+    if (transitionResult.reason === "INVALID_TRANSITION") {
+      throw new InvalidOrderStatusTransitionError();
+    }
+    if (transitionResult.reason === "INSUFFICIENT") {
+      throw new InsufficientListingQuantityError();
+    }
+    if (transitionResult.reason === "LISTING_NOT_FOUND") {
+      throw new ListingNotFoundError();
+    }
+    throw new InvalidOrderStatusTransitionError();
   }
 
-  const updatedOrder = await updateOrderStatusRepo(orderId, newStatus);
+  const updatedOrder = transitionResult.order;
 
   if (newStatus === ORDER_STATUS.CONFIRMED) {
     const event = createOrderConfirmedEvent({
@@ -218,6 +289,7 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
       orderId,
       listingId: order.listingId,
     });
+    await recordCancellationMetric({ userId });
   }
 
   return toUpdateOrderStatusResponse(updatedOrder);
@@ -300,4 +372,33 @@ export async function listMyOrdersAsFarmer({ farmerId, filters }) {
     limit,
     total: totalCount,
   });
+}
+
+export async function getFarmerSummary({ farmerId }) {
+  const { statusRows, payoutRows, escrowRows } =
+    await getFarmerSummaryData(farmerId);
+
+  const statusCounts = {};
+  for (const row of statusRows) statusCounts[row.status] = row._count._all;
+
+  const byCurrency = {};
+  const bucket = (currency) =>
+    (byCurrency[currency] ??= {
+      currency,
+      paidOut: 0,
+      payoutPending: 0,
+      inProtection: 0,
+    });
+
+  for (const row of payoutRows) {
+    const amount = Number(row._sum.amount ?? 0);
+    if (row.status === "SUCCEEDED") bucket(row.currency).paidOut += amount;
+    else if (row.status === "PENDING" || row.status === "PROCESSING")
+      bucket(row.currency).payoutPending += amount;
+  }
+  for (const row of escrowRows) {
+    bucket(row.currency).inProtection += Number(row._sum.amount ?? 0);
+  }
+
+  return { statusCounts, money: Object.values(byCurrency) };
 }

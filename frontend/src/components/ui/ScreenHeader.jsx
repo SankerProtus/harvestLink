@@ -1,59 +1,172 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { Text } from "./AppText.jsx";
+import { colors } from "../../theme/colors.js";
 import { shadows } from "../../theme/shadows.js";
+
+const BUTTON_SIZE = 44;
 
 export function HeaderActionButton({
   icon,
-  size = 18,
+  size = 20,
   accessibilityLabel,
   onPress,
   badgeCount = 0,
   variant = "glass",
 }) {
-  const Container = onPress ? Pressable : View;
+  const solid = variant === "solid";
+  const base = {
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: BUTTON_SIZE / 2,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: solid ? colors.primary : colors.white,
+    borderWidth: solid ? 0 : 1,
+    borderColor: colors.line,
+    ...(solid ? null : shadows.sm),
+  };
 
-  const bgClass =
-    variant === "solid" ? "bg-white/20" : "bg-white/15 border border-white/20";
-
-  return (
-    <Container
-      {...(onPress ? { onPress, accessibilityRole: "button" } : {})}
-      accessibilityLabel={onPress ? accessibilityLabel : undefined}
-      {...(onPress
-        ? {
-            style: ({ pressed }) => ({ opacity: pressed ? 0.7 : 1 }),
-          }
-        : {})}
-      className={`h-10 w-10 items-center justify-center rounded-xl ${bgClass}`}
-    >
-      <Feather name={icon} size={size} color="#FFFFFF" />
+  const content = (
+    <>
+      <Feather
+        name={icon}
+        size={size}
+        color={solid ? colors.white : colors.ink}
+      />
       {badgeCount > 0 ? (
-        <View className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-accent items-center justify-center border-2 border-primary-dark">
-          <Text className="text-white text-[10px] font-bold">
+        <View
+          accessible={false}
+          style={{
+            position: "absolute",
+            top: -3,
+            right: -3,
+            minWidth: 18,
+            height: 18,
+            paddingHorizontal: 4,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.accentDark,
+            borderWidth: 2,
+            borderColor: colors.white,
+          }}
+        >
+          <Text
+            maxFontSizeMultiplier={1}
+            style={{
+              fontSize: 10,
+              lineHeight: 12,
+              fontWeight: "700",
+              color: colors.white,
+            }}
+          >
             {badgeCount > 9 ? "9+" : badgeCount}
           </Text>
         </View>
       ) : null}
-    </Container>
+    </>
+  );
+
+  if (!onPress) {
+    return (
+      <View accessible={false} style={base}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={4}
+      accessibilityRole="button"
+      accessibilityLabel={
+        badgeCount > 0 && accessibilityLabel
+          ? `${accessibilityLabel}, ${badgeCount} new`
+          : accessibilityLabel
+      }
+      style={({ pressed }) => [
+        base,
+        {
+          opacity: pressed ? 0.75 : 1,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
+        },
+      ]}
+    >
+      {content}
+    </Pressable>
   );
 }
 
 export function StepIndicator({ current, total }) {
   return (
-    <View className="flex-row items-center gap-2">
+    <View
+      accessible
+      accessibilityLabel={`Step ${current} of ${total}`}
+      style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+    >
       {Array.from({ length: total }, (_, i) => i + 1).map((step) => (
         <View
           key={step}
-          className={`h-1.5 rounded-full ${
-            step === current
-              ? "w-6 bg-white"
-              : step < current
-                ? "w-1.5 bg-white/60"
-                : "w-1.5 bg-white/25"
-          }`}
+          style={{
+            height: 6,
+            width: step === current ? 24 : 6,
+            borderRadius: 3,
+            backgroundColor:
+              step <= current ? colors.primary : colors.lineStrong,
+          }}
         />
       ))}
+    </View>
+  );
+}
+
+export function SectionLabel({ children }) {
+  return (
+    <Text
+      className="text-[12px] font-bold text-ink-muted uppercase tracking-[1px] mb-2"
+      numberOfLines={1}
+    >
+      {children}
+    </Text>
+  );
+}
+
+export function SectionHeader({ title, subtitle, actionLabel, onAction }) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "flex-end",
+        justifyContent: "space-between",
+        marginBottom: 16,
+      }}
+    >
+      <View style={{ flex: 1, paddingRight: 12 }}>
+        <Text className="text-[20px] font-extrabold text-ink tracking-[-0.4px]">
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text className="text-[13px] text-ink-muted mt-0.5">
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      {actionLabel && onAction ? (
+        <Pressable
+          onPress={onAction}
+          accessibilityRole="button"
+          hitSlop={8}
+          style={{ flexDirection: "row", alignItems: "center" }}
+        >
+          <Text className="text-[13px] font-semibold text-primary mr-0.5">
+            {actionLabel}
+          </Text>
+          <Feather name="chevron-right" size={14} color={colors.primary} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -61,71 +174,97 @@ export function StepIndicator({ current, total }) {
 export function ScreenHeader({
   title,
   subtitle,
+  eyebrow,
   leftAction,
   rightAction,
-  backgroundClassName = "bg-primary-dark",
-  titleClassName = "text-[20px] font-extrabold text-white tracking-[-0.3px]",
-  subtitleClassName = "text-white/70 text-[13px] mt-1",
-  large = false,
+  tone = "plain",
+  overlap = 0,
   children,
-  titleRowContent,
 }) {
   const insets = useSafeAreaInsets();
+  const tinted = tone === "tinted";
+
+  const compactTitle = Boolean(leftAction);
 
   return (
-    <View className={`${backgroundClassName} overflow-hidden`}>
-      {/* Decorative depth layers */}
-      <View className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5" />
-      <View className="absolute top-8 -left-8 w-24 h-24 rounded-full bg-white/5" />
-      <View className="absolute bottom-0 left-0 right-0 h-24 bg-primary opacity-90" />
-
+    <View
+      style={
+        tinted
+          ? {
+              backgroundColor: colors.primaryLight,
+              borderBottomLeftRadius: 28,
+              borderBottomRightRadius: 28,
+            }
+          : undefined
+      }
+    >
       <View
-        className="px-5 rounded-b-xl3 relative z-10"
         style={{
-          paddingTop: insets.top + (large ? 8 : 12),
-          paddingBottom: large ? 28 : 22,
-          ...shadows.md,
+          paddingTop: insets.top + 10,
+          paddingBottom: (tinted ? 22 : 14) + overlap,
+          paddingHorizontal: 20,
         }}
       >
-        {titleRowContent ? (
-          <View className="flex-row items-center">
-            <View className="flex-shrink-0 min-w-[40px] items-start">
-              {leftAction}
-            </View>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {leftAction ? (
+            <View style={{ marginRight: 12 }}>{leftAction}</View>
+          ) : null}
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            {eyebrow ? (
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontSize: 11,
+                  lineHeight: 14,
+                  fontWeight: "700",
+                  letterSpacing: 1.2,
+                  textTransform: "uppercase",
+                  color: colors.primary,
+                  marginBottom: 2,
+                }}
+              >
+                {eyebrow}
+              </Text>
+            ) : null}
             <Text
-              className={titleClassName}
+              accessibilityRole="header"
               numberOfLines={1}
-              style={{ marginLeft: 6, marginRight: 10 }}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              maxFontSizeMultiplier={1.2}
+              style={{
+                fontSize: compactTitle ? 22 : 26,
+                lineHeight: compactTitle ? 27 : 31,
+                fontWeight: "800",
+                letterSpacing: -0.6,
+                color: colors.ink,
+              }}
             >
               {title}
             </Text>
-            <View className="flex-1">{titleRowContent}</View>
-            <View className="flex-shrink-0 min-w-[40px] items-end ml-2.5">
-              {rightAction}
-            </View>
-          </View>
-        ) : (
-          <View className="flex-row items-center justify-between">
-            <View className="flex-shrink-0 min-w-[40px] items-start">
-              {leftAction}
-            </View>
-            <View className="flex-1 px-2 items-center">
-              <Text className={titleClassName} numberOfLines={1}>
-                {title}
+            {subtitle ? (
+              <Text
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.2}
+                style={{
+                  fontSize: 14,
+                  lineHeight: 20,
+                  marginTop: 2,
+                  color: colors.inkSecondary,
+                }}
+              >
+                {subtitle}
               </Text>
-              {subtitle ? (
-                <Text className={subtitleClassName} numberOfLines={1}>
-                  {subtitle}
-                </Text>
-              ) : null}
-            </View>
-            <View className="flex-shrink-0 min-w-[40px] items-end">
-              {rightAction}
-            </View>
+            ) : null}
           </View>
-        )}
 
-        {children ? <View className="mt-4">{children}</View> : null}
+          {rightAction ? (
+            <View style={{ marginLeft: 12 }}>{rightAction}</View>
+          ) : null}
+        </View>
+
+        {children ? <View style={{ marginTop: 16 }}>{children}</View> : null}
       </View>
     </View>
   );

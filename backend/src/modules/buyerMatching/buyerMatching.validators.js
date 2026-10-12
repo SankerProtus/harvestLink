@@ -8,18 +8,13 @@ import {
 } from "./buyerMatching.constants.js";
 
 //  Reusable Field Schemas
-const cropTypeSchema = z.enum([
-  CROP_TYPES.TOMATO,
-  CROP_TYPES.MAIZE,
-  CROP_TYPES.CASSAVA,
-  CROP_TYPES.PLANTAIN,
-  CROP_TYPES.YAM,
-  CROP_TYPES.PEPPER,
-  CROP_TYPES.ONION,
-  CROP_TYPES.RICE,
-  CROP_TYPES.GROUNDNUT,
-  CROP_TYPES.COCOA,
-]);
+const cropTypeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .min(1, "Crop type is required")
+  .max(80, "Crop type is too long")
+  .regex(/^[A-Z][A-Z0-9_]*$/, "Invalid crop type");
 
 const quantityUnitSchema = z.enum([
   QUANTITY_UNITS.KILOGRAM,

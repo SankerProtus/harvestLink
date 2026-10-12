@@ -20,7 +20,10 @@ function serializeFarmer(farmer, ratingSummary) {
   return {
     id: farmer.id,
     name: farmer.fullName,
-    isVerified: Boolean(farmer.phoneVerifiedAt),
+    isVerified:
+      (farmer.verificationLevel ?? 0) >= 1 ||
+      Boolean(farmer.phoneVerifiedAt),
+    verificationLevel: farmer.verificationLevel ?? 0,
     avatarUrl: farmer.profileImageUrl ?? null,
     rating: ratingSummary?.rating != null ? Number(ratingSummary.rating) : null,
     reviewCount: ratingSummary?.reviewCount ?? null,
@@ -34,7 +37,7 @@ export function toMatchResultDTO(listing, ratingSummaryByFarmerId) {
     farmerId: listing.farmerId,
     title: listing.title,
     description: listing.description ?? null,
-    cropType: listing.cropType,
+    cropType: listing.crop?.slug ?? listing.cropType ?? null,
     quantity: serializeDecimal(listing.quantity),
     quantityUnit: listing.quantityUnit,
     pricePerUnit: serializeDecimal(listing.pricePerUnit),

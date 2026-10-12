@@ -1,4 +1,5 @@
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator } from "react-native";
+import { Text } from "./AppText.jsx";
 import { Feather } from "@expo/vector-icons";
 import { Button } from "./Button.jsx";
 import { colors } from "../../theme/colors.js";

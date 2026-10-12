@@ -8,6 +8,7 @@ import {
   getListing,
   getFarmerListings,
   searchListings,
+  listCrops,
   uploadListingPhoto,
 } from "./marketplace.controller.js";
 
@@ -46,6 +47,7 @@ router.get(
   lightUserLimiter,
   getFarmerListings,
 );
+router.get("/crops", lightLimiter, listCrops);
 router.get("/listings", lightLimiter, searchListings);
 
 router.post("/listings", authMiddleware, moderateLimiter, createListing);

@@ -21,10 +21,22 @@ import { MatchResultsPage } from "../features/buyerMatching/pages/MatchResultsPa
 import { MatchDetailPage } from "../features/buyerMatching/pages/MatchDetailPage.jsx";
 
 import { OrderDetailPage } from "../features/deliveryTracking/pages/OrderDetailPage.jsx";
+import { OpenDisputePage } from "../features/trust/pages/OpenDisputePage.jsx";
+import { MyDisputesPage } from "../features/trust/pages/MyDisputesPage.jsx";
+import { VerificationRequestPage } from "../features/trust/pages/VerificationRequestPage.jsx";
+import { ReportUserPage } from "../features/trust/pages/ReportUserPage.jsx";
+import { AdminModerationPage } from "../features/admin/pages/AdminModerationPage.jsx";
+import { AdminDisputeDetailPage } from "../features/admin/pages/AdminDisputeDetailPage.jsx";
+import { AdminUserDetailPage } from "../features/admin/pages/AdminUserDetailPage.jsx";
 
 import { ListingInterestPage } from "../features/marketplace/pages/ListingInterestPage.jsx";
 import { NotificationsPage } from "../features/notifications/pages/NotificationsPage.jsx";
 import { FarmerProfilePage } from "../features/farmerProfile/pages/FarmerProfilePage.jsx";
+
+import { BootScreen } from "../components/ui/BootScreen.jsx";
+
+import { SavedListingsPage } from "../features/marketplace/pages/SavedListingsPage.jsx";
+import { DeleteAccountPage } from "../features/auth/pages/DeleteAccountPage.jsx";
 
 import { ProtectedTabNavigator } from "./ProtectedTabNavigator.jsx";
 
@@ -97,6 +109,33 @@ function ProtectedNavigator() {
         name="SyncDiagnostics"
         component={SyncDiagnosticsPage}
       />
+      <ProtectedStack.Screen name="OpenDispute" component={OpenDisputePage} />
+      <ProtectedStack.Screen name="ReportUser" component={ReportUserPage} />
+      <ProtectedStack.Screen name="MyDisputes" component={MyDisputesPage} />
+      <ProtectedStack.Screen
+        name="VerificationRequest"
+        component={VerificationRequestPage}
+      />
+      <ProtectedStack.Screen
+        name="SavedListings"
+        component={SavedListingsPage}
+      />
+      <ProtectedStack.Screen
+        name="AccountDelete"
+        component={DeleteAccountPage}
+      />
+      <ProtectedStack.Screen
+        name="AdminModeration"
+        component={AdminModerationPage}
+      />
+      <ProtectedStack.Screen
+        name="AdminDisputeDetail"
+        component={AdminDisputeDetailPage}
+      />
+      <ProtectedStack.Screen
+        name="AdminUserDetail"
+        component={AdminUserDetailPage}
+      />
     </ProtectedStack.Navigator>
   );
 }
@@ -110,7 +149,7 @@ export function AppNavigator() {
   }, []);
 
   if (isInitializing || hasSeenOnboarding === null) {
-    return null;
+    return <BootScreen />;
   }
 
   if (!hasSeenOnboarding) {

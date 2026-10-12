@@ -6,6 +6,8 @@ import {
   updateListing as updateListingRepo,
   updateListingQuantity as updateListingQuantityRepo,
   updateListingStatus as updateListingStatusRepo,
+  decrementListingQuantityActive,
+  incrementListingQuantity,
   listListingsByFarmerId,
   searchListings as searchListingsRepo,
 } from "./marketplace.repository.js";
@@ -42,7 +44,11 @@ import {
   createListingSoldEvent,
 } from "./marketplace.events.js";
 
-import { LISTING_STATUS } from "./marketplace.constants.js";
+import { LISTING_STATUS, LISTING_VERIFICATION_MIN_TIER } from "./marketplace.constants.js";
+import { findActiveCropBySlug, listActiveCrops } from "./crops.repository.js";
+import { evaluatePriceReviewRequired } from "./priceBand.service.js";
+import { prisma } from "../../common/utils/prismaClient.js";
+import { InvalidCropTypeError } from "./marketplace.errors.js";
 
 
 // Private helpers
@@ -70,6 +76,23 @@ function assertListingEditable(listing) {
   }
 }
 
+async function resolveCropId(cropTypeSlug) {
+  const crop = await findActiveCropBySlug(cropTypeSlug);
+  if (!crop) {
+    throw new InvalidCropTypeError();
+  }
+  return crop;
+}
+
+async function mapListingCropUpdates(updates) {
+  if (updates.cropType === undefined) {
+    return updates;
+  }
+  const crop = await resolveCropId(updates.cropType);
+  const { cropType: _drop, ...rest } = updates;
+  return { ...rest, cropId: crop.id };
+}
+
 
 // Create Listing
 
@@ -94,11 +117,30 @@ export async function createListing({
     throw new DuplicateListingError();
   }
 
+  const farmer = await prisma.user.findUnique({ where: { id: farmerId } });
+  if (
+    !farmer ||
+    (farmer.verificationLevel ?? 0) < LISTING_VERIFICATION_MIN_TIER
+  ) {
+    throw new ListingUnavailableError(
+      "Complete verification before creating listings",
+    );
+  }
+
+  const crop = await resolveCropId(cropType);
+
+  const priceReviewRequired = await evaluatePriceReviewRequired({
+    cropId: crop.id,
+    location,
+    quantityUnit,
+    pricePerUnit,
+  });
+
   const listing = await createListingRepo({
     farmerId,
     title,
     description: description ?? null,
-    cropType,
+    cropId: crop.id,
     quantity,
     quantityUnit,
     pricePerUnit,
@@ -106,12 +148,13 @@ export async function createListing({
     harvestDate: harvestDate ?? null,
     images: images ?? [],
     status: LISTING_STATUS.ACTIVE,
+    priceReviewRequired,
   });
 
   const event = createListingCreatedEvent({
     listingId: listing.id,
     farmerId: listing.farmerId,
-    cropType: listing.cropType,
+    cropType: crop.slug,
     quantity: listing.quantity,
     quantityUnit: listing.quantityUnit,
     pricePerUnit: listing.pricePerUnit,
@@ -131,9 +174,23 @@ export async function updateListing({ listingId, userId, updates }) {
   const becomesZeroQuantity =
     updates.quantity !== undefined && updates.quantity === 0;
 
+  let mappedUpdates = await mapListingCropUpdates(updates);
+
+  if (mappedUpdates.pricePerUnit !== undefined) {
+    const cropId = mappedUpdates.cropId ?? listing.cropId;
+    const quantityUnit = mappedUpdates.quantityUnit ?? listing.quantityUnit;
+    const location = mappedUpdates.location ?? listing.location;
+    mappedUpdates.priceReviewRequired = await evaluatePriceReviewRequired({
+      cropId,
+      location,
+      quantityUnit,
+      pricePerUnit: mappedUpdates.pricePerUnit,
+    });
+  }
+
   const data = becomesZeroQuantity
-    ? { ...updates, status: LISTING_STATUS.SOLD }
-    : { ...updates };
+    ? { ...mappedUpdates, status: LISTING_STATUS.SOLD }
+    : { ...mappedUpdates };
 
   const updatedListing = await updateListingRepo(listingId, data);
 
@@ -236,38 +293,45 @@ export async function changeListingStatus({ listingId, userId, newStatus }) {
   return toChangeListingStatusResponse(updatedListing);
 }
 
+async function resolveReservationFailure(listingId) {
+  const listing = await findListingById(listingId);
+  if (!listing) {
+    throw new ListingNotFoundError();
+  }
+  if (listing.status === LISTING_STATUS.SOLD) {
+    throw new ListingAlreadySoldError();
+  }
+  if (listing.status === LISTING_STATUS.REMOVED) {
+    throw new ListingUnavailableError();
+  }
+  throw new InsufficientListingQuantityError();
+}
+
 // Reservation / Inventory Management
 export async function confirmListingReservation({ listingId, quantity }) {
-  const listing = await requireListing(listingId);
-  assertListingEditable(listing);
+  const before = await requireListing(listingId);
+  const previousQuantity = Number(before.quantity);
 
-  const availableQuantity = Number(listing.quantity);
-  const requestedQuantity = Number(quantity);
-
-  if (availableQuantity < requestedQuantity) {
-    throw new InsufficientListingQuantityError();
+  const updatedListing = await decrementListingQuantityActive(
+    listingId,
+    quantity,
+  );
+  if (!updatedListing) {
+    await resolveReservationFailure(listingId);
   }
 
-  const remainingQuantity = availableQuantity - requestedQuantity;
-  const becomesZero = remainingQuantity === 0;
-
-  const data = becomesZero
-    ? { quantity: remainingQuantity, status: LISTING_STATUS.SOLD }
-    : { quantity: remainingQuantity };
-
-  const updatedListing = await updateListingRepo(listingId, data);
-
+  const newQuantity = Number(updatedListing.quantity);
   const quantityEvent = createListingQuantityUpdatedEvent({
     listingId,
-    previousQuantity: availableQuantity,
-    newQuantity: remainingQuantity,
+    previousQuantity,
+    newQuantity,
   });
   // TODO: publish `quantityEvent` once an event bus exists.
 
-  if (becomesZero) {
+  if (updatedListing.status === LISTING_STATUS.SOLD) {
     const soldEvent = createListingSoldEvent({
       listingId,
-      farmerId: listing.farmerId,
+      farmerId: updatedListing.farmerId,
     });
     // TODO: publish `soldEvent` once an event bus exists.
   }
@@ -276,22 +340,20 @@ export async function confirmListingReservation({ listingId, quantity }) {
 }
 
 export async function releaseListingReservation({ listingId, quantity }) {
-  const listing = await requireListing(listingId);
+  const before = await requireListing(listingId);
+  const previousQuantity = Number(before.quantity);
+  const reactivates = before.status === LISTING_STATUS.SOLD;
 
-  const currentQuantity = Number(listing.quantity);
-  const restoredQuantity = currentQuantity + Number(quantity);
-  const reactivates = listing.status === LISTING_STATUS.SOLD;
+  const updatedListing = await incrementListingQuantity(listingId, quantity);
+  if (!updatedListing) {
+    throw new ListingNotFoundError();
+  }
 
-  const data = reactivates
-    ? { quantity: restoredQuantity, status: LISTING_STATUS.ACTIVE }
-    : { quantity: restoredQuantity };
-
-  const updatedListing = await updateListingRepo(listingId, data);
-
+  const newQuantity = Number(updatedListing.quantity);
   const quantityEvent = createListingQuantityUpdatedEvent({
     listingId,
-    previousQuantity: currentQuantity,
-    newQuantity: restoredQuantity,
+    previousQuantity,
+    newQuantity,
   });
   // TODO: publish `quantityEvent` once an event bus exists.
 
@@ -349,6 +411,18 @@ export async function searchListings(filters) {
     total: totalCount,
     ratingSummaryByFarmerId,
   });
+}
+
+export async function listCrops({ search } = {}) {
+  const crops = await listActiveCrops({ search });
+  return crops.map((crop) => ({
+    id: crop.id,
+    name: crop.name,
+    slug: crop.slug,
+    category: crop.category,
+    localNames: crop.localNames ?? null,
+    defaultUnit: crop.defaultUnit,
+  }));
 }
 
 export async function uploadListingPhoto({ fileBuffer }) {

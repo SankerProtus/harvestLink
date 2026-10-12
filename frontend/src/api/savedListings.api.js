@@ -11,3 +11,7 @@ export function saveListing(listingId) {
 export function unsaveListing(listingId) {
   return apiClient.delete(`/saved-listings/listings/${listingId}`);
 }
+
+export function getMySavedListings(params) {
+  return apiClient.get("/saved-listings", { params });
+}

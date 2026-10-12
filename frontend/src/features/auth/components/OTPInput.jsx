@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { View, TextInput, Text } from "react-native";
+import { View } from "react-native";
+import { TextInput, Text } from "../../../components/ui/AppText.jsx";
 import { OTP_CONFIG } from "../schemas/authSchemas.js";
 import { shadows } from "../../../theme/shadows.js";
 

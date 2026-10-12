@@ -1,4 +1,5 @@
-import { Modal, View, Text, Pressable } from "react-native";
+import { Modal, View, Pressable } from "react-native";
+import { Text } from "./AppText.jsx";
 import { Feather } from "@expo/vector-icons";
 import { useAlertStore } from "../../lib/alertStore.js";
 import { colors } from "../../theme/colors.js";

@@ -1,15 +1,14 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
-  Text,
   FlatList,
   Pressable,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  RefreshControl,
 } from "react-native";
+import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Feather } from "@expo/vector-icons";
@@ -17,93 +16,117 @@ import { Feather } from "@expo/vector-icons";
 import { Alert } from "../../../lib/alert.js";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { colors } from "../../../theme/colors.js";
+import { getErrorMessage } from "../../../lib/errorMap.js";
 import { shadows } from "../../../theme/shadows.js";
-import { CROP_TYPES } from "../schemas/marketplaceSchemas.js";
-
-import {
-  useExpressedInterestIds,
-  useExpressInterest,
-  useWithdrawInterest,
-} from "../hooks/listingInterestHooks.js";
-import {
-  useSavedListingIds,
-  useSaveListing,
-  useUnsaveListing,
-} from "../hooks/savedListingHooks.js";
-import { useUnreadNotificationCount } from "../../notifications/hooks/notificationHooks.js";
 
 import { Button } from "../../../components/ui/Button.jsx";
-import { Chip } from "../../../components/ui/Chip.jsx";
-
 import {
   HeaderActionButton,
   ScreenHeader,
 } from "../../../components/ui/ScreenHeader.jsx";
+import { ErrorState, EmptyState } from "../../../components/ui/ScreenState.jsx";
+import { ProduceCardSkeleton } from "../../../components/ui/Skeleton.jsx";
+import { useUnreadNotificationCount } from "../../notifications/hooks/notificationHooks.js";
+
 import { ListingFilters } from "../components/ListingFilters.jsx";
-import { ListingCard } from "../components/ListingCard.jsx";
-
+import { ProduceCard } from "../components/ProduceCard.jsx";
+import { CROP_LIST } from "../lib/cropMeta.js";
 import { listingSearchSchema } from "../schemas/marketplaceSchemas.js";
-import { useListings } from "../hooks/marketplaceHooks.js";
-import { getErrorMessage } from "../../../lib/errorMap.js";
-import {
-  LoadingState,
-  ErrorState,
-  EmptyState,
-} from "../../../components/ui/ScreenState.jsx";
+import { useInfiniteListings } from "../hooks/marketplaceHooks.js";
+import { useToggleSaveListing } from "../hooks/useToggleSaveListing.js";
 
-const CROP_TYPE_LIST = Object.values(CROP_TYPES);
-const DEFAULT_FILTERS = { page: 1, limit: 20 };
+const PAGE_SIZE = 20;
+const EMPTY_PANEL = {
+  quantityUnit: undefined,
+  location: "",
+  minPrice: "",
+  maxPrice: "",
+};
 
-function formatCropLabel(value) {
-  return value.charAt(0) + value.slice(1).toLowerCase();
-}
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "price_asc", label: "Price: low to high" },
+  { value: "price_desc", label: "Price: high to low" },
+];
 
-function toApiFilters(formValues) {
-  const { minPrice, maxPrice, ...rest } = formValues;
+function buildQueryFilters({ panel, cropType, q, sort }) {
+  const { quantityUnit, location, minPrice, maxPrice } = panel;
   return {
-    ...rest,
+    limit: PAGE_SIZE,
+    // Only sent when used, so the app still works against an older backend.
+    ...(sort !== "newest" ? { sort } : {}),
+    ...(q ? { q } : {}),
+    ...(cropType ? { cropType } : {}),
+    ...(quantityUnit ? { quantityUnit } : {}),
+    ...(location?.trim() ? { location: location.trim() } : {}),
     ...(minPrice ? { minPrice: Number(minPrice) } : {}),
     ...(maxPrice ? { maxPrice: Number(maxPrice) } : {}),
   };
 }
 
+function CropChip({ label, emoji, isSelected, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: isSelected }}
+      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+      className={`flex-row items-center rounded-full mr-2 border px-3.5 min-h-[44px] ${
+        isSelected ? "bg-primary border-primary" : "bg-white border-line"
+      }`}
+    >
+      {emoji ? (
+        <Text
+          style={{ fontSize: 16, marginRight: 6 }}
+          allowFontScaling={false}
+          accessible={false}
+        >
+          {emoji}
+        </Text>
+      ) : null}
+      <Text
+        className={`text-[13.5px] font-semibold ${isSelected ? "text-white" : "text-ink-secondary"}`}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export function BrowseListingsPage() {
   const navigation = useNavigation();
-  const unreadNotificationCount = useUnreadNotificationCount();
+  const route = useRoute();
   const { user, isAuthenticated } = useAuth();
-  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS);
-  const [page, setPage] = useState(1);
+  const unreadNotificationCount = useUnreadNotificationCount();
+  const { isSaved, toggle } = useToggleSaveListing();
+  const searchRef = useRef(null);
 
-  const expressedInterestIds = useExpressedInterestIds();
-  const expressInterest = useExpressInterest();
-  const withdrawInterest = useWithdrawInterest();
+  const [searchText, setSearchText] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [cropType, setCropType] = useState(undefined);
+  const [sort, setSort] = useState("newest");
+  const [panel, setPanel] = useState(EMPTY_PANEL);
 
-  const savedListingIds = useSavedListingIds();
-  const saveListing = useSaveListing();
-  const unsaveListing = useUnsaveListing();
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(searchText), 400);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
-  function handleToggleInterest(item) {
-    const isCurrentlyInterested = expressedInterestIds.data?.has(item.id);
-    const mutation = isCurrentlyInterested ? withdrawInterest : expressInterest;
-    mutation.mutate(item.id, {
-      onError: (err) => {
-        Alert.alert("Couldn't update interest", getErrorMessage(err));
-      },
-    });
-  }
+  // The backend requires at least 2 characters.
+  const q = debounced.trim().length >= 2 ? debounced.trim() : "";
 
-  function handleToggleSave(item) {
-    const isCurrentlySaved = savedListingIds.data?.has(item.id);
-    const mutation = isCurrentlySaved ? unsaveListing : saveListing;
-    mutation.mutate(item.id, {
-      onError: (err) => {
-        Alert.alert("Couldn't update saved listings", getErrorMessage(err));
-      },
-    });
-  }
+  // Presets sent from the home screen (crop tile / search bar tap).
+  useEffect(() => {
+    const { cropType: presetCrop, focusSearch } = route.params ?? {};
+    if (presetCrop) setCropType(presetCrop);
+    if (focusSearch) setTimeout(() => searchRef.current?.focus(), 200);
+    if (presetCrop || focusSearch) {
+      navigation.setParams({ cropType: undefined, focusSearch: undefined });
+    }
+  }, [route.params, navigation]);
 
   const {
-    control,
     handleSubmit,
     reset,
     watch,
@@ -111,51 +134,223 @@ export function BrowseListingsPage() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(listingSearchSchema),
-    defaultValues: {
-      cropType: undefined,
-      quantityUnit: undefined,
-      location: "",
-      minPrice: "",
-      maxPrice: "",
-    },
+    defaultValues: EMPTY_PANEL,
   });
-
   const formValues = watch();
 
-  const queryFilters = toApiFilters({
-    ...appliedFilters,
-    page,
-    limit: DEFAULT_FILTERS.limit,
-  });
-
-  const listings = useListings(queryFilters);
-
   function onApply(values) {
-    setAppliedFilters(values);
-    setPage(1);
+    const { quantityUnit, location, minPrice, maxPrice } = values;
+    setPanel({ quantityUnit, location, minPrice, maxPrice });
   }
 
-  function onReset() {
-    reset({
-      cropType: undefined,
-      quantityUnit: undefined,
-      location: "",
-      minPrice: "",
-      maxPrice: "",
-    });
-    setAppliedFilters(DEFAULT_FILTERS);
-    setPage(1);
+  function onResetPanel() {
+    reset(EMPTY_PANEL);
+    setPanel(EMPTY_PANEL);
+    setCropType(undefined);
   }
 
-  const results = listings.data?.results ?? [];
-  const pagination = listings.data?.pagination;
-  const canGoNext = pagination ? page < pagination.totalPages : false;
-  const canGoPrev = page > 1;
+  function clearAll() {
+    onResetPanel();
+    setSearchText("");
+    setDebounced("");
+    setSort("newest");
+  }
+
+  const queryFilters = useMemo(
+    () => buildQueryFilters({ panel, cropType, q, sort }),
+    [panel, cropType, q, sort],
+  );
+  const feed = useInfiniteListings(queryFilters);
+
+  const results = useMemo(() => {
+    const seen = new Set();
+    return (feed.data?.pages ?? [])
+      .flatMap((page) => page.results)
+      .filter((item) => !seen.has(item.id) && seen.add(item.id));
+  }, [feed.data]);
+
+  const total = feed.data?.pages?.[0]?.pagination?.total ?? 0;
+  const hasPanelFilters = Boolean(
+    panel.quantityUnit ||
+    panel.location?.trim() ||
+    panel.minPrice ||
+    panel.maxPrice,
+  );
+  const hasAnyFilter = Boolean(q || cropType || hasPanelFilters);
+
+  // Pad odd counts so the last card keeps column width.
+  const gridData = useMemo(
+    () =>
+      results.length % 2 === 1
+        ? [...results, { id: "__spacer", spacer: true }]
+        : results,
+    [results],
+  );
+
+  const openListing = useCallback(
+    (listing) =>
+      navigation.navigate("ListingDetail", { listingId: listing.id }),
+    [navigation],
+  );
+
+  const renderItem = useCallback(
+    ({ item }) =>
+      item.spacer ? (
+        <View style={{ flex: 1 }} />
+      ) : (
+        <ProduceCard
+          listing={item}
+          isSaved={isSaved(item.id)}
+          onPress={openListing}
+          onToggleSave={item.farmerId === user?.id ? undefined : toggle}
+        />
+      ),
+    [isSaved, toggle, openListing, user?.id],
+  );
+
+  function handleEndReached() {
+    if (
+      feed.hasNextPage &&
+      !feed.isFetchingNextPage &&
+      !feed.isFetchNextPageError
+    ) {
+      feed.fetchNextPage();
+    }
+  }
+
+  function openSortMenu() {
+    Alert.alert("Sort by", "Choose how listings are ordered.", [
+      ...SORT_OPTIONS.map((option) => ({
+        text: option.value === sort ? `${option.label} ✓` : option.label,
+        onPress: () => setSort(option.value),
+      })),
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  const sortLabel =
+    SORT_OPTIONS.find((o) => o.value === sort)?.label ?? "Newest";
+
+  const header = (
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14 }}
+        style={{ flexGrow: 0 }}
+      >
+        <CropChip
+          label="All"
+          isSelected={!cropType}
+          onPress={() => setCropType(undefined)}
+        />
+        {CROP_LIST.map((crop) => (
+          <CropChip
+            key={crop.value}
+            label={crop.label}
+            emoji={crop.emoji}
+            isSelected={cropType === crop.value}
+            onPress={() =>
+              setCropType(cropType === crop.value ? undefined : crop.value)
+            }
+          />
+        ))}
+      </ScrollView>
+
+      <View className="px-5 pt-3">
+        <ListingFilters
+          value={formValues}
+          onQuantityUnitChange={(unit) => setValue("quantityUnit", unit)}
+          onLocationChange={(text) => setValue("location", text)}
+          onMinPriceChange={(text) => setValue("minPrice", text)}
+          onMaxPriceChange={(text) => setValue("maxPrice", text)}
+          errors={{
+            location: errors.location?.message,
+            minPrice: errors.minPrice?.message,
+            maxPrice: errors.maxPrice?.message,
+          }}
+          onApply={handleSubmit(onApply)}
+          onReset={onResetPanel}
+        />
+      </View>
+
+      <View className="flex-row items-center justify-between px-5 pb-3">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-[13px] font-semibold text-ink-secondary"
+        >
+          {feed.isLoading
+            ? "Loading…"
+            : `${total} ${total === 1 ? "listing" : "listings"}`}
+        </Text>
+        <Pressable
+          onPress={openSortMenu}
+          accessibilityRole="button"
+          accessibilityLabel={`Sort: ${sortLabel}. Change sort order.`}
+          hitSlop={8}
+          className="flex-row items-center min-h-[44px]"
+        >
+          <Feather name="sliders" size={14} color={colors.primary} />
+          <Text className="text-[13px] font-bold text-primary ml-1.5">
+            {sortLabel}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  let emptyContent = null;
+  if (feed.isLoading) {
+    emptyContent = (
+      <View className="flex-row px-5" style={{ gap: 12 }}>
+        <ProduceCardSkeleton />
+        <ProduceCardSkeleton />
+      </View>
+    );
+  } else if (feed.isError) {
+    emptyContent = (
+      <ErrorState
+        title="Couldn't load listings"
+        message={getErrorMessage(feed.error)}
+        onRetry={() => feed.refetch()}
+      />
+    );
+  } else if (results.length === 0) {
+    emptyContent = (
+      <EmptyState
+        icon="search"
+        title={
+          q
+            ? `No results for “${q}”`
+            : hasAnyFilter
+              ? "No listings match your filters"
+              : "No produce listed yet"
+        }
+        description={
+          q
+            ? "Check the spelling or try a broader search."
+            : hasAnyFilter
+              ? "Try widening your search or clearing filters."
+              : "New produce will appear here as farmers list it."
+        }
+        action={
+          hasAnyFilter ? (
+            <Button
+              label="Clear search and filters"
+              onPress={clearAll}
+              variant="secondary"
+            />
+          ) : undefined
+        }
+      />
+    );
+  }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <ScreenHeader
         title="Marketplace"
+        tone="tinted"
         leftAction={
           navigation.canGoBack() ? (
             <HeaderActionButton
@@ -164,18 +359,7 @@ export function BrowseListingsPage() {
               accessibilityLabel="Go back"
               onPress={() => navigation.goBack()}
             />
-          ) : (
-            <HeaderActionButton
-              icon="menu"
-              size={20}
-              accessibilityLabel="Menu"
-              onPress={() =>
-                isAuthenticated
-                  ? navigation.navigate("ProtectedTabs", { screen: "Profile" })
-                  : navigation.navigate("Welcome")
-              }
-            />
-          )
+          ) : undefined
         }
         rightAction={
           isAuthenticated ? (
@@ -188,164 +372,88 @@ export function BrowseListingsPage() {
             />
           ) : null
         }
-      />
-
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View className="pt-4">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20 }}
-          >
-            <Chip
-              label="All"
-              isSelected={!formValues.cropType}
-              icon="grid"
-              onPress={() => {
-                setValue("cropType", undefined);
-                handleSubmit(onApply)();
-              }}
-            />
-            {CROP_TYPE_LIST.map((crop) => (
-              <Chip
-                key={crop}
-                label={formatCropLabel(crop)}
-                isSelected={formValues.cropType === crop}
-                icon="feather"
-                onPress={() => {
-                  setValue(
-                    "cropType",
-                    formValues.cropType === crop ? undefined : crop,
-                  );
-                  handleSubmit(onApply)();
-                }}
-              />
-            ))}
-          </ScrollView>
+        <View
+          className="flex-row items-center bg-white rounded-xl px-3 min-h-[48px]"
+          style={shadows.md}
+        >
+          <Feather name="search" size={18} color={colors.inkMuted} />
+          <TextInput
+            ref={searchRef}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Search produce, farmers or places"
+            placeholderTextColor={colors.inkFaint}
+            accessibilityLabel="Search listings"
+            returnKeyType="search"
+            autoCorrect={false}
+            className="flex-1 px-3 py-3 text-[15px] text-ink"
+          />
+          {searchText ? (
+            <Pressable
+              onPress={() => setSearchText("")}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+              hitSlop={10}
+            >
+              <Feather name="x-circle" size={18} color={colors.inkMuted} />
+            </Pressable>
+          ) : null}
         </View>
+      </ScreenHeader>
 
-        <View className="px-5 pt-2 pb-1">
-          <ListingFilters
-            value={formValues}
-            onQuantityUnitChange={(unit) => setValue("quantityUnit", unit)}
-            onLocationChange={(text) => setValue("location", text)}
-            onMinPriceChange={(text) => setValue("minPrice", text)}
-            onMaxPriceChange={(text) => setValue("maxPrice", text)}
-            errors={{
-              location: errors.location?.message,
-              minPrice: errors.minPrice?.message,
-              maxPrice: errors.maxPrice?.message,
-            }}
-            onApply={handleSubmit(onApply)}
-            onReset={onReset}
-          />
-        </View>
-
-        {listings.isLoading ? (
-          <LoadingState label="Loading listings…" />
-        ) : listings.isError ? (
-          <ErrorState
-            title="Couldn't load listings"
-            message={getErrorMessage(listings.error)}
-            onRetry={() => listings.refetch()}
-          />
-        ) : results.length === 0 ? (
-          <EmptyState
-            icon="search"
-            title="No listings match your filters"
-            description="Try widening your search or resetting filters."
-            action={
-              <Button
-                label="Reset filters"
-                onPress={onReset}
-                variant="secondary"
-              />
+      <FlatList
+        data={feed.isLoading || feed.isError ? [] : gridData}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={{ gap: 12, paddingHorizontal: 20 }}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={header}
+        ListEmptyComponent={emptyContent}
+        renderItem={renderItem}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.6}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        removeClippedSubviews
+        refreshControl={
+          <RefreshControl
+            refreshing={
+              feed.isRefetching && !feed.isFetchingNextPage && !feed.isLoading
             }
+            onRefresh={() => feed.refetch()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
-        ) : (
-          <FlatList
-            data={results}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{
-              paddingHorizontal: 20,
-              paddingTop: 8,
-              paddingBottom: 16,
-            }}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => {
-              const isOwnListing = item.farmerId === user?.id;
-              return (
-                <ListingCard
-                  listing={item}
-                  isInterested={
-                    expressedInterestIds.data?.has(item.id) ?? false
-                  }
-                  onExpressInterest={
-                    isOwnListing ? undefined : handleToggleInterest
-                  }
-                  isSaved={savedListingIds.data?.has(item.id) ?? false}
-                  onToggleSave={isOwnListing ? undefined : handleToggleSave}
-                  onRequestMatch={
-                    isOwnListing
-                      ? undefined
-                      : (listing) =>
-                          navigation.navigate("ListingDetail", {
-                            listingId: listing.id,
-                          })
-                  }
-                  onPress={() =>
-                    navigation.navigate("ListingDetail", { listingId: item.id })
-                  }
-                />
-              );
-            }}
-            ListFooterComponent={
-              pagination && pagination.totalPages > 1 ? (
-                <View className="flex-row justify-center items-center py-6 gap-5">
-                  <Pressable
-                    onPress={() => setPage((p) => p - 1)}
-                    disabled={!canGoPrev}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Previous page"
-                    style={({ pressed }) => ({
-                      opacity: !canGoPrev ? 0.3 : pressed ? 0.7 : 1,
-                      ...shadows.sm,
-                    })}
-                    className="w-10 h-10 rounded-xl bg-white border border-line items-center justify-center"
-                  >
-                    <Feather name="chevron-left" size={18} color={colors.ink} />
-                  </Pressable>
-                  <Text className="text-[13px] font-semibold text-ink-muted">
-                    {pagination.page} / {pagination.totalPages}
-                  </Text>
-                  <Pressable
-                    onPress={() => setPage((p) => p + 1)}
-                    disabled={!canGoNext}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Next page"
-                    style={({ pressed }) => ({
-                      opacity: !canGoNext ? 0.3 : pressed ? 0.7 : 1,
-                      ...shadows.sm,
-                    })}
-                    className="w-10 h-10 rounded-xl bg-white border border-line items-center justify-center"
-                  >
-                    <Feather
-                      name="chevron-right"
-                      size={18}
-                      color={colors.ink}
-                    />
-                  </Pressable>
-                </View>
-              ) : null
-            }
-          />
-        )}
-      </KeyboardAvoidingView>
+        }
+        ListFooterComponent={
+          feed.isFetchingNextPage ? (
+            <View className="flex-row px-5 pt-3" style={{ gap: 12 }}>
+              <ProduceCardSkeleton />
+              <ProduceCardSkeleton />
+            </View>
+          ) : feed.isFetchNextPageError ? (
+            <Pressable
+              onPress={() => feed.fetchNextPage()}
+              accessibilityRole="button"
+              accessibilityLabel="Couldn't load more listings. Tap to retry."
+              className="items-center justify-center min-h-[56px] mt-3"
+            >
+              <Text className="text-[13.5px] font-bold text-primary">
+                Couldn't load more. Tap to retry
+              </Text>
+            </Pressable>
+          ) : results.length > 0 && !feed.hasNextPage ? (
+            <Text className="text-[12.5px] text-ink-muted text-center pt-5">
+              You've seen all {total} {total === 1 ? "listing" : "listings"}
+            </Text>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }

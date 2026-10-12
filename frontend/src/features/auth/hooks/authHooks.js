@@ -155,3 +155,16 @@ export function useUploadProfilePhoto() {
     },
   });
 }
+
+export function useDeleteAccount() {
+  const { logout } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => authApi.deleteAccount(),
+    onSuccess: async () => {
+      await logout();
+      queryClient.clear();
+    },
+  });
+}

@@ -1,6 +1,17 @@
 import { randomInt, timingSafeEqual } from "node:crypto";
-import { sha256Hash } from "./crypto.js";
+import { hmacSha256 } from "./crypto.js";
 import { OTP_CONFIG } from "../../modules/auth/auth.constants.js";
+
+function resolveOtpPepper() {
+  const pepper = process.env.OTP_PEPPER?.trim();
+  if (pepper) {
+    return pepper;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("OTP_PEPPER must be set in production");
+  }
+  return "dev-insecure-otp-pepper";
+}
 
 // Generation
 export function generateOtpCode(length = OTP_CONFIG.CODE_LENGTH) {
@@ -10,9 +21,9 @@ export function generateOtpCode(length = OTP_CONFIG.CODE_LENGTH) {
 }
 
 
-// Hashing
+// Hashing (HMAC with server-side pepper — not reversible from DB hash alone)
 export function hashOtpCode(code) {
-  return sha256Hash(code);
+  return hmacSha256(resolveOtpPepper(), String(code));
 }
 
 // Verification

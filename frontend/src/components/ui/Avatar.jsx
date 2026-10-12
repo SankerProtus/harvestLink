@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text, Image } from "react-native";
+import { View, Image } from "react-native";
+import { Text } from "./AppText.jsx";
 
 function initialsOf(name) {
   if (!name) return "?";

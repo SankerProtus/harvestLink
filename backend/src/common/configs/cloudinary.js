@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import { ServiceUnavailableError } from "../../errors/commonErrors.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -16,6 +17,18 @@ export function uploadImageBuffer(
     transformation = [{ width: 512, height: 512, crop: "fill", gravity: "face" }],
   } = {},
 ) {
+  if (
+    !process.env.CLOUDINARY_CLOUD_NAME ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET
+  ) {
+    return Promise.reject(
+      new ServiceUnavailableError(
+        "Evidence storage is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.",
+      ),
+    );
+  }
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {

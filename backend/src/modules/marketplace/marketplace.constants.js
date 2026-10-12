@@ -43,7 +43,14 @@ export const LISTING_CONFIG = Object.freeze({
   MAX_PRICE_PER_UNIT: 1000000,
   MAX_IMAGES: 5,
   MAX_AVAILABILITY_WINDOW_DAYS: 90,
+  /** Flag prices below reference min by more than this fraction (scam bait). */
+  PRICE_BAND_LOW_TOLERANCE: 0.4,
+  /** Flag prices above reference max by more than this fraction. */
+  PRICE_BAND_HIGH_TOLERANCE: 0.4,
 });
+
+/** Minimum farmer verification tier required to publish listings (0 = phone OTP). */
+export const LISTING_VERIFICATION_MIN_TIER = 0;
 
 // Search / pagination defaults
 

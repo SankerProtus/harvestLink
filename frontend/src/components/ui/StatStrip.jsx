@@ -1,4 +1,5 @@
-import { View, Text } from "react-native";
+import { View } from "react-native";
+import { Text } from "./AppText.jsx";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "../../theme/colors.js";
 import { shadows } from "../../theme/shadows.js";

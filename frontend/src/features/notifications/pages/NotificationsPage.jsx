@@ -1,4 +1,5 @@
-import { View, Text, FlatList, Pressable } from "react-native";
+import { View, FlatList, Pressable } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -156,7 +157,7 @@ export function NotificationsPage() {
   const hasUnread = unreadCount > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <ScreenHeader
         title="Notifications"
         subtitle={hasUnread ? `${unreadCount} unread` : "You're all caught up"}
@@ -170,18 +171,12 @@ export function NotificationsPage() {
         }
         rightAction={
           hasUnread ? (
-            <Pressable
-              onPress={() => markAllRead.mutate()}
-              accessibilityRole="button"
+            <HeaderActionButton
+              icon="check-circle"
+              variant="solid"
               accessibilityLabel="Mark all as read"
-              hitSlop={8}
-              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
-              className="bg-white/15 rounded-full px-3 py-2 border border-white/20"
-            >
-              <Text className="text-white text-[11px] font-bold">
-                Mark all read
-              </Text>
-            </Pressable>
+              onPress={() => markAllRead.mutate()}
+            />
           ) : null
         }
       />

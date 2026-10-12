@@ -1,30 +1,38 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  Dimensions,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
+  StyleSheet,
+  useWindowDimensions,
 } from "react-native";
-import { Alert } from "../../../lib/alert.js";
+import { Text } from "../../../components/ui/AppText.jsx";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
+import { Alert } from "../../../lib/alert.js";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
 import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { ReviewCard } from "../../../components/ui/ReviewCard.jsx";
-import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
-import {
-  LoadingState,
-  ErrorState,
-} from "../../../components/ui/ScreenState.jsx";
+import { PriceText } from "../../../components/ui/PriceText.jsx";
+import { Skeleton } from "../../../components/ui/Skeleton.jsx";
+import { TrustBadge } from "../../../components/ui/TrustBadge.jsx";
+import { ErrorState } from "../../../components/ui/ScreenState.jsx";
 import { useListing } from "../hooks/marketplaceHooks.js";
 import { useListingReviews } from "../../deliveryTracking/hooks/reviewHooks.js";
 import { useCreateOrder } from "../../deliveryTracking/hooks/deliveryTrackingHooks.js";
@@ -38,231 +46,244 @@ import {
   useSaveListing,
   useUnsaveListing,
 } from "../hooks/savedListingHooks.js";
+import { TONE_COLORS } from "../../deliveryTracking/lib/orderStatus.js";
+import { formatDate, formatUnit, harvestLabel } from "../lib/listingFormat.js";
 import { useAuth } from "../../../context/AuthContext.jsx";
+import { formatCurrency } from "../../../lib/currency.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
-import { PriceText } from "../../../components/ui/PriceText.jsx";
 import { colors } from "../../../theme/colors.js";
 import { shadows } from "../../../theme/shadows.js";
+import { TABULAR_NUMS } from "../../../theme/typography.js";
+import { FONT_FAMILY } from "../../../theme/fonts.js";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-
-const STATUS_STYLES = {
-  ACTIVE: { bg: "bg-success-muted", text: "text-success", label: "Available" },
-  SOLD: { bg: "bg-info-muted", text: "text-info", label: "Sold Out" },
-  REMOVED: { bg: "bg-line", text: "text-ink-muted", label: "Unavailable" },
+const STATUS_CHIPS = {
+  ACTIVE: { label: "Available", tone: "success" },
+  SOLD: { label: "Sold out", tone: "info" },
+  REMOVED: { label: "Unavailable", tone: "neutral" },
 };
 
-function formatUnit(unit) {
-  if (!unit) return "";
-  return unit.charAt(0) + unit.slice(1).toLowerCase();
+function Chip({ label, tone, icon }) {
+  const t = TONE_COLORS[tone] ?? TONE_COLORS.neutral;
+  return (
+    <View
+      className="flex-row items-center rounded-full px-2.5 py-1 mr-2"
+      style={{ backgroundColor: t.bg }}
+    >
+      {icon ? (
+        <Feather
+          name={icon}
+          size={12}
+          color={t.fg}
+          style={{ marginRight: 4 }}
+        />
+      ) : null}
+      <Text className="text-[12px] font-bold" style={{ color: t.fg }}>
+        {label}
+      </Text>
+    </View>
+  );
 }
 
-function formatDate(isoString) {
-  if (!isoString) return "—";
-  return new Date(isoString).toLocaleDateString("en-GB", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+function SectionTitle({ children, action, onAction, actionLabel }) {
+  return (
+    <View className="flex-row items-center justify-between mb-3">
+      <Text
+        accessibilityRole="header"
+        className="text-[17px] font-extrabold text-ink tracking-[-0.2px]"
+      >
+        {children}
+      </Text>
+      {action ? (
+        <Pressable
+          onPress={onAction}
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel ?? action}
+          hitSlop={8}
+          className="min-h-[44px] justify-center"
+        >
+          <Text className="text-[13px] font-bold text-primary">{action}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
 }
 
-function FloatingIconButton({
-  icon,
-  iconSet: IconSet = Feather,
-  color,
-  onPress,
-  accessibilityLabel,
-}) {
+function RoundButton({ onPress, label, children }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      hitSlop={8}
+      accessibilityLabel={label}
+      hitSlop={6}
       style={({ pressed }) => ({
         opacity: pressed ? 0.85 : 1,
         transform: [{ scale: pressed ? 0.95 : 1 }],
         ...shadows.md,
       })}
-      className="w-10 h-10 rounded-xl bg-white items-center justify-center"
+      className="w-11 h-11 rounded-full bg-white items-center justify-center"
     >
-      <IconSet name={icon} size={18} color={color ?? colors.ink} />
+      {children}
     </Pressable>
   );
 }
 
-function ImageCarousel({ images, title }) {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const mainScrollRef = useRef(null);
-  const thumbScrollRef = useRef(null);
-  const viewerScrollRef = useRef(null);
+function HeartButton({ saved, onPress }) {
+  const reduceMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
-  function handleScrollEnd(event) {
-    const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    setActiveIndex(index);
-    // Keep the thumbnail strip's active state in view as the main image
-    // is swiped, the same way product galleries on shopping apps do.
-    thumbScrollRef.current?.scrollTo({
-      x: Math.max(0, index * 72 - SCREEN_WIDTH / 2 + 36),
-      animated: true,
-    });
+  function handlePress() {
+    if (!reduceMotion && !saved) {
+      scale.value = withSequence(
+        withSpring(1.3, { damping: 6 }),
+        withSpring(1),
+      );
+    }
+    onPress();
   }
 
-  function scrollToIndex(index) {
-    setActiveIndex(index);
-    mainScrollRef.current?.scrollTo({
-      x: index * SCREEN_WIDTH,
-      animated: true,
-    });
+  return (
+    <RoundButton
+      onPress={handlePress}
+      label={saved ? "Remove from saved" : "Save listing"}
+    >
+      <Animated.View style={animatedStyle}>
+        <Ionicons
+          name={saved ? "heart" : "heart-outline"}
+          size={21}
+          color={saved ? colors.danger : colors.inkSecondary}
+        />
+      </Animated.View>
+    </RoundButton>
+  );
+}
+
+function Gallery({ images, title, width, height }) {
+  const insets = useSafeAreaInsets();
+  const [index, setIndex] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  function handleScrollEnd(event) {
+    setIndex(Math.round(event.nativeEvent.contentOffset.x / width));
   }
 
   if (images.length === 0) {
     return (
-      <View className="w-full h-[300px] bg-primary-muted items-center justify-center">
+      <View
+        style={{ width, height }}
+        className="bg-primary-light items-center justify-center"
+      >
         <View className="w-16 h-16 rounded-full bg-white/80 items-center justify-center">
-          <Feather name="image" size={26} color={colors.inkFaint} />
+          <Feather name="image" size={26} color={colors.inkMuted} />
         </View>
       </View>
     );
   }
 
   return (
-    <View className="w-full bg-primary-muted">
-      <View className="w-full h-[300px]">
-        <ScrollView
-          ref={mainScrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleScrollEnd}
-        >
-          {images.map((uri, index) => (
-            <Pressable
-              key={`${uri}-${index}`}
-              onPress={() => setIsViewerOpen(true)}
-              accessibilityRole="imagebutton"
-              accessibilityLabel={`${title} photo ${index + 1} of ${images.length}. Double tap to view full screen.`}
-            >
-              <RemoteImage
-                uri={uri}
-                style={{ width: SCREEN_WIDTH, height: 300 }}
-                iconWrapperStyle={{ width: SCREEN_WIDTH, height: 300 }}
-                iconSize={26}
-                accessibilityLabel={`${title} photo ${index + 1} of ${images.length}`}
-              />
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {images.length > 1 ? (
-          <View
-            className="absolute bottom-4 right-4 rounded-full px-3 py-1.5"
-            style={{ backgroundColor: colors.overlay }}
+    <View style={{ width, height }} className="bg-primary-light">
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScrollEnd}
+      >
+        {images.map((uri, i) => (
+          <Pressable
+            key={`${uri}-${i}`}
+            onPress={() => setViewerOpen(true)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`${title} photo ${i + 1} of ${images.length}. Double tap to view full screen.`}
           >
-            <Text className="text-white text-[11px] font-bold">
-              {activeIndex + 1} / {images.length}
-            </Text>
-          </View>
-        ) : null}
-      </View>
+            <RemoteImage
+              uri={uri}
+              style={{ width, height }}
+              iconWrapperStyle={{ width, height }}
+              iconSize={26}
+            />
+          </Pressable>
+        ))}
+      </ScrollView>
 
-      {/*
-        Tappable thumbnail strip beneath the main photo, mirroring the
-        product-gallery pattern on shopping apps (Amazon, Jumia, etc.):
-        buyers can jump straight to a specific angle instead of only
-        swiping through them one at a time.
-      */}
       {images.length > 1 ? (
-        <View className="bg-white border-t border-line/40 py-2.5">
-          <ScrollView
-            ref={thumbScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-          >
-            {images.map((uri, index) => (
-              <Pressable
-                key={`thumb-${uri}-${index}`}
-                onPress={() => scrollToIndex(index)}
-                accessibilityRole="button"
-                accessibilityLabel={`Show photo ${index + 1} of ${images.length}`}
-                className={`w-14 h-14 rounded-lg overflow-hidden ${
-                  index === activeIndex
-                    ? "border-2 border-primary"
-                    : "border border-line/60 opacity-60"
-                }`}
-              >
-                <RemoteImage
-                  uri={uri}
-                  className="w-full h-full"
-                  iconSize={16}
-                />
-              </Pressable>
-            ))}
-          </ScrollView>
+        <View
+          pointerEvents="none"
+          accessible
+          accessibilityLabel={`Photo ${index + 1} of ${images.length}`}
+          className="absolute left-0 right-0 flex-row justify-center"
+          style={{ bottom: 38, gap: 6 }}
+        >
+          {images.map((_, i) => (
+            <View
+              key={i}
+              style={{
+                width: i === index ? 20 : 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor:
+                  i === index ? colors.white : "rgba(255,255,255,0.55)",
+              }}
+            />
+          ))}
         </View>
       ) : null}
 
-      {isViewerOpen ? (
+      {viewerOpen ? (
         <Modal
-          visible={isViewerOpen}
+          visible
           transparent
+          statusBarTranslucent
           animationType="fade"
-          onRequestClose={() => setIsViewerOpen(false)}
+          onRequestClose={() => setViewerOpen(false)}
         >
           <View style={{ flex: 1, backgroundColor: "#000000" }}>
             <ScrollView
-              ref={viewerScrollRef}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
-              contentOffset={{ x: activeIndex * SCREEN_WIDTH, y: 0 }}
+              contentOffset={{ x: index * width, y: 0 }}
               onMomentumScrollEnd={handleScrollEnd}
             >
-              {images.map((uri, index) => (
+              {images.map((uri, i) => (
                 <View
-                  key={`viewer-${uri}-${index}`}
-                  style={{
-                    width: SCREEN_WIDTH,
-                    height: "100%",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  key={`viewer-${uri}-${i}`}
+                  style={{ width, height: "100%", justifyContent: "center" }}
                 >
                   <RemoteImage
                     uri={uri}
-                    style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
+                    style={{ width, height: "100%" }}
                     resizeMode="contain"
-                    iconWrapperStyle={{
-                      width: SCREEN_WIDTH,
-                      height: SCREEN_WIDTH,
-                    }}
+                    iconWrapperStyle={{ width, height: "100%" }}
                     iconSize={32}
-                    accessibilityLabel={`${title} photo ${index + 1} of ${images.length}, full screen`}
+                    accessibilityLabel={`${title} photo ${i + 1} of ${images.length}, full screen`}
                   />
                 </View>
               ))}
             </ScrollView>
 
-            <View
-              className="absolute top-14 right-5 rounded-full px-3 py-1.5"
-              style={{ backgroundColor: colors.overlay }}
-            >
-              <Text className="text-white text-[11px] font-bold">
-                {activeIndex + 1} / {images.length}
-              </Text>
-            </View>
-
             <Pressable
-              onPress={() => setIsViewerOpen(false)}
+              onPress={() => setViewerOpen(false)}
               accessibilityRole="button"
               accessibilityLabel="Close full screen photo viewer"
               hitSlop={10}
-              className="absolute top-14 left-5 w-10 h-10 rounded-full bg-white/15 items-center justify-center"
+              className="absolute left-4 w-11 h-11 rounded-full items-center justify-center"
+              style={{
+                top: insets.top + 8,
+                backgroundColor: "rgba(255,255,255,0.18)",
+              }}
             >
-              <Feather name="x" size={20} color="#FFFFFF" />
+              <Feather name="x" size={22} color="#FFFFFF" />
             </Pressable>
+            <View
+              className="absolute right-4 rounded-full px-3 py-1.5"
+              style={{ top: insets.top + 16, backgroundColor: colors.overlay }}
+            >
+              <Text className="text-white text-[12px] font-bold">
+                {index + 1} / {images.length}
+              </Text>
+            </View>
           </View>
         </Modal>
       ) : null}
@@ -270,56 +291,128 @@ function ImageCarousel({ images, title }) {
   );
 }
 
-function QuantityStepper({ value, onChange, max }) {
+function Fact({ label, value, isLast }) {
   return (
-    <View className="flex-row items-center justify-between bg-cream rounded-xl2 px-2 py-2 border border-line/50">
-      <Pressable
-        onPress={() => onChange(Math.max(1, value - 1))}
-        accessibilityRole="button"
-        accessibilityLabel="Decrease quantity"
-        disabled={value <= 1}
-        style={({ pressed }) => ({
-          opacity: value <= 1 ? 0.4 : pressed ? 0.8 : 1,
-          ...shadows.sm,
-        })}
-        className="w-11 h-11 rounded-xl bg-white items-center justify-center border border-line/60"
+    <View
+      accessible
+      accessibilityLabel={`${label}: ${value}`}
+      className={`flex-1 px-2 py-3.5 items-center ${isLast ? "" : "border-r border-line/60"}`}
+    >
+      <Text className="text-[11px] font-bold uppercase tracking-[0.6px] text-ink-muted">
+        {label}
+      </Text>
+      <Text
+        className="text-[14px] font-extrabold text-ink mt-1"
+        numberOfLines={1}
+        style={TABULAR_NUMS}
       >
-        <Feather
-          name="minus"
-          size={16}
-          color={value <= 1 ? colors.inkFaint : colors.ink}
-        />
-      </Pressable>
-      <Text className="text-[18px] font-extrabold text-ink tracking-[-0.3px]">
         {value}
       </Text>
-      <Pressable
-        onPress={() => onChange(Math.min(max, value + 1))}
-        accessibilityRole="button"
-        accessibilityLabel="Increase quantity"
-        disabled={value >= max}
-        style={({ pressed }) => ({
-          opacity: value >= max ? 0.4 : pressed ? 0.8 : 1,
-          ...shadows.sm,
-        })}
-        className="w-11 h-11 rounded-xl bg-white items-center justify-center border border-line/60"
+    </View>
+  );
+}
+
+function Description({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > 180;
+  return (
+    <View className="mt-7">
+      <SectionTitle>About this produce</SectionTitle>
+      <Text
+        numberOfLines={expanded || !isLong ? undefined : 4}
+        className="text-[14.5px] leading-[23px] text-ink-secondary"
       >
-        <Feather
-          name="plus"
-          size={16}
-          color={value >= max ? colors.inkFaint : colors.ink}
-        />
-      </Pressable>
+        {text}
+      </Text>
+      {isLong ? (
+        <Pressable
+          onPress={() => setExpanded((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={expanded ? "Show less" : "Read more"}
+          className="self-start min-h-[44px] justify-center"
+        >
+          <Text className="text-[13.5px] font-bold text-primary">
+            {expanded ? "Show less" : "Read more"}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function StepButton({ icon, label, disabled, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => ({
+        opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
+      })}
+      className="w-11 h-11 rounded-full items-center justify-center"
+    >
+      <Feather name={icon} size={18} color={colors.ink} />
+    </Pressable>
+  );
+}
+
+function QuantityStepper({ value, onChange, max, unit }) {
+  return (
+    <View className="flex-row items-center rounded-full border border-line bg-white">
+      <StepButton
+        icon="minus"
+        label="Decrease quantity"
+        disabled={value <= 1}
+        onPress={() => onChange(Math.max(1, value - 1))}
+      />
+      <View
+        className="min-w-[52px] items-center"
+        accessible
+        accessibilityLabel={`${value} ${unit}`}
+      >
+        <Text
+          className="text-[17px] font-extrabold text-ink"
+          style={TABULAR_NUMS}
+        >
+          {value}
+        </Text>
+        <Text className="text-[10px] text-ink-muted -mt-0.5">{unit}</Text>
+      </View>
+      <StepButton
+        icon="plus"
+        label="Increase quantity"
+        disabled={value >= max}
+        onPress={() => onChange(Math.min(max, value + 1))}
+      />
+    </View>
+  );
+}
+
+function DetailSkeleton({ width, heroHeight }) {
+  return (
+    <View accessibilityLabel="Loading listing">
+      <Skeleton width={width} height={heroHeight} radius={0} />
+      <View className="-mt-6 pt-6 px-5 bg-surface rounded-t-[28px]">
+        <Skeleton width={110} height={24} radius={12} />
+        <Skeleton width="75%" height={28} style={{ marginTop: 14 }} />
+        <Skeleton width="45%" height={14} style={{ marginTop: 10 }} />
+        <Skeleton width="40%" height={34} style={{ marginTop: 18 }} />
+        <Skeleton height={76} radius={16} style={{ marginTop: 20 }} />
+        <Skeleton height={64} radius={16} style={{ marginTop: 12 }} />
+      </View>
     </View>
   );
 }
 
 export function ListingDetailPage() {
   const navigation = useNavigation();
-  const route = useRoute();
-  const { listingId } = route.params;
+  const { listingId } = useRoute().params;
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const heroHeight = Math.round(Math.min(Math.max(width * 0.85, 280), 420));
 
   const listing = useListing(listingId);
   const listingReviews = useListingReviews(listingId, { page: 1, limit: 3 });
@@ -333,25 +426,39 @@ export function ListingDetailPage() {
 
   const [requestedQuantity, setRequestedQuantity] = useState(1);
 
-  const floatingHeader = (topInset) => (
-    <View
-      className="absolute left-5 right-5 flex-row justify-between z-10"
-      style={{ top: topInset + 10 }}
-    >
-      <FloatingIconButton
-        icon="arrow-left"
-        accessibilityLabel="Go back"
-        onPress={() => navigation.goBack()}
-      />
-      <View />
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+  const fadeStart = heroHeight - 150;
+  const fadeEnd = heroHeight - 90;
+  const barStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [fadeStart, fadeEnd],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  const backButton = (
+    <RoundButton onPress={() => navigation.goBack()} label="Go back">
+      <Feather name="arrow-left" size={20} color={colors.ink} />
+    </RoundButton>
+  );
+  const floatingBack = (
+    <View className="absolute left-4 z-10" style={{ top: insets.top + 6 }}>
+      {backButton}
     </View>
   );
 
   if (listing.isLoading) {
     return (
       <View className="flex-1 bg-surface">
-        {floatingHeader(insets.top)}
-        <LoadingState label="Loading listing…" />
+        <ScrollView scrollEnabled={false}>
+          <DetailSkeleton width={width} heroHeight={heroHeight} />
+        </ScrollView>
+        {floatingBack}
       </View>
     );
   }
@@ -359,7 +466,7 @@ export function ListingDetailPage() {
   if (listing.isError) {
     return (
       <View className="flex-1 bg-surface">
-        {floatingHeader(insets.top)}
+        {floatingBack}
         <ErrorState
           title="Couldn't load listing"
           message={getErrorMessage(listing.error)}
@@ -370,11 +477,10 @@ export function ListingDetailPage() {
   }
 
   const data = listing.data;
-
   if (!data) {
     return (
       <View className="flex-1 bg-surface">
-        {floatingHeader(insets.top)}
+        {floatingBack}
         <ErrorState
           icon="file-minus"
           title="Listing unavailable"
@@ -384,36 +490,55 @@ export function ListingDetailPage() {
     );
   }
 
-  const statusStyle = STATUS_STYLES[data.status] ?? STATUS_STYLES.ACTIVE;
+  const status = STATUS_CHIPS[data.status] ?? STATUS_CHIPS.ACTIVE;
   const images = data.images ?? [];
   const isOwnListing = user?.id === data.farmerId;
   const isInterested = expressedInterestIds.data?.has(data.id) ?? false;
   const isSaved = savedListingIds.data?.has(data.id) ?? false;
   const canOrder = data.status === "ACTIVE" && !isOwnListing;
+  const freshness =
+    data.status === "ACTIVE" ? harvestLabel(data.harvestDate) : null;
+
+  const unit = formatUnit(data.quantityUnit);
+  const maxQty = Math.max(1, Math.floor(Number(data.quantity)));
+  const qty = Math.min(requestedQuantity, maxQty);
+  const total = Number(data.pricePerUnit) * qty;
+
+  const facts = [
+    { label: "Available", value: `${data.quantity} ${unit}` },
+    data.harvestDate && {
+      label: "Harvested",
+      value: formatDate(data.harvestDate, true),
+    },
+    { label: "Listed", value: formatDate(data.createdAt, true) },
+  ].filter(Boolean);
+
+  const reviewTotal = listingReviews.data?.pagination?.total ?? 0;
+  const reviewItems = listingReviews.data?.results ?? [];
+  const openFarmer = () =>
+    navigation.navigate("FarmerProfile", { farmerId: data.farmer?.id });
 
   function handleToggleInterest() {
     const mutation = isInterested ? withdrawInterest : expressInterest;
     mutation.mutate(data.id, {
-      onError: (err) => {
-        Alert.alert("Couldn't update interest", getErrorMessage(err));
-      },
+      onError: (err) =>
+        Alert.alert("Couldn't update interest", getErrorMessage(err)),
     });
   }
 
   function handleToggleSave() {
     const mutation = isSaved ? unsaveListing : saveListing;
     mutation.mutate(data.id, {
-      onError: (err) => {
-        Alert.alert("Couldn't update saved listings", getErrorMessage(err));
-      },
+      onError: (err) =>
+        Alert.alert("Couldn't update saved listings", getErrorMessage(err)),
     });
   }
 
-  async function handleRequestMatch() {
+  async function placeOrder() {
     try {
       const order = await createOrder.mutateAsync({
         listingId: data.id,
-        quantity: requestedQuantity,
+        quantity: qty,
       });
       navigation.navigate("OrderDetail", { orderId: order.id });
     } catch (err) {
@@ -421,247 +546,235 @@ export function ListingDetailPage() {
     }
   }
 
+  function handleRequestOrder() {
+    Alert.alert(
+      "Request this order?",
+      `${qty} ${unit} of ${data.title} · ${formatCurrency(total)}. The farmer will be asked to confirm.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Request order", onPress: placeOrder },
+      ],
+    );
+  }
+
   return (
     <View className="flex-1 bg-surface">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 180 + insets.bottom }}
       >
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: canOrder ? 120 : 24 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <ImageCarousel images={images} title={data.title} />
+        <Gallery
+          images={images}
+          title={data.title}
+          width={width}
+          height={heroHeight}
+        />
 
-          <View className="px-5 pt-5 -mt-5">
-            <Card className="p-5">
-              <View className="flex-row justify-between items-start gap-3">
-                <Text className="text-[22px] font-extrabold text-ink flex-1 tracking-[-0.3px]">
-                  {data.title}
+        <View className="-mt-6 pt-6 px-5 bg-surface rounded-t-[28px]">
+          <View className="flex-row flex-wrap">
+            <Chip label={status.label} tone={status.tone} />
+            {freshness ? (
+              <Chip label={freshness} tone="primary" icon="sunrise" />
+            ) : null}
+          </View>
+
+          <Text
+            accessibilityRole="header"
+            className="text-[26px] leading-[31px] font-extrabold text-ink mt-3 tracking-[-0.5px]"
+          >
+            {data.title}
+          </Text>
+
+          <View className="flex-row items-center mt-2">
+            <Feather name="map-pin" size={14} color={colors.inkMuted} />
+            <Text className="text-[14px] text-ink-secondary ml-1.5 flex-1">
+              {data.location}
+            </Text>
+          </View>
+
+          <View className="flex-row items-end mt-4">
+            <PriceText amount={data.pricePerUnit} size="lg" />
+            <Text className="text-[14px] text-ink-muted ml-1.5 mb-1">
+              / {unit.toLowerCase()}
+            </Text>
+          </View>
+
+          {data.farmer ? (
+            <Pressable
+              onPress={openFarmer}
+              accessibilityRole="button"
+              accessibilityLabel={`Sold by ${data.farmer.name}. View profile.`}
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.92 : 1,
+                ...shadows.card,
+              })}
+              className="flex-row items-center bg-white rounded-2xl border border-line/60 p-3.5 mt-5"
+            >
+              <Avatar
+                uri={data.farmer.avatarUrl}
+                name={data.farmer.name}
+                size="md"
+                className="mr-3"
+              />
+              <View className="flex-1">
+                <Text className="text-[11px] font-bold uppercase tracking-[0.6px] text-ink-muted">
+                  Sold by
                 </Text>
-                <View className={`rounded-full px-3 py-1.5 ${statusStyle.bg}`}>
-                  <Text className={`text-[11px] font-bold ${statusStyle.text}`}>
-                    {statusStyle.label}
-                  </Text>
-                </View>
-              </View>
-
-              <View className="flex-row items-center mt-2.5">
-                <Feather name="map-pin" size={13} color={colors.inkFaint} />
-                <Text className="text-[13px] text-ink-muted ml-1.5">
-                  {data.location}
-                </Text>
-              </View>
-
-              {data.farmer ? (
-                <Pressable
-                  onPress={() =>
-                    navigation.navigate("FarmerProfile", {
-                      farmerId: data.farmer.id,
-                    })
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={`View ${data.farmer.name}'s profile`}
-                  className="flex-row items-center mt-4 pt-4 border-t border-line/60"
+                <Text
+                  className="text-[15px] font-extrabold text-ink mt-0.5"
+                  numberOfLines={1}
                 >
-                  <Avatar
-                    uri={data.farmer.avatarUrl}
-                    name={data.farmer.name}
-                    size="sm"
-                    className="mr-3"
-                  />
-                  <View className="flex-1">
-                    <View className="flex-row items-center">
-                      <Text className="text-[14px] font-bold text-ink mr-1">
-                        {data.farmer.name}
-                      </Text>
-                      {data.farmer.isVerified ? (
-                        <Feather
-                          name="check-circle"
-                          size={13}
-                          color={colors.primary}
-                        />
-                      ) : null}
-                    </View>
-                    <View className="mt-1">
-                      <RatingStars
-                        rating={data.farmer.rating}
-                        reviewCount={data.farmer.reviewCount}
-                        size={13}
-                        showValue={data.farmer.rating != null}
-                        emptyLabel="No ratings yet"
-                      />
-                    </View>
-                  </View>
-                  <Feather
-                    name="chevron-right"
-                    size={18}
-                    color={colors.inkFaint}
-                  />
-                </Pressable>
-              ) : null}
-            </Card>
-          </View>
-
-          <View className="px-5 mt-4">
-            <Card className="p-5">
-              <View className="flex-row justify-between items-baseline">
-                <View>
-                  <PriceText amount={data.pricePerUnit} size="lg" />
-                  <Text className="text-[12px] text-ink-muted mt-0.5">
-                    per {formatUnit(data.quantityUnit)}
-                  </Text>
-                </View>
-                <View className="items-end">
-                  <Text className="text-[15px] font-bold text-ink">
-                    {data.quantity} {formatUnit(data.quantityUnit)}
-                  </Text>
-                  <Text className="text-[10px] text-ink-faint uppercase tracking-wide font-semibold mt-0.5">
-                    available
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          </View>
-
-          {data.description ? (
-            <View className="px-5 mt-5">
-              <SectionLabel>Description</SectionLabel>
-              <Card className="p-4">
-                <Text className="text-[14px] text-ink-secondary leading-[22px]">
-                  {data.description}
+                  {data.farmer.name}
                 </Text>
-              </Card>
-            </View>
+                <View className="mt-1">
+                  <RatingStars
+                    rating={data.farmer.rating}
+                    reviewCount={data.farmer.reviewCount}
+                    size={13}
+                    showValue={data.farmer.rating != null}
+                    emptyLabel="No ratings yet"
+                  />
+                </View>
+                {data.farmer.isVerified ? (
+                  <View className="mt-2">
+                    <TrustBadge type="verifiedFarmer" size="sm" />
+                  </View>
+                ) : null}
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.inkMuted} />
+            </Pressable>
           ) : null}
 
-          <View className="px-5 mt-5">
-            <SectionLabel>Details</SectionLabel>
-            <Card padded={false}>
-              {data.harvestDate ? (
-                <View className="flex-row justify-between items-center py-3.5 px-4 border-b border-line/60">
-                  <Text className="text-[13px] text-ink-muted">
-                    Harvest date
-                  </Text>
-                  <Text className="text-[13px] font-semibold text-ink">
-                    {formatDate(data.harvestDate)}
-                  </Text>
-                </View>
-              ) : null}
-              <View className="flex-row justify-between items-center py-3.5 px-4">
-                <Text className="text-[13px] text-ink-muted">Listed on</Text>
-                <Text className="text-[13px] font-semibold text-ink">
-                  {formatDate(data.createdAt)}
-                </Text>
-              </View>
-            </Card>
+          <View
+            className="flex-row bg-white rounded-2xl border border-line/60 mt-4"
+            style={shadows.card}
+          >
+            {facts.map((fact, i) => (
+              <Fact
+                key={fact.label}
+                label={fact.label}
+                value={fact.value}
+                isLast={i === facts.length - 1}
+              />
+            ))}
           </View>
 
-          <View className="px-5 mt-5">
-            <View className="flex-row items-center justify-between mb-1">
-              <SectionLabel>Reviews</SectionLabel>
-              {(listingReviews.data?.pagination?.total ?? 0) > 0 ? (
-                <Pressable
-                  onPress={() =>
-                    navigation.navigate("FarmerProfile", {
-                      farmerId: data.farmer?.id,
-                    })
-                  }
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="See all reviews for this farmer"
-                >
-                  <Text className="text-[12.5px] font-bold text-primary">
-                    See all
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
+          {data.description ? <Description text={data.description} /> : null}
+
+          <View className="mt-7">
+            <SectionTitle
+              action={reviewTotal > 0 && data.farmer ? "See all" : undefined}
+              onAction={openFarmer}
+              actionLabel="See all reviews for this farmer"
+            >
+              Reviews
+            </SectionTitle>
             {listingReviews.isLoading ? (
-              <Text className="text-[12.5px] text-ink-faint mt-2">
-                Loading reviews…
-              </Text>
-            ) : (listingReviews.data?.results ?? []).length === 0 ? (
-              <Card className="p-4">
-                <Text className="text-[13px] text-ink-muted">
-                  No reviews yet for this product.
+              <View accessibilityLabel="Loading reviews" className="gap-3">
+                <Skeleton height={84} radius={16} />
+                <Skeleton height={84} radius={16} />
+              </View>
+            ) : reviewItems.length === 0 ? (
+              <Card className="p-4 flex-row items-center">
+                <Feather name="star" size={18} color={colors.inkMuted} />
+                <Text className="text-[13.5px] text-ink-secondary ml-3 flex-1">
+                  No reviews for this product yet. Reviews appear after a
+                  delivered order.
                 </Text>
               </Card>
             ) : (
-              listingReviews.data.results.map((review) => (
+              reviewItems.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))
             )}
           </View>
+        </View>
+      </Animated.ScrollView>
 
-          {canOrder ? (
-            <View className="px-5 mt-5">
-              <SectionLabel>Quantity</SectionLabel>
-              <QuantityStepper
-                value={requestedQuantity}
-                onChange={setRequestedQuantity}
-                max={Math.max(1, Math.floor(Number(data.quantity)))}
-              />
-            </View>
-          ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
-
+      {/* Header: transparent over the photo, solid once you scroll past it */}
       <View
-        className="absolute left-5 right-5 flex-row justify-between z-10"
-        style={{ top: insets.top + 10 }}
+        pointerEvents="box-none"
+        className="absolute top-0 left-0 right-0 z-10"
+        style={{ paddingTop: insets.top + 6, paddingBottom: 6 }}
       >
-        <FloatingIconButton
-          icon="arrow-left"
-          accessibilityLabel="Go back"
-          onPress={() => navigation.goBack()}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: colors.white,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: colors.line,
+            },
+            barStyle,
+          ]}
         />
-        {isOwnListing ? (
-          <FloatingIconButton
-            icon="edit-2"
-            accessibilityLabel="Edit listing"
-            onPress={() =>
-              navigation.navigate("EditListing", { listingId: data.id })
-            }
-          />
-        ) : (
-          <Pressable
-            onPress={handleToggleSave}
-            accessibilityRole="button"
-            accessibilityLabel={isSaved ? "Remove from saved" : "Save listing"}
-            hitSlop={8}
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.85 : 1,
-              transform: [{ scale: pressed ? 0.95 : 1 }],
-              ...shadows.md,
-            })}
-            className="w-10 h-10 rounded-xl bg-white items-center justify-center"
+        <View className="flex-row items-center px-4" style={{ gap: 12 }}>
+          {backButton}
+          <Animated.Text
+            numberOfLines={1}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            style={[
+              {
+                flex: 1,
+                fontSize: 16,
+                fontFamily: FONT_FAMILY.extrabold,
+                color: colors.ink,
+              },
+              barStyle,
+            ]}
           >
-            <Ionicons
-              name={isSaved ? "heart" : "heart-outline"}
-              size={18}
-              color={isSaved ? colors.danger : colors.inkFaint}
-            />
-          </Pressable>
-        )}
+            {data.title}
+          </Animated.Text>
+          {isOwnListing ? (
+            <RoundButton
+              onPress={() =>
+                navigation.navigate("EditListing", { listingId: data.id })
+              }
+              label="Edit listing"
+            >
+              <Feather name="edit-2" size={18} color={colors.ink} />
+            </RoundButton>
+          ) : (
+            <HeartButton saved={isSaved} onPress={handleToggleSave} />
+          )}
+        </View>
       </View>
 
       {canOrder ? (
         <View
-          className="absolute bottom-0 left-0 right-0 px-5 pt-3 bg-white border-t border-line/60"
-          style={{
-            paddingBottom: insets.bottom + 12,
-            ...shadows.md,
-          }}
+          className="absolute bottom-0 left-0 right-0 bg-white border-t border-line/60 px-5 pt-3"
+          style={{ paddingBottom: insets.bottom + 12, ...shadows.md }}
         >
+          <View className="flex-row items-center justify-between mb-3">
+            <QuantityStepper
+              value={qty}
+              onChange={setRequestedQuantity}
+              max={maxQty}
+              unit={unit}
+            />
+            <View className="items-end">
+              <Text className="text-[11px] font-bold uppercase tracking-[0.6px] text-ink-muted">
+                Total
+              </Text>
+              <Text
+                accessibilityLiveRegion="polite"
+                className="text-[22px] font-extrabold text-ink tracking-[-0.4px]"
+                style={TABULAR_NUMS}
+              >
+                {formatCurrency(total)}
+              </Text>
+            </View>
+          </View>
           <View className="flex-row gap-3">
             <View className="flex-1">
               <Button
                 label={isInterested ? "Interested ✓" : "Express interest"}
                 onPress={handleToggleInterest}
-                variant={isInterested ? "primary" : "secondary"}
+                variant={isInterested ? "soft" : "secondary"}
                 size="md"
                 isLoading={
                   expressInterest.isPending || withdrawInterest.isPending
@@ -670,8 +783,8 @@ export function ListingDetailPage() {
             </View>
             <View className="flex-1">
               <Button
-                label="Request match"
-                onPress={handleRequestMatch}
+                label="Request order"
+                onPress={handleRequestOrder}
                 variant="primary"
                 size="md"
                 isLoading={createOrder.isPending}
@@ -679,16 +792,29 @@ export function ListingDetailPage() {
             </View>
           </View>
         </View>
-      ) : isOwnListing ? (
+      ) : (
         <View
-          className="absolute bottom-0 left-0 right-0 px-5 pt-3 bg-white border-t border-line/60"
-          style={{ paddingBottom: insets.bottom + 12 }}
+          className="absolute bottom-0 left-0 right-0 bg-white border-t border-line/60 px-5 pt-3"
+          style={{ paddingBottom: insets.bottom + 12, ...shadows.md }}
         >
-          <Text className="text-[13px] text-ink-muted text-center">
-            This is your own listing.
-          </Text>
+          {isOwnListing ? (
+            <Button
+              label="Edit listing"
+              variant="primary"
+              size="md"
+              onPress={() =>
+                navigation.navigate("EditListing", { listingId: data.id })
+              }
+            />
+          ) : (
+            <Text className="text-[14px] text-ink-secondary text-center py-2">
+              {data.status === "SOLD"
+                ? "This listing is sold out."
+                : "This listing is no longer available."}
+            </Text>
+          )}
         </View>
-      ) : null}
+      )}
     </View>
   );
 }

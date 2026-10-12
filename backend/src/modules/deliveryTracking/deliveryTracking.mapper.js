@@ -23,7 +23,7 @@ function serializeListingSummary(listing) {
   return {
     id: listing.id,
     title: listing.title,
-    cropType: listing.cropType,
+    cropType: listing.crop?.slug ?? listing.cropType ?? null,
     images: listing.images ?? [],
   };
 }
@@ -38,6 +38,26 @@ function serializePerson(person) {
   };
 }
 
+// Both helpers return `undefined` when the relation wasn't loaded (so the key
+// is omitted from JSON) and `null` when it was loaded but no row exists.
+function serializeEscrow(escrow) {
+  if (escrow === undefined) return undefined;
+  if (escrow === null) return null;
+  return {
+    status: escrow.status,
+    amount: serializeDecimal(escrow.amount),
+    currency: escrow.currency,
+    fundedAt: serializeDate(escrow.fundedAt),
+    releasedAt: serializeDate(escrow.releasedAt),
+  };
+}
+
+function serializePaymentSummary(payments) {
+  if (!Array.isArray(payments)) return undefined;
+  const latest = payments[0];
+  return latest ? { status: latest.status, provider: latest.provider } : null;
+}
+
 export function toOrderDTO(order) {
   return {
     id: order.id,
@@ -47,6 +67,13 @@ export function toOrderDTO(order) {
     quantity: serializeDecimal(order.quantity),
     pricePerUnitAtOrder: serializeDecimal(order.pricePerUnitAtOrder),
     status: order.status,
+    confirmedAt: serializeDate(order.confirmedAt),
+    escrow: serializeEscrow(order.escrow),
+    payments: serializePaymentSummary(order.payments),
+    deliveryVerifiedAt: serializeDate(order.deliveryVerifiedAt),
+    protectionEndsAt: serializeDate(order.protectionEndsAt),
+    escrow: serializeEscrow(order.escrow),
+    payment: serializePaymentSummary(order.payments),
     latitude: order.latestLatitude ?? null,
     longitude: order.latestLongitude ?? null,
     locationReportedAt: serializeDate(order.locationReportedAt),

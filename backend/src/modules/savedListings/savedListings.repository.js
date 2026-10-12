@@ -23,3 +23,18 @@ export async function listSavedListingIdsForBuyer(buyerId) {
   });
   return rows.map((row) => row.listingId);
 }
+
+export async function listSavedListingsForBuyer(buyerId, { skip = 0, take = 20 }) {
+  const where = { buyerId };
+  const [rows, totalCount] = await prisma.$transaction([
+    prisma.savedListing.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+      include: { listing: { include: { farmer: true, crop: true } } },
+    }),
+    prisma.savedListing.count({ where }),
+  ]);
+  return { items: rows.map((row) => row.listing), totalCount };
+}

@@ -168,3 +168,5 @@ export function parseOrThrow(schema, payload) {
   }
   return result.data;
 }
+
+export const deleteAccountSchema = z.object({ confirm: z.literal("DELETE") }).strict();

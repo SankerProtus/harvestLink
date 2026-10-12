@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text, ScrollView } from "react-native";
+import { View, ScrollView } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -124,7 +125,7 @@ export function MatchDetailPage() {
 
   if (listing.isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
         <ScreenHeader title="Match Details" leftAction={backAction} />
         <View className="flex-1 items-center justify-center">
           <Text className="text-ink-muted">Loading listing…</Text>
@@ -135,7 +136,7 @@ export function MatchDetailPage() {
 
   if (listing.isError || !listing.data) {
     return (
-      <SafeAreaView className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
         <ScreenHeader title="Match Details" leftAction={backAction} />
         <View className="flex-1 items-center justify-center px-6">
           <Text
@@ -185,7 +186,7 @@ export function MatchDetailPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
+    <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
       <ScreenHeader title="Match Details" leftAction={backAction} />
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
         <View className="px-5 pt-5">

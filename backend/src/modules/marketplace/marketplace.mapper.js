@@ -21,14 +21,21 @@ function serializeDecimal(value) {
 // fabricated number.
 function serializeFarmer(farmer, ratingSummary) {
   if (!farmer) return undefined;
+  const verificationLevel = farmer.verificationLevel ?? 0;
   return {
     id: farmer.id,
     name: farmer.fullName,
-    isVerified: Boolean(farmer.phoneVerifiedAt),
+    isVerified: verificationLevel >= 1 || Boolean(farmer.phoneVerifiedAt),
+    verificationLevel,
     avatarUrl: farmer.profileImageUrl ?? null,
     rating: ratingSummary?.rating != null ? Number(ratingSummary.rating) : null,
     reviewCount: ratingSummary?.reviewCount ?? null,
   };
+}
+
+function listingCropSlug(listing) {
+  if (listing.crop?.slug) return listing.crop.slug;
+  return listing.cropType ?? null;
 }
 
 export function toListingDTO(listing, ratingSummaryByFarmerId) {
@@ -38,7 +45,10 @@ export function toListingDTO(listing, ratingSummaryByFarmerId) {
     farmerId: listing.farmerId,
     title: listing.title,
     description: listing.description ?? null,
-    cropType: listing.cropType,
+    cropType: listingCropSlug(listing),
+    cropId: listing.cropId ?? listing.crop?.id ?? null,
+    cropName: listing.crop?.name ?? listing.customCropName ?? null,
+    priceReviewRequired: Boolean(listing.priceReviewRequired),
     quantity: serializeDecimal(listing.quantity),
     quantityUnit: listing.quantityUnit,
     pricePerUnit: serializeDecimal(listing.pricePerUnit),

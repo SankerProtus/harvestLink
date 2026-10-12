@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import {
   View,
-  Text,
   Pressable,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
@@ -114,7 +114,7 @@ export function OtpVerifyPage() {
   }, [code]);
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <StatusBar style="dark" />
 
       <ScreenHeader

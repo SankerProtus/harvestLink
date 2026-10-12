@@ -1,17 +1,22 @@
-import { Pressable, Text, ActivityIndicator } from "react-native";
+import { Pressable, ActivityIndicator } from "react-native";
+import { Text } from "./AppText.jsx";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "../../theme/colors.js";
 import { shadows } from "../../theme/shadows.js";
 
 const VARIANT_STYLES = {
   primary: "bg-primary",
-  secondary: "bg-white border-[1px] border-line",
+  accent: "bg-accent-dark",
+  soft: "bg-primary-light",
+  secondary: "bg-white border border-line-strong",
   danger: "bg-danger",
   ghost: "bg-transparent",
 };
 
 const VARIANT_TEXT_STYLES = {
   primary: "text-white",
+  accent: "text-white",
+  soft: "text-primary-dark",
   secondary: "text-ink",
   danger: "text-white",
   ghost: "text-primary",
@@ -19,30 +24,25 @@ const VARIANT_TEXT_STYLES = {
 
 const VARIANT_SPINNER_COLOR = {
   primary: colors.white,
+  accent: colors.white,
+  soft: colors.primaryActive,
   secondary: colors.primary,
   danger: colors.white,
   ghost: colors.primary,
 };
 
-const VARIANT_ICON_COLOR = {
-  primary: colors.white,
-  secondary: colors.primary,
-  danger: colors.white,
-  ghost: colors.primary,
-};
+const VARIANT_ICON_COLOR = VARIANT_SPINNER_COLOR;
 
-// Size variants follow 8pt grid system
-// Standard button: 44px height, 12px horizontal padding, 10px vertical padding, 8px radius
 const SIZE_STYLES = {
-  sm: "py-2.5 px-3 min-h-[40px] rounded-lg", // Compact: 40px
-  md: "py-2.5 px-4 min-h-[44px] rounded-lg", // Standard: 44px (spec default)
-  lg: "py-3 px-6 min-h-[48px] rounded-lg", // Large: 48px
+  sm: "py-2 px-3.5 min-h-[44px] rounded-xl",
+  md: "py-2.5 px-5 min-h-[48px] rounded-xl",
+  lg: "py-3 px-6 min-h-[54px] rounded-2xl",
 };
 
 const SIZE_TEXT = {
-  sm: "text-sm font-semibold", // 14px Semibold
-  md: "text-base font-semibold", // 16px Semibold (spec default)
-  lg: "text-lg font-semibold", // 18px Semibold
+  sm: "text-sm font-semibold",
+  md: "text-base font-semibold",
+  lg: "text-[17px] font-semibold",
 };
 
 export function Button({

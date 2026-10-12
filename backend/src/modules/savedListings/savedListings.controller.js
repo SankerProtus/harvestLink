@@ -1,11 +1,13 @@
 import {
   parseOrThrow,
   listingIdParamSchema,
+  savedListQuerySchema
 } from "./savedListings.validators.js";
 import {
   saveListing as saveListingService,
   unsaveListing as unsaveListingService,
   getSavedListingIdsForBuyer as getSavedListingIdsForBuyerService,
+  getSavedListingsForBuyer as getSavedListingsForBuyerService
 } from "./savedListings.service.js";
 
 function sendSuccess(res, statusCode, data) {
@@ -36,6 +38,20 @@ export async function getMySavedListingIds(req, res, next) {
   try {
     const result = await getSavedListingIdsForBuyerService(req.user.id);
     return sendSuccess(res, 200, { listingIds: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getMySavedListings(req, res, next) {
+  try {
+    const { page, limit } = parseOrThrow(savedListQuerySchema, req.query);
+    const result = await getSavedListingsForBuyerService({
+      buyerId: req.user.id,
+      page,
+      limit,
+    });
+    return sendSuccess(res, 200, result);
   } catch (err) {
     next(err);
   }

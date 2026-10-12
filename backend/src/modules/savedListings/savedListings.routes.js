@@ -4,6 +4,7 @@ import {
   saveListing,
   unsaveListing,
   getMySavedListingIds,
+  getMySavedListings
 } from "./savedListings.controller.js";
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
 import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";
@@ -23,6 +24,8 @@ const lightUserLimiter = rateLimiter({
   max: 100,
   strategy: "user",
 });
+
+router.get("/", authMiddleware, lightUserLimiter, getMySavedListings);
 
 router.post(
   "/listings/:listingId",

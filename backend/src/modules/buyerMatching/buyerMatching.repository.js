@@ -13,7 +13,7 @@ export async function searchMatches(filters) {
 
   const where = {
     status: "ACTIVE",
-    cropType,
+    crop: { slug: cropType, active: true },
     quantityUnit: requestedQuantityUnit,
     quantity: { gte: requestedQuantity },
     ...(location
@@ -25,7 +25,7 @@ export async function searchMatches(filters) {
   const [items, totalCount] = await prisma.$transaction([
     prisma.listing.findMany({
       where,
-      include: { farmer: true },
+      include: { farmer: true, crop: true },
       orderBy: [{ pricePerUnit: "asc" }, { createdAt: "desc" }],
       skip,
       take,

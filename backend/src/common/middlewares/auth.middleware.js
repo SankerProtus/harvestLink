@@ -1,9 +1,10 @@
 import { verifyAccessToken } from "../utils/jwt.js";
 import { UnauthorizedError } from "../../errors/commonErrors.js";
+import { prisma } from "../utils/prismaClient.js";
 
 const BEARER_PREFIX = "Bearer ";
 
-export function authMiddleware(req, res, next) {
+export async function authMiddleware(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -37,9 +38,20 @@ export function authMiddleware(req, res, next) {
       });
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: claims.userId },
+      select: { id: true, role: true, accountStatus: true },
+    });
+    if (!user || user.accountStatus === "DELETED") {
+      throw new UnauthorizedError("Account is not available", { reason: "ACCOUNT_UNAVAILABLE" });
+    }
+    if (user.accountStatus === "SUSPENDED") {
+      throw new UnauthorizedError("This account has been blocked", { reason: "ACCOUNT_SUSPENDED" });
+    }
+
     req.user = {
-      id: claims.userId,
-      role: claims.role,
+      id: user.id,
+      role: user.role,
     };
 
     next();

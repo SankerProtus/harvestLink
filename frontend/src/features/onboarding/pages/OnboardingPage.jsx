@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
 import {
   View,
-  Text,
   Pressable,
   Animated,
   useWindowDimensions,
   Image,
 } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -56,33 +56,28 @@ function PhotoScene({ source, badge }) {
 const SLIDES = [
   {
     key: "sell",
-    // Vendors handing produce straight to a customer at a market stall —
-    // the clearest visual for "direct to buyer, no middleman."
     image: require("../../../../assets/onboarding_photo_2.jpg"),
     badge: {
       icon: "basket-outline",
-      title: "Fresh Tomatoes",
-      subtitle: "GHS 45 / crate",
+      title: "Direct to buyers",
+      subtitle: "You choose your price",
     },
     title: "Sell your harvest,\nnot to middlemen",
     body: "List what you've grown and set your own price. Buyers see it directly — no broker taking a cut.",
   },
   {
     key: "browse",
-    // Phone + basket of produce — browsing and buying through the app.
     image: require("../../../../assets/onboarding_photo_1.jpg"),
     badge: {
       icon: "check-decagram",
-      title: "Verified listing",
-      subtitle: "500+ farmers nearby",
+      title: "Verified farmers",
+      subtitle: "Look for the badge",
     },
     title: "Fresh produce,\nverified farmers",
     body: "Browse real listings from farmers near you and buy with confidence.",
   },
   {
     key: "offline",
-    // Delivery trucks and a solar-powered depot — produce still moving
-    // and syncing even where the grid and connectivity are unreliable.
     image: require("../../../../assets/onboarding_photo_3.jpg"),
     badge: {
       icon: "cloud-sync-outline",

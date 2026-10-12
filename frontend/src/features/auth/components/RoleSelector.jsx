@@ -1,4 +1,5 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
+import { Text } from "../../../components/ui/AppText.jsx";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { USER_ROLES } from "../schemas/authSchemas.js";
 

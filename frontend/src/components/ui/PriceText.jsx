@@ -1,4 +1,5 @@
-import { View, Text } from "react-native";
+import { View } from "react-native";
+import { Text } from "./AppText.jsx";
 import { TABULAR_NUMS } from "../../theme/typography.js";
 import { formatMoneyParts } from "../../lib/currency.js";
 

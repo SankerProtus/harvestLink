@@ -11,7 +11,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1A531B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -28,7 +28,17 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share them with your friends."
+          "photosPermission": "HarvestLink uses your photos so you can add pictures to your produce listings, profile and dispute evidence.",
+          "cameraPermission": "HarvestLink uses your camera so you can take photos as evidence when reporting a delivery problem.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1A531B",
+          "image": "./assets/app_logo.png",
+          "imageWidth": 160
         }
       ],
       "expo-font",
@@ -39,7 +49,8 @@
         }
       ],
       "@maplibre/maplibre-react-native",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {

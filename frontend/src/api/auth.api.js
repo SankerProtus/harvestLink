@@ -76,3 +76,7 @@ export function uploadProfilePhoto(imageUri) {
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
+
+export function deleteAccount() {
+  return apiClient.delete("/auth/account", { data: { confirm: "DELETE" } });
+}

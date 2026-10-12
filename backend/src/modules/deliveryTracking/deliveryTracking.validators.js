@@ -80,15 +80,15 @@ export const reportLocationSchema = z
 export const orderListQuerySchema = z
   .object({
     status: orderStatusSchema.optional(),
-    page: z
+    page: z.coerce
       .number()
-      .int()
+      .int("page must be an integer")
       .min(1, "page must be at least 1")
       .optional()
       .default(ORDER_LIST_CONFIG.DEFAULT_PAGE),
-    limit: z
+    limit: z.coerce
       .number()
-      .int()
+      .int("limit must be an integer")
       .min(1, "limit must be at least 1")
       .max(
         ORDER_LIST_CONFIG.MAX_PAGE_SIZE,

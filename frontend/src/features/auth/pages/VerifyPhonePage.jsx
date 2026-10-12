@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import {
   View,
-  Text,
   Pressable,
-  TextInput,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useForm, Controller } from "react-hook-form";
@@ -193,7 +192,7 @@ export function VerifyPhonePage() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
       <StatusBar style="dark" />
 
       <ScreenHeader

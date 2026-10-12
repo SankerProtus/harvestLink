@@ -15,6 +15,7 @@ import {
   changePhoneNumber,
   getProfile,
   uploadProfilePhoto,
+  deleteAccount
 } from "./auth.controller.js";
 
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
@@ -27,28 +28,28 @@ const router = Router();
 // Rate limiters for different routes, using either IP-based or user-based strategies.
 const strictOtpLimiter = rateLimiter({
   routeName: "otp",
-  windowMs: 2 * 60 * 1000, // 2 minutes (was 10 minutes, before that 1 hour)
+  windowMs: 2 * 60 * 1000,
   max: 6,
   strategy: "ip",
 });
 
 const strictLoginLimiter = rateLimiter({
   routeName: "login",
-  windowMs: 5 * 60 * 1000, // 5 minutes (was 15 minutes)
+  windowMs: 5 * 60 * 1000,
   max: 8,
   strategy: "ip",
 });
 
 const strictChangePhoneLimiter = rateLimiter({
   routeName: "change-phone",
-  windowMs: 2 * 60 * 1000, // 2 minutes (was 60 minutes)
+  windowMs: 2 * 60 * 1000,
   max: 5,
   strategy: "user",
 });
 
 const moderateLimiter = rateLimiter({
   routeName: "moderate",
-  windowMs: 10 * 60 * 1000, // 10 minutes (was 15 minutes)
+  windowMs: 10 * 60 * 1000,
   max: 30,
   strategy: "ip",
 });
@@ -93,5 +94,7 @@ router.patch(
   uploadSingleImage,
   uploadProfilePhoto,
 );
+
+router.delete("/account", authMiddleware, strictLoginLimiter, deleteAccount);
 
 export default router;

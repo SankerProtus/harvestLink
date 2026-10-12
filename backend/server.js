@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { createServer } from "node:http";
 
+import { validateEnvironment } from "./src/common/config/env.validation.js";
 import { logger } from "./src/common/utils/logger.js";
 import { prisma } from "./src/common/utils/prismaClient.js";
 import { initSocketServer } from "./src/common/realtime/socketServer.js";
@@ -49,6 +50,7 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 try {
+  validateEnvironment();
   start();
 } catch (err) {
   logger.error("Fatal startup error", { message: err.message });
