@@ -4,8 +4,8 @@ import {
   ScrollView,
   Pressable,
   Image,
-  KeyboardAvoidingView,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -713,7 +713,7 @@ export function AdminModerationPage() {
         subtitle="Monitor, investigate and manage HarvestLink"
         leftAction={backAction}
       />
-      <KeyboardAvoidingView className="flex-1">
+      <KeyboardAvoider className="flex-1">
         <ScrollView
           className="flex-1"
           keyboardShouldPersistTaps="handled"
@@ -769,7 +769,7 @@ export function AdminModerationPage() {
             ) : null}
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

@@ -1,9 +1,8 @@
 import {
   View,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -58,7 +57,7 @@ export function CompleteRegistrationPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <StatusBar style="dark" />
 
       <ScreenHeader
@@ -74,9 +73,8 @@ export function CompleteRegistrationPage() {
         }
       />
 
-      <KeyboardAvoidingView
+      <KeyboardAvoider
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           className="flex-1"
@@ -134,7 +132,7 @@ export function CompleteRegistrationPage() {
             </Text>
           ) : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

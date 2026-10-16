@@ -4,8 +4,8 @@ import {
   ScrollView,
   Pressable,
   Image,
-  KeyboardAvoidingView,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -137,7 +137,7 @@ export function OpenDisputePage() {
         subtitle="Photos stay on secure storage for review"
         leftAction={backAction}
       />
-      <KeyboardAvoidingView className="flex-1">
+      <KeyboardAvoider className="flex-1">
         <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
           <View className="px-5 pt-4">
             <Text className="text-[12.5px] text-ink-muted mb-4">
@@ -257,7 +257,7 @@ export function OpenDisputePage() {
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

@@ -7,9 +7,23 @@ export const ORDER_STATUS = Object.freeze({
   CONFIRMED: "CONFIRMED",
   IN_TRANSIT: "IN_TRANSIT",
   DELIVERED: "DELIVERED",
+  DISPUTED: "DISPUTED",
   CANCELLATION_REQUESTED: "CANCELLATION_REQUESTED",
   CANCELLED: "CANCELLED",
 });
+
+/**
+ * Statuses a client may *ask* the status endpoint to move an order into.
+ * CANCELLATION_REQUESTED and DISPUTED are reached only through the trust
+ * flows (cancellation requests / disputes), never by a direct status PATCH.
+ */
+export const CLIENT_SETTABLE_ORDER_STATUSES = Object.freeze([
+  ORDER_STATUS.PENDING,
+  ORDER_STATUS.CONFIRMED,
+  ORDER_STATUS.IN_TRANSIT,
+  ORDER_STATUS.DELIVERED,
+  ORDER_STATUS.CANCELLED,
+]);
 
 // Order Configuration
 export const ORDER_CONFIG = Object.freeze({

@@ -5,8 +5,8 @@ import {
   Image,
   Linking,
   Pressable,
-  KeyboardAvoidingView,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -90,7 +90,7 @@ export function AdminDisputeDetailPage() {
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
       <ScreenHeader title="Resolve dispute" leftAction={backAction} />
-      <KeyboardAvoidingView className="flex-1">
+      <KeyboardAvoider className="flex-1">
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 32 }}>
           <Card className="p-4 mb-4">
             <Text className="text-[12px] text-ink-muted uppercase font-semibold">
@@ -218,7 +218,7 @@ export function AdminDisputeDetailPage() {
             </>
           ) : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

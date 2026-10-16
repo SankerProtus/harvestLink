@@ -31,7 +31,6 @@ import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { ReviewCard } from "../../../components/ui/ReviewCard.jsx";
 import { PriceText } from "../../../components/ui/PriceText.jsx";
 import { Skeleton } from "../../../components/ui/Skeleton.jsx";
-import { TrustBadge } from "../../../components/ui/TrustBadge.jsx";
 import { ErrorState } from "../../../components/ui/ScreenState.jsx";
 import { useListing } from "../hooks/marketplaceHooks.js";
 import { useListingReviews } from "../../deliveryTracking/hooks/reviewHooks.js";
@@ -298,11 +297,9 @@ function Fact({ label, value, isLast }) {
       accessibilityLabel={`${label}: ${value}`}
       className={`flex-1 px-2 py-3.5 items-center ${isLast ? "" : "border-r border-line/60"}`}
     >
-      <Text className="text-[11px] font-bold uppercase tracking-[0.6px] text-ink-muted">
-        {label}
-      </Text>
+      <Text className="text-[12px] font-medium text-ink-muted">{label}</Text>
       <Text
-        className="text-[14px] font-extrabold text-ink mt-1"
+        className="text-[14.5px] font-extrabold text-ink mt-0.5"
         numberOfLines={1}
         style={TABULAR_NUMS}
       >
@@ -563,7 +560,7 @@ export function ListingDetailPage() {
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 180 + insets.bottom }}
+        contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
       >
         <Gallery
           images={images}
@@ -619,15 +616,24 @@ export function ListingDetailPage() {
                 className="mr-3"
               />
               <View className="flex-1">
-                <Text className="text-[11px] font-bold uppercase tracking-[0.6px] text-ink-muted">
-                  Sold by
-                </Text>
-                <Text
-                  className="text-[15px] font-extrabold text-ink mt-0.5"
-                  numberOfLines={1}
-                >
-                  {data.farmer.name}
-                </Text>
+                <Text className="text-[12px] text-ink-muted">Sold by</Text>
+                <View className="flex-row items-center mt-0.5">
+                  <Text
+                    className="text-[15.5px] font-extrabold text-ink shrink"
+                    numberOfLines={1}
+                  >
+                    {data.farmer.name}
+                  </Text>
+                  {data.farmer.isVerified ? (
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={16}
+                      color={colors.primary}
+                      style={{ marginLeft: 5 }}
+                      accessibilityLabel="Verified farmer"
+                    />
+                  ) : null}
+                </View>
                 <View className="mt-1">
                   <RatingStars
                     rating={data.farmer.rating}
@@ -637,11 +643,6 @@ export function ListingDetailPage() {
                     emptyLabel="No ratings yet"
                   />
                 </View>
-                {data.farmer.isVerified ? (
-                  <View className="mt-2">
-                    <TrustBadge type="verifiedFarmer" size="sm" />
-                  </View>
-                ) : null}
               </View>
               <Feather name="chevron-right" size={18} color={colors.inkMuted} />
             </Pressable>
@@ -660,6 +661,54 @@ export function ListingDetailPage() {
               />
             ))}
           </View>
+
+          {canOrder ? (
+            <View
+              className="bg-white rounded-2xl border border-line/60 mt-4 p-4"
+              style={shadows.card}
+            >
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1 pr-3">
+                  <Text className="text-[15px] font-bold text-ink">
+                    How many {unit.toLowerCase()}s?
+                  </Text>
+                  <Text className="text-[12.5px] text-ink-muted mt-0.5">
+                    {maxQty} available
+                  </Text>
+                </View>
+                <QuantityStepper
+                  value={qty}
+                  onChange={setRequestedQuantity}
+                  max={maxQty}
+                  unit={unit}
+                />
+              </View>
+              <View className="h-px bg-line/70 my-3.5" />
+              <Pressable
+                onPress={handleToggleInterest}
+                disabled={expressInterest.isPending || withdrawInterest.isPending}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isInterested ? "Withdraw interest" : "Express interest"
+                }
+                className="flex-row items-center min-h-[40px]"
+              >
+                <Feather
+                  name={isInterested ? "check-circle" : "bell"}
+                  size={17}
+                  color={isInterested ? colors.primary : colors.inkSecondary}
+                />
+                <Text className="flex-1 ml-2.5 text-[13.5px] text-ink-secondary">
+                  {isInterested
+                    ? "The farmer knows you're interested"
+                    : "Not ready to order? Let the farmer know you're interested."}
+                </Text>
+                <Text className="text-[13px] font-bold text-primary">
+                  {isInterested ? "Undo" : "Notify"}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {data.description ? <Description text={data.description} /> : null}
 
@@ -749,44 +798,26 @@ export function ListingDetailPage() {
           className="absolute bottom-0 left-0 right-0 bg-white border-t border-line/60 px-5 pt-3"
           style={{ paddingBottom: insets.bottom + 12, ...shadows.md }}
         >
-          <View className="flex-row items-center justify-between mb-3">
-            <QuantityStepper
-              value={qty}
-              onChange={setRequestedQuantity}
-              max={maxQty}
-              unit={unit}
-            />
-            <View className="items-end">
-              <Text className="text-[11px] font-bold uppercase tracking-[0.6px] text-ink-muted">
-                Total
+          <View className="flex-row items-center" style={{ gap: 16 }}>
+            <View>
+              <Text className="text-[12px] text-ink-muted">
+                {qty} {unit.toLowerCase()}
+                {qty === 1 ? "" : "s"}
               </Text>
               <Text
                 accessibilityLiveRegion="polite"
-                className="text-[22px] font-extrabold text-ink tracking-[-0.4px]"
+                className="text-[22px] leading-[27px] font-extrabold text-ink tracking-[-0.5px]"
                 style={TABULAR_NUMS}
               >
                 {formatCurrency(total)}
               </Text>
-            </View>
-          </View>
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <Button
-                label={isInterested ? "Interested ✓" : "Express interest"}
-                onPress={handleToggleInterest}
-                variant={isInterested ? "soft" : "secondary"}
-                size="md"
-                isLoading={
-                  expressInterest.isPending || withdrawInterest.isPending
-                }
-              />
             </View>
             <View className="flex-1">
               <Button
                 label="Request order"
                 onPress={handleRequestOrder}
                 variant="primary"
-                size="md"
+                size="lg"
                 isLoading={createOrder.isPending}
               />
             </View>

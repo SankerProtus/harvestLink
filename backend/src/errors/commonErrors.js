@@ -83,6 +83,38 @@ export class RateLimitError extends AppError {
   }
 }
 
+export class PayloadTooLargeError extends AppError {
+  constructor(
+    message = "The request is too large",
+    details = null,
+    code = "PAYLOAD_TOO_LARGE",
+  ) {
+    super(message, {
+      statusCode: 413,
+      code,
+      isOperational: true,
+      details,
+    });
+  }
+}
+
+/** A third-party storage/upload provider (e.g. Cloudinary) rejected or failed. */
+export class UploadProviderError extends AppError {
+  constructor(
+    message = "We couldn't store your photo right now. Please try again.",
+    details = null,
+    cause,
+  ) {
+    super(message, {
+      statusCode: 502,
+      code: "UPLOAD_PROVIDER_ERROR",
+      isOperational: true,
+      details,
+      cause,
+    });
+  }
+}
+
 export class InternalServerError extends AppError {
   constructor(message = "An unexpected error occurred", details = null) {
     super(message, {

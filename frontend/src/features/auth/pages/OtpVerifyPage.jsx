@@ -3,9 +3,8 @@ import {
   View,
   Pressable,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -114,7 +113,7 @@ export function OtpVerifyPage() {
   }, [code]);
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
+    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <StatusBar style="dark" />
 
       <ScreenHeader
@@ -134,9 +133,8 @@ export function OtpVerifyPage() {
         }
       />
 
-      <KeyboardAvoidingView
+      <KeyboardAvoider
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           className="flex-1"
@@ -216,7 +214,7 @@ export function OtpVerifyPage() {
             </View>
           ) : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

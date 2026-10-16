@@ -43,6 +43,21 @@ export class InvalidOrderStatusTransitionError extends AppError {
   }
 }
 
+/**
+ * Thrown when a client tries to PATCH an order straight to DELIVERED. Delivery
+ * is only ever confirmed by the buyer entering the handover code, so this is a
+ * distinct, user-actionable condition rather than a generic bad transition.
+ */
+export class HandoverCodeRequiredError extends InvalidOrderStatusTransitionError {
+  constructor(
+    message = "Delivery is confirmed when the buyer enters the handover code",
+    details = null,
+  ) {
+    super(message, details);
+    this.code = "DELIVERY_HANDOVER_CODE_REQUIRED";
+  }
+}
+
 export class OrderCancellationNotAllowedError extends AppError {
   constructor(
     message = "This order cannot be cancelled in its current state",

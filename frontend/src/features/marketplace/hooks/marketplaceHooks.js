@@ -10,7 +10,7 @@ import {
 } from "../../../database/repositories/ListingRepository.js";
 import { enqueue as enqueueOperation } from "../../../database/sync/SyncQueue.js";
 import { OPERATION_TYPES } from "../../../database/sync/SyncEngine.js";
-import { normalizeListingImageUrls } from "../lib/normalizeListingImageUrls.js";
+import { normalizeListingImageUrls } from "../../../../src/features/marketplace/lib/normalizeListingImageUrls.js";
 
 export const marketplaceQueryKeys = {
   listingsRoot: ["marketplace", "listings"],

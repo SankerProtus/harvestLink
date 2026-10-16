@@ -12,6 +12,7 @@ const SIZE_STYLES = {
   sm: { box: "w-8 h-8", text: "text-[12px]" },
   md: { box: "w-12 h-12", text: "text-[16px]" },
   lg: { box: "w-24 h-24", text: "text-[28px]" },
+  hero: { box: "w-[76px] h-[76px]", text: "text-[26px]" },
 };
 
 export function Avatar({ uri, name, size = "md", className = "" }) {

@@ -19,7 +19,7 @@ import {
   getListing as getRemoteListing,
   uploadListingPhoto,
 } from "../../api/marketplace.api.js";
-import { normalizeListingImageUrls } from "../../features/marketplace/lib/normalizeListingImageUrls.js";
+import { normalizeListingImageUrls } from "../../../src/features/marketplace/lib/normalizeListingImageUrls.js";
 
 export const OPERATION_TYPES = Object.freeze({
   CREATE_LISTING: "CREATE_LISTING",

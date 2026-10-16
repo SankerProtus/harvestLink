@@ -4,9 +4,8 @@ import {
   Image,
   ScrollView,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { useNavigation } from "@react-navigation/native";
 import { useForm, Controller } from "react-hook-form";
@@ -212,9 +211,8 @@ export function WelcomePage() {
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <StatusBar style="dark" />
-      <KeyboardAvoidingView
+      <KeyboardAvoider
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           className="flex-1"
@@ -410,7 +408,7 @@ export function WelcomePage() {
             </Text>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

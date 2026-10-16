@@ -2,9 +2,8 @@ import {
   View,
   ScrollView,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
@@ -222,10 +221,8 @@ export function ListingForm({
   }
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAvoider
       className="flex-1"
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       <ScrollView
         contentContainerStyle={{ paddingBottom: 28 }}
@@ -563,6 +560,6 @@ export function ListingForm({
           </View>
         </Card>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoider>
   );
 }

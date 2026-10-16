@@ -3,10 +3,10 @@ import {
   View,
   ScrollView,
   Linking,
+  Pressable,
   Share,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { Alert } from "../../../lib/alert.js";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,15 +20,11 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Avatar } from "../../../components/ui/Avatar.jsx";
 import { MapPin } from "../../../components/ui/MapPin.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
-import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
 import {
   LoadingState,
   ErrorState,
 } from "../../../components/ui/ScreenState.jsx";
-import {
-  HeaderActionButton,
-  ScreenHeader,
-} from "../../../components/ui/ScreenHeader.jsx";
+import { TopBar, TopBarButton } from "../../../components/ui/TopBar.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import {
   useOrder,
@@ -38,6 +34,7 @@ import {
 import { useReviewForOrder, useCreateReview } from "../hooks/reviewHooks.js";
 import { getErrorMessage } from "../../../lib/errorMap.js";
 import { colors } from "../../../theme/colors.js";
+import { shadows } from "../../../theme/shadows.js";
 import { formatCurrency } from "../../../lib/currency.js";
 import {
   OSM_RASTER_STYLE,
@@ -120,16 +117,44 @@ const RATING_LABELS = {
   5: "Excellent",
 };
 
-function InfoRow({ label, value, isLast = false }) {
+function InfoRow({ label, value, isLast = false, strong = false }) {
   return (
     <View
       className={`flex-row justify-between items-center py-3 px-4 ${
         isLast ? "" : "border-b border-line/70"
       }`}
     >
-      <Text className="text-[12.5px] text-ink-muted">{label}</Text>
-      <Text className="text-[12.5px] font-semibold text-ink">{value}</Text>
+      <Text
+        className={
+          strong
+            ? "text-[14px] font-bold text-ink"
+            : "text-[13.5px] text-ink-muted"
+        }
+      >
+        {label}
+      </Text>
+      <Text
+        className={
+          strong
+            ? "text-[16px] font-extrabold text-ink"
+            : "text-[13.5px] font-semibold text-ink"
+        }
+      >
+        {value}
+      </Text>
     </View>
+  );
+}
+
+// Sentence-case section title (replaces the small grey ALL-CAPS labels).
+function Heading({ children }) {
+  return (
+    <Text
+      accessibilityRole="header"
+      className="text-[17px] font-extrabold text-ink tracking-[-0.2px] mb-3"
+    >
+      {children}
+    </Text>
   );
 }
 
@@ -156,19 +181,12 @@ export function OrderDetailPage() {
   const [draftRating, setDraftRating] = useState(0);
   const [draftComment, setDraftComment] = useState("");
 
-  const backAction = (
-    <HeaderActionButton
-      icon="arrow-left"
-      size={20}
-      accessibilityLabel="Go back"
-      onPress={() => navigation.goBack()}
-    />
-  );
+  const goBack = () => navigation.goBack();
 
   if (order.isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
-        <ScreenHeader title="Order details" leftAction={backAction} />
+      <SafeAreaView className="flex-1 bg-surface">
+        <TopBar title="Order details" onBack={goBack} />
         <LoadingState label="Loading order…" />
       </SafeAreaView>
     );
@@ -176,8 +194,8 @@ export function OrderDetailPage() {
 
   if (order.isError) {
     return (
-      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
-        <ScreenHeader title="Order details" leftAction={backAction} />
+      <SafeAreaView className="flex-1 bg-surface">
+        <TopBar title="Order details" onBack={goBack} />
         <ErrorState
           title="Couldn't load order"
           message={getErrorMessage(order.error)}
@@ -192,8 +210,8 @@ export function OrderDetailPage() {
 
   if (!data) {
     return (
-      <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
-        <ScreenHeader title="Order details" leftAction={backAction} />
+      <SafeAreaView className="flex-1 bg-surface">
+        <TopBar title="Order details" onBack={goBack} />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-ink-muted text-center">
             This order is not available.
@@ -312,26 +330,23 @@ export function OrderDetailPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={["bottom", "left", "right"]}>
-      <ScreenHeader
+    <SafeAreaView className="flex-1 bg-surface">
+      <TopBar
         title="Order details"
-        leftAction={backAction}
-        rightAction={
-          <HeaderActionButton
+        onBack={goBack}
+        right={
+          <TopBarButton
             icon="share-2"
-            size={18}
             accessibilityLabel="Share order"
             onPress={handleSharePress}
           />
         }
       />
-      <KeyboardAvoidingView
+      <KeyboardAvoider
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 28 }}
+          contentContainerStyle={{ paddingBottom: 32 }}
           keyboardShouldPersistTaps="handled"
         >
           <View className="px-5 pt-4 gap-3">
@@ -345,47 +360,21 @@ export function OrderDetailPage() {
             <PaymentProtectionCard order={data} isBuyer={isBuyer} />
           </View>
 
-          {availableActions.length > 0 ? (
-            <View className="px-5 mt-6">
-              <SectionLabel>Update status</SectionLabel>
-              <Card className="p-5">
-                {updateStatus.isError ? (
-                  <Text
-                    className="text-[13px] text-danger mb-3"
-                    accessibilityRole="alert"
-                  >
-                    {getErrorMessage(updateStatus.error)}
-                  </Text>
-                ) : null}
-                {availableActions.map((action, index) => (
-                  <View key={action.to} className={index > 0 ? "mt-2.5" : ""}>
-                    <Button
-                      label={action.label}
-                      onPress={() => handleTransitionPress(action)}
-                      variant={action.to === "CANCELLED" ? "danger" : "primary"}
-                      isLoading={updateStatus.isPending}
-                    />
-                  </View>
-                ))}
-              </Card>
-            </View>
-          ) : null}
-
           <View className="px-5 mt-6">
-            <SectionLabel>Order summary</SectionLabel>
+            <Heading>Order summary</Heading>
             <Card padded={false}>
               <InfoRow label="Quantity" value={data.quantity} />
               <InfoRow
                 label="Price per unit"
                 value={formatCurrency(data.pricePerUnitAtOrder)}
-                isLast
               />
+              <InfoRow label="Total" value={formatCurrency(total)} strong isLast />
             </Card>
           </View>
 
           {counterpart ? (
             <View className="px-5 mt-6">
-              <SectionLabel>{isBuyer ? "Farmer" : "Buyer"}</SectionLabel>
+              <Heading>{isBuyer ? "Farmer" : "Buyer"}</Heading>
               <Card className="flex-row items-center p-4">
                 <Avatar
                   uri={counterpart.avatarUrl}
@@ -400,35 +389,36 @@ export function OrderDetailPage() {
                   >
                     {counterpart.name}
                   </Text>
-                  <Text className="text-[12px] text-ink-muted mt-0.5">
-                    {isBuyer ? "Farmer" : "Buyer"}
+                  <Text className="text-[12.5px] text-ink-muted mt-0.5">
+                    {counterpart.phone ?? (isBuyer ? "Farmer" : "Buyer")}
                   </Text>
                 </View>
                 {counterpart.phone ? (
-                  <View style={{ width: 100 }}>
-                    <Button
-                      label="Call"
-                      icon="phone"
-                      variant="secondary"
-                      onPress={() =>
-                        Linking.openURL(`tel:${counterpart.phone}`)
-                      }
-                    />
-                  </View>
+                  <Pressable
+                    onPress={() => Linking.openURL(`tel:${counterpart.phone}`)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Call ${counterpart.name}`}
+                    hitSlop={6}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+                    className="w-11 h-11 rounded-full bg-primary-light items-center justify-center"
+                  >
+                    <Feather name="phone" size={18} color={colors.primaryActive} />
+                  </Pressable>
                 ) : null}
               </Card>
             </View>
           ) : null}
 
+          {hasLocation || canReportLocation || data.status === "IN_TRANSIT" ? (
           <View className="px-5 mt-6">
-            <SectionLabel>Delivery location</SectionLabel>
-            <Card className="p-5">
+            <Heading>Delivery location</Heading>
+            <Card className="p-3">
               {hasLocation ? (
                 <>
                   <View
                     style={{
                       width: "100%",
-                      height: 190,
+                      height: 170,
                       borderRadius: 16,
                       overflow: "hidden",
                     }}
@@ -455,7 +445,7 @@ export function OrderDetailPage() {
                   </Text>
                 </>
               ) : (
-                <View className="h-[190px] rounded-xl2 bg-cream items-center justify-center border border-line/50">
+                <View className="h-[150px] rounded-xl2 bg-cream items-center justify-center border border-line/50">
                   <Feather name="map-pin" size={22} color={colors.inkFaint} />
                   <Text className="text-[13px] text-ink-muted mt-2">
                     No location reported yet.
@@ -486,6 +476,7 @@ export function OrderDetailPage() {
               ) : null}
             </Card>
           </View>
+          ) : null}
 
           <OrderTrustPanel
             orderId={orderId}
@@ -501,7 +492,7 @@ export function OrderDetailPage() {
 
           {data.status === "DELIVERED" && (isBuyer || isFarmer) ? (
             <View className="px-5 mt-6">
-              <SectionLabel>Rating</SectionLabel>
+              <Heading>Rating</Heading>
               <Card className="p-5">
                 {review.isLoading ? (
                   <View className="flex-row items-center py-2">
@@ -622,7 +613,52 @@ export function OrderDetailPage() {
             </View>
           ) : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+
+        {availableActions.length > 0 ? (
+          <View
+            className="bg-white border-t border-line/60 px-5 pt-3 pb-3"
+            style={shadows.md}
+          >
+            {updateStatus.isError ? (
+              <Text
+                className="text-[13px] text-danger mb-2"
+                accessibilityRole="alert"
+              >
+                {getErrorMessage(updateStatus.error)}
+              </Text>
+            ) : null}
+            {availableActions
+              .filter((a) => a.to !== "CANCELLED")
+              .map((action) => (
+                <Button
+                  key={action.to}
+                  label={action.label}
+                  size="lg"
+                  onPress={() => handleTransitionPress(action)}
+                  isLoading={updateStatus.isPending}
+                />
+              ))}
+            {availableActions.some((a) => a.to === "CANCELLED") ? (
+              <Pressable
+                onPress={() =>
+                  handleTransitionPress(
+                    availableActions.find((a) => a.to === "CANCELLED"),
+                  )
+                }
+                disabled={updateStatus.isPending}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel order"
+                hitSlop={8}
+                className="items-center justify-center min-h-[44px]"
+              >
+                <Text className="text-[14px] font-bold text-danger">
+                  Cancel order
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

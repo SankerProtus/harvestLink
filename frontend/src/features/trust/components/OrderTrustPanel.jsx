@@ -5,7 +5,7 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { SectionLabel } from "../../../components/ui/SectionHeader.jsx";
 import { colors } from "../../../theme/colors.js";
-import { getErrorMessage } from "../../../lib/errorMap.js";
+import { getErrorMessage } from "../../../../src/lib/errorMap.js";
 import {
   useDecideCancellation,
   useGenerateHandoverCode,
@@ -51,7 +51,9 @@ export function OrderTrustPanel({
   const showHandoverBuyer = isBuyer && orderStatus === "IN_TRANSIT";
 
   const canRequestCancellation =
-    orderStatus === "CONFIRMED" && !pendingCancellation && (isBuyer || isFarmer);
+    orderStatus === "CONFIRMED" &&
+    !pendingCancellation &&
+    (isBuyer || isFarmer);
 
   const canDecideCancellation =
     orderStatus === "CANCELLATION_REQUESTED" &&
@@ -210,7 +212,13 @@ export function OrderTrustPanel({
         ) : null}
 
         {showHandoverFarmer ? (
-          <View className={canOpenDispute || canRequestCancellation ? "mt-4 pt-4 border-t border-line/60" : ""}>
+          <View
+            className={
+              canOpenDispute || canRequestCancellation
+                ? "mt-4 pt-4 border-t border-line/60"
+                : ""
+            }
+          >
             <Text className="text-[13px] font-semibold text-ink mb-2">
               Buyer handover code
             </Text>
@@ -229,7 +237,9 @@ export function OrderTrustPanel({
               </Text>
             ) : null}
             <Button
-              label={generatedCode ? "Generate new code" : "Generate handover code"}
+              label={
+                generatedCode ? "Generate new code" : "Generate handover code"
+              }
               icon="key"
               variant="secondary"
               isLoading={generateCode.isPending}
@@ -239,7 +249,11 @@ export function OrderTrustPanel({
         ) : null}
 
         {showHandoverBuyer ? (
-          <View className={canOpenDispute ? "mt-4 pt-4 border-t border-line/60" : ""}>
+          <View
+            className={
+              canOpenDispute ? "mt-4 pt-4 border-t border-line/60" : ""
+            }
+          >
             <Text className="text-[13px] font-semibold text-ink mb-2">
               Confirm delivery
             </Text>

@@ -67,11 +67,27 @@ export const ERROR_MESSAGES = Object.freeze({
   DELIVERY_UNAUTHORIZED_ORDER_ACCESS:
     "You don't have permission to view or manage this order.",
   DELIVERY_INVALID_STATUS_TRANSITION:
-    "This order can't be moved to that status right now.",
+    "This order has already changed. We've refreshed it so you can see where it stands now.",
+  DELIVERY_HANDOVER_CODE_REQUIRED:
+    "Delivery is confirmed when the buyer enters the handover code you share at drop-off.",
+  DELIVERY_ORDER_CANCELLATION_NOT_ALLOWED:
+    "This order can't be cancelled from here right now.",
+  DELIVERY_SELF_ORDER_NOT_ALLOWED: "You can't order your own listing.",
   DELIVERY_INSUFFICIENT_LISTING_QUANTITY:
     "There isn't enough stock left to complete this.",
   DELIVERY_LOCATION_REPORTING_NOT_ALLOWED:
     "Location can only be reported while a delivery is in transit.",
+
+  // ─── Uploads ──────────────────────────────────────────────
+  UPLOAD_FILE_TOO_LARGE:
+    "One of your photos is too large to upload. Remove it or choose a smaller photo.",
+  UPLOAD_PROVIDER_ERROR:
+    "We couldn't upload your photo right now. Please try again.",
+  PAYLOAD_TOO_LARGE: "That request was too large to send.",
+
+  // ─── Network ──────────────────────────────────────────────
+  NETWORK_ERROR:
+    "We couldn't reach HarvestLink. Check your connection and try again.",
 
   // ─── Trust: User reports ─────────────────────────────────
   REPORT_SELF: "You cannot report your own account.",
@@ -118,6 +134,10 @@ export function getRateLimitMessage(remainingSeconds) {
     minutes > 0 ? `${minutes}m ${String(seconds).padStart(2, "0")}s` : `${seconds}s`;
 
   return `Too many attempts. Try again in ${formatted}.`;
+}
+
+export function isNetworkError(error) {
+  return error?.code === "NETWORK_ERROR";
 }
 
 export function isValidationError(error) {

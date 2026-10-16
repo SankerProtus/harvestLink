@@ -2,7 +2,10 @@ import multer from "multer";
 import { BadRequestError } from "../../errors/commonErrors.js";
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+// Cloudinary's free-plan cap for a single image is 10 MB. Mobile clients
+// downscale before upload (see uploadListingPhoto on the app), so this is the
+// safety net for older app builds, not the normal path.
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 const storage = multer.memoryStorage();
 

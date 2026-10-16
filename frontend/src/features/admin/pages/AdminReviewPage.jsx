@@ -3,8 +3,8 @@ import {
   View,
   ScrollView,
   RefreshControl,
-  KeyboardAvoidingView,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Card } from "../../../components/ui/Card.jsx";
@@ -376,7 +376,7 @@ export function AdminReviewPage() {
       subtitle="Decisions that protect buyers and farmers"
     >
       <FilterChips options={options} value={queue} onChange={setQueue} />
-      <KeyboardAvoidingView className="flex-1">
+      <KeyboardAvoider className="flex-1">
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 32 }}
@@ -393,7 +393,7 @@ export function AdminReviewPage() {
         >
           {content}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </AdminScreen>
   );
 }

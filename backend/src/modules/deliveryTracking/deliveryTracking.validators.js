@@ -5,6 +5,7 @@ import {
   ORDER_CONFIG,
   GPS_CONFIG,
   ORDER_LIST_CONFIG,
+  CLIENT_SETTABLE_ORDER_STATUSES,
 } from "./deliveryTracking.constants.js";
 
 //  Reusable Field Schemas
@@ -19,13 +20,25 @@ const quantitySchema = z
     `Quantity must be at most ${ORDER_CONFIG.MAX_QUANTITY}`,
   );
 
-const orderStatusSchema = z.enum([
-  ORDER_STATUS.PENDING,
-  ORDER_STATUS.CONFIRMED,
-  ORDER_STATUS.IN_TRANSIT,
-  ORDER_STATUS.DELIVERED,
-  ORDER_STATUS.CANCELLED,
-]);
+// Statuses a client may request via PATCH /orders/:id/status.
+const orderStatusUpdateSchema = z.enum(CLIENT_SETTABLE_ORDER_STATUSES);
+
+// Statuses an order can *be in* (list filter). Derived from ORDER_STATUS so it
+// can never drift from the database enum again — previously this list omitted
+// CANCELLATION_REQUESTED and DISPUTED, so those filter tabs always returned 422.
+const orderStatusEnum = z.enum(Object.values(ORDER_STATUS));
+
+// Accepts one status ("DELIVERED") or a comma-separated group
+// ("PENDING,CONFIRMED,IN_TRANSIT") so the app can offer "Active" / "Issues"
+// tabs with a single request. Output: a string for one value, an array for
+// several, so existing single-status callers are unaffected.
+const orderStatusFilterSchema = z
+  .string()
+  .transform((raw) =>
+    [...new Set(raw.split(",").map((s) => s.trim()).filter(Boolean))],
+  )
+  .pipe(z.array(orderStatusEnum).min(1).max(Object.values(ORDER_STATUS).length))
+  .transform((list) => (list.length === 1 ? list[0] : list));
 
 const latitudeSchema = z
   .number()
@@ -66,7 +79,7 @@ export const orderIdParamSchema = z
 
 export const updateOrderStatusSchema = z
   .object({
-    status: orderStatusSchema,
+    status: orderStatusUpdateSchema,
   })
   .strict();
 
@@ -79,7 +92,7 @@ export const reportLocationSchema = z
 
 export const orderListQuerySchema = z
   .object({
-    status: orderStatusSchema.optional(),
+    status: orderStatusFilterSchema.optional(),
     page: z.coerce
       .number()
       .int("page must be an integer")

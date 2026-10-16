@@ -1,5 +1,8 @@
 import { apiClient } from "./client.js";
+import { prepareImageForUpload } from "../lib/imageUpload.js";
 
+// The default 15 s client timeout is too short for a photo on mobile data.
+const PHOTO_UPLOAD_TIMEOUT_MS = 60_000;
 
 export function searchListings(filters) {
   return apiClient.get("/marketplace/listings", { params: filters });
@@ -33,15 +36,19 @@ export function changeListingStatus(listingId, status) {
   });
 }
 
-export function uploadListingPhoto(imageUri) {
+export async function uploadListingPhoto(imageUri) {
+  // Downscaled JPEG, so the "image/jpeg" type below is always accurate.
+  const preparedUri = await prepareImageForUpload(imageUri);
+
   const formData = new FormData();
   formData.append("photo", {
-    uri: imageUri,
+    uri: preparedUri,
     name: `listing-photo-${Date.now()}.jpg`,
     type: "image/jpeg",
   });
 
   return apiClient.post("/marketplace/listings/photos", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: PHOTO_UPLOAD_TIMEOUT_MS,
   });
 }

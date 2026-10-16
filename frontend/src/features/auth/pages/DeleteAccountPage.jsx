@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, ScrollView, Pressable, Linking, KeyboardAvoidingView } from "react-native";
+import { View, ScrollView, Pressable, Linking } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -63,7 +64,7 @@ export function DeleteAccountPage() {
           />
         }
       />
-      <KeyboardAvoidingView className="flex-1">
+      <KeyboardAvoider className="flex-1">
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
@@ -146,7 +147,7 @@ export function DeleteAccountPage() {
             </Pressable>
           ) : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

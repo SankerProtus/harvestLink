@@ -24,10 +24,7 @@ import { SegmentedControl } from "../../../components/ui/SegmentedControl.jsx";
 import { Skeleton } from "../../../components/ui/Skeleton.jsx";
 import { StatusPill } from "../../../components/ui/StatusPill.jsx";
 import { TrustBadge } from "../../../components/ui/TrustBadge.jsx";
-import {
-  HeaderActionButton,
-  ScreenHeader,
-} from "../../../components/ui/ScreenHeader.jsx";
+import { TopBar, TopBarButton } from "../../../components/ui/TopBar.jsx";
 import { EmptyState, ErrorState } from "../../../components/ui/ScreenState.jsx";
 
 import { useUnreadNotificationCount } from "../../notifications/hooks/notificationHooks.js";
@@ -41,15 +38,23 @@ import { getOrderStatusCopy, getOrderStatusMeta } from "../lib/orderStatus.js";
 const TABS = { BUYER: "buyer", FARMER: "farmer" };
 const PAGE_SIZE = 20;
 
+// Eight status tabs (most of them empty most of the time) became five groups
+// that match how people think about orders: what's happening, what's done,
+// what needs sorting out. "Issues" bundles cancellation requests and disputes.
 const FILTERS = [
-  { value: "ALL", label: "All" },
-  { value: "PENDING", label: "Pending" },
-  { value: "CONFIRMED", label: "Confirmed" },
-  { value: "IN_TRANSIT", label: "In transit" },
-  { value: "DELIVERED", label: "Delivered" },
-  { value: "CANCELLATION_REQUESTED", label: "Cancellation" },
-  { value: "DISPUTED", label: "Disputed" },
-  { value: "CANCELLED", label: "Cancelled" },
+  { value: "ALL", label: "All", statuses: [] },
+  {
+    value: "ACTIVE",
+    label: "Active",
+    statuses: ["PENDING", "CONFIRMED", "IN_TRANSIT"],
+  },
+  { value: "DELIVERED", label: "Delivered", statuses: ["DELIVERED"] },
+  {
+    value: "ISSUES",
+    label: "Issues",
+    statuses: ["CANCELLATION_REQUESTED", "DISPUTED"],
+  },
+  { value: "CANCELLED", label: "Cancelled", statuses: ["CANCELLED"] },
 ];
 
 function formatDate(isoString) {
@@ -86,7 +91,7 @@ const OrderRow = memo(function OrderRow({ order, activeTab, onPress }) {
       className="bg-white rounded-2xl border border-line/60 mb-3 overflow-hidden"
     >
       <View className="flex-row p-3.5">
-        <View className="w-14 h-14 rounded-xl overflow-hidden bg-primary-light mr-3">
+        <View className="w-[60px] h-[60px] rounded-xl overflow-hidden bg-primary-light mr-3.5">
           <RemoteImage
             uri={order.listing?.images?.[0]}
             className="w-full h-full"
@@ -173,13 +178,13 @@ export function MyOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const unreadNotificationCount = useUnreadNotificationCount();
 
-  const filters = useMemo(
-    () => ({
+  const filters = useMemo(() => {
+    const group = FILTERS.find((f) => f.value === statusFilter);
+    return {
       limit: PAGE_SIZE,
-      ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
-    }),
-    [statusFilter],
-  );
+      ...(group?.statuses.length ? { status: group.statuses.join(",") } : {}),
+    };
+  }, [statusFilter]);
 
   const buyerOrders = useInfiniteBuyerOrders(filters, {
     enabled: activeTab === TABS.BUYER,
@@ -240,14 +245,19 @@ export function MyOrdersPage() {
       horizontal
       showsHorizontalScrollIndicator={false}
       style={{ flexGrow: 0 }}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12 }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 14 }}
     >
       {FILTERS.map((f) => {
-        const count = f.value === "ALL" ? totalOrders : statusCounts?.[f.value];
+        const count =
+          f.value === "ALL"
+            ? totalOrders
+            : statusCounts
+              ? f.statuses.reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0)
+              : undefined;
         return (
           <Chip
             key={f.value}
-            label={count ? `${f.label} · ${count}` : f.label}
+            label={count ? `${f.label} ${count}` : f.label}
             isSelected={statusFilter === f.value}
             onPress={() => setStatusFilter(f.value)}
           />
@@ -273,7 +283,7 @@ export function MyOrdersPage() {
         <EmptyState
           icon="inbox"
           title={`No ${filterLabel.toLowerCase()} orders`}
-          description="Orders with this status will appear here."
+          description="Orders that fit this tab will show up here."
           action={
             <Button
               label="Show all orders"
@@ -322,22 +332,12 @@ export function MyOrdersPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
-      <ScreenHeader
+    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+      <TopBar
         title="Orders"
-        subtitle="Track your transactions"
-        leftAction={
-          <HeaderActionButton
-            icon="user"
-            size={20}
-            accessibilityLabel="Profile"
-            onPress={() => navigation.navigate("Profile")}
-          />
-        }
-        rightAction={
-          <HeaderActionButton
+        right={
+          <TopBarButton
             icon="bell"
-            size={18}
             accessibilityLabel="Notifications"
             badgeCount={unreadNotificationCount.data ?? 0}
             onPress={() => navigation.navigate("Notifications")}
@@ -346,11 +346,11 @@ export function MyOrdersPage() {
       />
 
       {isBuyerRole ? null : (
-        <View className="px-5 pt-4 pb-3">
+        <View className="px-5 pb-3">
           <SegmentedControl
             options={[
-              { value: TABS.BUYER, label: "As buyer" },
-              { value: TABS.FARMER, label: "As farmer" },
+              { value: TABS.BUYER, label: "Buying" },
+              { value: TABS.FARMER, label: "Selling" },
             ]}
             value={activeTab}
             onChange={handleTabChange}
@@ -358,7 +358,7 @@ export function MyOrdersPage() {
         </View>
       )}
 
-      <View className={isBuyerRole ? "pt-4" : ""}>{chips}</View>
+      {chips}
 
       {body && !query.isLoading ? (
         <View className="flex-1">{body}</View>

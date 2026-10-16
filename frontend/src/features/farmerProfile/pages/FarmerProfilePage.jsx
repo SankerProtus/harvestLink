@@ -1,17 +1,11 @@
-import {
-  View,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { View, FlatList } from "react-native";
 import { Text } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
-import {
-  HeaderActionButton,
-  ScreenHeader,
-} from "../../../components/ui/ScreenHeader.jsx";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
+import { TopBar, TopBarButton } from "../../../components/ui/TopBar.jsx";
 import {
   LoadingState,
   ErrorState,
@@ -20,25 +14,68 @@ import {
 import { Avatar } from "../../../components/ui/Avatar.jsx";
 import { RatingStars } from "../../../components/ui/RatingStars.jsx";
 import { ReviewCard } from "../../../components/ui/ReviewCard.jsx";
-import { getErrorMessage } from "../../../lib/errorMap.js";
+import { getErrorMessage } from "../../../../src/lib/errorMap.js";
+import { colors } from "../../../theme/colors.js";
+import { shadows } from "../../../theme/shadows.js";
+import { TABULAR_NUMS } from "../../../theme/typography.js";
 import { useFarmerReviews } from "../../deliveryTracking/hooks/reviewHooks.js";
-import { Button } from "../../../components/ui/Button.jsx";
 
-function FarmerSummaryHeader({ farmer }) {
+// Identity + reputation in one block: who they are, and the number buyers
+// actually decide on. Reporting lives in the top bar (a deliberate but quiet
+// action) instead of a full-width button that competed with the reviews.
+function FarmerSummary({ farmer, reviewCount }) {
+  const hasRating = farmer.rating != null;
+  const count = farmer.reviewCount ?? reviewCount ?? 0;
+
   return (
-    <View className="items-center pt-2 pb-5">
-      <Avatar uri={farmer.avatarUrl} name={farmer.name} size="lg" />
-      <Text className="text-[19px] font-extrabold text-ink mt-3 tracking-[-0.3px]">
-        {farmer.name}
-      </Text>
-      <View className="mt-1.5">
-        <RatingStars
-          rating={farmer.rating}
-          reviewCount={farmer.reviewCount}
-          size={15}
-          showValue={farmer.rating != null}
-          emptyLabel="No ratings yet"
-        />
+    <View className="mb-6">
+      <View className="flex-row items-center">
+        <Avatar uri={farmer.avatarUrl} name={farmer.name} size="hero" />
+        <View className="flex-1 ml-4 min-w-0">
+          <View className="flex-row items-center">
+            <Text
+              className="text-[21px] leading-[26px] font-extrabold text-ink tracking-[-0.4px] shrink"
+              numberOfLines={2}
+            >
+              {farmer.name}
+            </Text>
+            {farmer.isVerified ? (
+              <Ionicons
+                name="shield-checkmark"
+                size={18}
+                color={colors.primary}
+                style={{ marginLeft: 6 }}
+                accessibilityLabel="Verified farmer"
+              />
+            ) : null}
+          </View>
+          <Text className="text-[13.5px] text-ink-muted mt-0.5">Farmer</Text>
+        </View>
+      </View>
+
+      <View
+        className="flex-row items-center bg-white rounded-2xl border border-line/60 mt-5 px-4 py-3.5"
+        style={shadows.card}
+      >
+        <Text
+          className="text-[34px] leading-[38px] font-extrabold text-ink tracking-[-1px]"
+          style={TABULAR_NUMS}
+        >
+          {hasRating ? Number(farmer.rating).toFixed(1) : "–"}
+        </Text>
+        <View className="ml-3.5">
+          <RatingStars
+            rating={farmer.rating}
+            size={16}
+            showValue={false}
+            emptyLabel="No ratings yet"
+          />
+          <Text className="text-[12.5px] text-ink-muted mt-1">
+            {count > 0
+              ? `${count} review${count === 1 ? "" : "s"} from buyers`
+              : "No reviews yet"}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -54,24 +91,27 @@ export function FarmerProfilePage() {
   const farmer = reviews.data?.farmer;
 
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
-      <ScreenHeader
-        title="Farmer Profile"
-        leftAction={
-          <HeaderActionButton
-            icon="arrow-left"
-            size={20}
-            accessibilityLabel="Go back"
-            onPress={() => navigation.goBack()}
-          />
+    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+      <TopBar
+        title="Farmer profile"
+        onBack={() => navigation.goBack()}
+        right={
+          farmer ? (
+            <TopBarButton
+              icon="flag"
+              accessibilityLabel="Report this account"
+              onPress={() =>
+                navigation.navigate("ReportUser", {
+                  userId: farmer.id,
+                  userName: farmer.name,
+                })
+              }
+            />
+          ) : null
         }
       />
 
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
+      <KeyboardAvoider className="flex-1">
         {reviews.isLoading ? (
           <LoadingState label="Loading profile…" />
         ) : reviews.isError ? (
@@ -87,26 +127,22 @@ export function FarmerProfilePage() {
             contentContainerStyle={{
               paddingHorizontal: 20,
               paddingTop: 8,
-              paddingBottom: 24,
+              paddingBottom: 32,
             }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={
               farmer ? (
                 <>
-                  <FarmerSummaryHeader farmer={farmer} />
-                  <Button
-                    label="Report this account"
-                    variant="secondary"
-                    icon="flag"
-                    className="mb-5"
-                    onPress={() =>
-                      navigation.navigate("ReportUser", {
-                        userId: farmer.id,
-                        userName: farmer.name,
-                      })
-                    }
-                  />
+                  <FarmerSummary farmer={farmer} reviewCount={results.length} />
+                  {results.length > 0 ? (
+                    <Text
+                      accessibilityRole="header"
+                      className="text-[17px] font-extrabold text-ink tracking-[-0.2px] mb-3"
+                    >
+                      Reviews
+                    </Text>
+                  ) : null}
                 </>
               ) : null
             }
@@ -114,7 +150,7 @@ export function FarmerProfilePage() {
               <EmptyState
                 icon="star"
                 title="No reviews yet"
-                description="Reviews from buyers will show up here once orders are delivered and rated."
+                description="Reviews appear here after a buyer's order is delivered and rated."
               />
             }
             renderItem={({ item }) => (
@@ -122,7 +158,7 @@ export function FarmerProfilePage() {
             )}
           />
         )}
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

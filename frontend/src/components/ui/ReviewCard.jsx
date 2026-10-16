@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Avatar } from "./Avatar.jsx";
 import { RatingStars } from "./RatingStars.jsx";
 import { colors } from "../../theme/colors.js";
+import { shadows } from "../../theme/shadows.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { getSocket } from "../../lib/socket.js";
 import {
@@ -50,7 +51,7 @@ function CommentRow({ comment }) {
           </Text>
           {isFarmer ? (
             <View className="bg-primary-muted rounded-full px-1.5 py-[1px]">
-              <Text className="text-[9.5px] font-bold text-primary uppercase tracking-wide">
+              <Text className="text-[10.5px] font-bold text-primary">
                 Farmer
               </Text>
             </View>
@@ -166,7 +167,10 @@ export function ReviewCard({ review, showListingTitle = false }) {
   const commentCount = comments.data?.length ?? review.commentCount ?? 0;
 
   return (
-    <View className="bg-white rounded-2xl border border-line/50 p-4 mb-3">
+    <View
+      className="bg-white rounded-2xl border border-line/60 p-4 mb-3"
+      style={shadows.card}
+    >
       <View className="flex-row items-start">
         <Avatar
           uri={review.buyer?.avatarUrl}

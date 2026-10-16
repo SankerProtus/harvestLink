@@ -203,7 +203,7 @@ export async function listOrdersByBuyerId(buyerId, filters) {
 
   const where = {
     buyerId,
-    ...(status ? { status } : {}),
+    ...(status ? { status: Array.isArray(status) ? { in: status } : status } : {}),
   };
 
   const [items, totalCount] = await prisma.$transaction([
@@ -229,7 +229,7 @@ export async function listOrdersByFarmerId(farmerId, filters) {
 
   const where = {
     farmerId,
-    ...(status ? { status } : {}),
+    ...(status ? { status: Array.isArray(status) ? { in: status } : status } : {}),
   };
 
   const [items, totalCount] = await prisma.$transaction([

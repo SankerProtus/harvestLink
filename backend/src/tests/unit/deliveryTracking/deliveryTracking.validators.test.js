@@ -135,6 +135,13 @@ describe("deliveryTracking.validators", () => {
       expect(result.success).toBe(false);
     });
 
+    test.each(["CANCELLATION_REQUESTED", "DISPUTED"])(
+      "does not let a client PATCH an order straight to %s (trust flows own those)",
+      (status) => {
+        expect(updateOrderStatusSchema.safeParse({ status }).success).toBe(false);
+      },
+    );
+
     test("rejects a missing status", () => {
       const result = updateOrderStatusSchema.safeParse({});
       expect(result.success).toBe(false);
@@ -259,6 +266,41 @@ describe("deliveryTracking.validators", () => {
     test("rejects an invalid status filter value", () => {
       const result = orderListQuerySchema.safeParse({ status: "SHIPPED" });
       expect(result.success).toBe(false);
+    });
+
+    // Regression: the app's "Cancellation" and "Disputed" tabs send these
+    // values. They are real OrderStatus enum members but were missing from the
+    // filter schema, so those tabs always failed with a 422 validation error.
+    test("accepts a comma-separated status group and returns an array", () => {
+      const result = orderListQuerySchema.safeParse({
+        status: "PENDING,CONFIRMED,IN_TRANSIT",
+      });
+      expect(result.success).toBe(true);
+      expect(result.data.status).toEqual(["PENDING", "CONFIRMED", "IN_TRANSIT"]);
+    });
+
+    test("a one-item group stays a plain string (backwards compatible)", () => {
+      const result = orderListQuerySchema.safeParse({ status: "DELIVERED" });
+      expect(result.data.status).toBe("DELIVERED");
+    });
+
+    test("rejects a group containing an unknown status", () => {
+      expect(
+        orderListQuerySchema.safeParse({ status: "PENDING,SHIPPED" }).success,
+      ).toBe(false);
+    });
+
+    test.each([
+      "PENDING",
+      "CONFIRMED",
+      "IN_TRANSIT",
+      "DELIVERED",
+      "DISPUTED",
+      "CANCELLATION_REQUESTED",
+      "CANCELLED",
+    ])("accepts every OrderStatus as a list filter: %s", (status) => {
+      const result = orderListQuerySchema.safeParse({ status });
+      expect(result.success).toBe(true);
     });
 
     test("limit: accepts exactly the maximum", () => {

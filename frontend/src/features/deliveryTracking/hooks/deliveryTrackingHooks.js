@@ -56,6 +56,18 @@ export function useUpdateOrderStatus() {
   return useMutation({
     mutationFn: ({ orderId, status }) =>
       deliveryTrackingApi.updateOrderStatus(orderId, status),
+    // A 409 means the order changed under us (other party acted first).
+    // Refetch so the buttons shown match the order's real state.
+    onError: (error, variables) => {
+      if (error?.status === 409) {
+        queryClient.invalidateQueries({
+          queryKey: deliveryTrackingQueryKeys.order(variables.orderId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["deliveryTracking", "myOrders"],
+        });
+      }
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: deliveryTrackingQueryKeys.order(variables.orderId),
@@ -66,16 +78,6 @@ export function useUpdateOrderStatus() {
       queryClient.invalidateQueries({
         queryKey: ["deliveryTracking", "myOrders", "farmer"],
       });
-    },
-    onError: (error, variables) => {
-      if (error?.status === 409) {
-        queryClient.invalidateQueries({
-          queryKey: deliveryTrackingQueryKeys.order(variables.orderId),
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["deliveryTracking", "myOrders"],
-        });
-      }
     },
   });
 }

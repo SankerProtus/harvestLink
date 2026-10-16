@@ -2,6 +2,7 @@ import { View } from "react-native";
 import { Text } from "../../../components/ui/AppText.jsx";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Feather } from "@expo/vector-icons";
+import { colors } from "../../../theme/colors.js";
 import { Card } from "../../../components/ui/Card.jsx";
 import { PriceText } from "../../../components/ui/PriceText.jsx";
 import { RemoteImage } from "../../../components/ui/RemoteImage.jsx";
@@ -100,8 +101,62 @@ export function OrderStatusHero({
   return (
     <Animated.View entering={FadeInDown.duration(260)}>
       <Card padded={false}>
-        <View className="flex-row items-center p-4">
-          <View className="w-14 h-14 rounded-xl overflow-hidden bg-primary-muted mr-3">
+        {/* 1. What's happening with my order? (the question people open this for) */}
+        <View className="p-4 pb-5">
+          <View className="flex-row items-center">
+            <View
+              className="w-11 h-11 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: tone.bg }}
+            >
+              <Feather name={meta.icon} size={19} color={tone.fg} />
+            </View>
+            <View className="flex-1">
+              <Text
+                className="text-[13px] font-bold"
+                style={{ color: tone.fg }}
+              >
+                {meta.label}
+              </Text>
+              <Text className="text-[19px] leading-[24px] font-extrabold text-ink tracking-[-0.3px]">
+                {copy.title}
+              </Text>
+            </View>
+          </View>
+
+          {copy.actionNeeded ? (
+            <View className="flex-row items-center self-start rounded-full bg-accent-light px-2.5 py-1 mt-3">
+              <Feather name="alert-circle" size={13} color={colors.accentDark} />
+              <Text className="text-[12px] font-bold text-accent-dark ml-1.5">
+                Needs your action
+              </Text>
+            </View>
+          ) : null}
+
+          {copy.next ? (
+            <Text className="text-[14px] text-ink-secondary mt-3 leading-[21px]">
+              {copy.next}
+            </Text>
+          ) : null}
+          {copy.help ? (
+            <Text className="text-[13px] text-ink-muted mt-1.5 leading-[19px]">
+              {copy.help}
+            </Text>
+          ) : null}
+
+          {isLinear ? <Timeline status={order.status} /> : null}
+
+          {signals.length > 0 ? (
+            <View className="flex-row flex-wrap gap-2 mt-4">
+              {signals.map((type) => (
+                <TrustBadge key={type} type={type} />
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        {/* 2. What did I order? */}
+        <View className="flex-row items-center px-4 py-3.5 border-t border-line/70 bg-surface/60">
+          <View className="w-12 h-12 rounded-xl overflow-hidden bg-primary-muted mr-3">
             <RemoteImage
               uri={order.listing?.images?.[0]}
               className="w-full h-full"
@@ -110,67 +165,17 @@ export function OrderStatusHero({
             />
           </View>
           <View className="flex-1 min-w-0 mr-2">
-            <Text className="text-[15px] font-bold text-ink" numberOfLines={1}>
+            <Text className="text-[14.5px] font-bold text-ink" numberOfLines={1}>
               {order.listing?.title ?? "Order"}
             </Text>
             <Text
-              className="text-[12px] text-ink-muted mt-0.5"
+              className="text-[12.5px] text-ink-muted mt-0.5"
               numberOfLines={1}
             >
-              #{orderRef} · {dateLabel}
+              Order {orderRef} · {dateLabel}
             </Text>
           </View>
           <PriceText amount={total} size="sm" />
-        </View>
-
-        <View className="border-t border-line/70 p-4">
-          <View className="flex-row items-center">
-            <View
-              className="w-10 h-10 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: tone.bg }}
-            >
-              <Feather name={meta.icon} size={18} color={tone.fg} />
-            </View>
-            <View className="flex-1">
-              <Text
-                className="text-[11px] font-bold uppercase tracking-[0.8px]"
-                style={{ color: tone.fg }}
-              >
-                {meta.label}
-              </Text>
-              <Text className="text-[18px] font-extrabold text-ink tracking-[-0.3px]">
-                {copy.title}
-              </Text>
-            </View>
-            {copy.actionNeeded ? (
-              <View className="rounded-full bg-accent-dark px-2.5 py-1">
-                <Text className="text-[11px] font-bold text-white">
-                  Action needed
-                </Text>
-              </View>
-            ) : null}
-          </View>
-
-          {copy.next ? (
-            <Text className="text-[13.5px] text-ink-secondary mt-3 leading-5">
-              {copy.next}
-            </Text>
-          ) : null}
-          {copy.help ? (
-            <Text className="text-[12.5px] text-ink-muted mt-1.5 leading-[18px]">
-              {copy.help}
-            </Text>
-          ) : null}
-
-          {signals.length > 0 ? (
-            <View className="flex-row flex-wrap gap-2 mt-3">
-              {signals.map((type) => (
-                <TrustBadge key={type} type={type} />
-              ))}
-            </View>
-          ) : null}
-
-          {isLinear ? <Timeline status={order.status} /> : null}
         </View>
       </Card>
     </Animated.View>

@@ -5,9 +5,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -16,15 +15,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Feather } from "@expo/vector-icons";
 
-import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Chip } from "../../../components/ui/Chip.jsx";
-import { FieldLabel } from "../../../components/ui/Input.jsx";
-import { SectionHeader } from "../../../components/ui/SectionHeader.jsx";
-import {
-  HeaderActionButton,
-  ScreenHeader,
-} from "../../../components/ui/ScreenHeader.jsx";
+import { TopBar, TopBarButton } from "../../../components/ui/TopBar.jsx";
 import { ListingCard } from "../../marketplace/components/ListingCard.jsx";
 import {
   matchSearchSchema,
@@ -108,6 +101,62 @@ function formatLabel(value) {
   return value.charAt(0) + value.slice(1).toLowerCase();
 }
 
+function Label({ children, hint }) {
+  return (
+    <View className="flex-row items-baseline mb-2">
+      <Text className="text-[14px] font-bold text-ink">{children}</Text>
+      {hint ? (
+        <Text className="text-[12.5px] text-ink-muted ml-2">{hint}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+// Numbered step that turns into a green tick once it is filled in, so people
+// can see at a glance what is still missing before they search.
+function StepLabel({ step, done, title, hint }) {
+  return (
+    <View className="flex-row items-center mb-3">
+      <View
+        className="items-center justify-center"
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          backgroundColor: done ? colors.primary : colors.primaryLight,
+        }}
+      >
+        {done ? (
+          <Feather name="check" size={13} color={colors.white} />
+        ) : (
+          <Text
+            className="text-[12px] font-extrabold"
+            style={{ color: colors.primaryActive }}
+          >
+            {step}
+          </Text>
+        )}
+      </View>
+      <Text className="text-[15px] font-extrabold text-ink ml-2.5 tracking-[-0.2px]">
+        {title}
+      </Text>
+      {hint ? (
+        <Text className="text-[12.5px] text-ink-muted ml-2">{hint}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+// Every option is visible at once. The old sideways-scrolling rows hid half
+// the crops and units ("Cassav…") and nothing told people to scroll.
+function OptionWrap({ children }) {
+  return (
+    <View className="flex-row flex-wrap" style={{ rowGap: 8 }}>
+      {children}
+    </View>
+  );
+}
+
 const inputBase =
   "border-[1.5px] rounded-xl2 px-4 py-3.5 text-[15px] text-ink min-h-[52px] bg-white";
 
@@ -143,6 +192,7 @@ export function MatchResultsPage() {
   const [submittedFilters, setSubmittedFilters] = useState(null);
   const [isFormExpanded, setIsFormExpanded] = useState(true);
   const [recentSearches, setRecentSearches] = useState([]);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   const {
     control,
@@ -162,7 +212,18 @@ export function MatchResultsPage() {
   });
 
   const cropType = watch("cropType");
+  const requestedQuantity = watch("requestedQuantity");
   const requestedQuantityUnit = watch("requestedQuantityUnit");
+  const quantityNumber = Number(requestedQuantity);
+  const hasCrop = Boolean(cropType);
+  const hasAmount =
+    requestedQuantity !== undefined &&
+    requestedQuantity !== "" &&
+    quantityNumber > 0 &&
+    Boolean(requestedQuantityUnit);
+  const canSearch = hasCrop && hasAmount;
+  const optionalHasErrors = Boolean(errors.maxPrice || errors.location);
+  const filtersOpen = showMoreFilters || optionalHasErrors;
 
   const matches = useSearchMatches(submittedFilters ?? {});
   const hasSearched = submittedFilters !== null;
@@ -192,28 +253,51 @@ export function MatchResultsPage() {
     runSearch({ ...values, location: values.location || undefined });
   }
 
+  const showForm = !(hasSearched && !isFormExpanded);
+
+  // Recent searches first, then starter searches, shown ABOVE the form so a
+  // repeat search is a single tap.
+  const quickSearches = [
+    ...recentSearches.map((entry) => ({
+      key: `recent-${summarizeSearch(entry)}`,
+      label: summarizeSearch(entry),
+      icon: "clock",
+      values: entry,
+    })),
+    ...POPULAR_SEARCHES.map((s) => ({
+      key: `popular-${s.label}`,
+      label: s.label,
+      icon: "trending-up",
+      values: s.values,
+    })),
+  ];
+
+  const draftSummary = canSearch
+    ? summarizeSearch({
+        cropType,
+        requestedQuantity: quantityNumber,
+        requestedQuantityUnit,
+        location: undefined,
+      })
+    : hasCrop
+      ? `${formatLabel(cropType)} · add how much you need`
+      : "Choose a crop to get started";
+
   return (
-    <SafeAreaView className="flex-1 bg-surface" edges={[]}>
-      <ScreenHeader
-        title="Find Matches"
+    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
+      <TopBar
+        title="Find matches"
         subtitle={
-          hasSearched && !matches.isLoading
+          hasSearched && !matches.isLoading && !showForm
             ? `${resultCount} match${resultCount === 1 ? "" : "es"} found`
-            : "Connect with the right farmers"
+            : "Farmers with what you need"
         }
-        leftAction={
-          navigation.canGoBack() ? (
-            <HeaderActionButton
-              icon="arrow-left"
-              size={20}
-              accessibilityLabel="Go back"
-              onPress={() => navigation.goBack()}
-            />
-          ) : (
-            <HeaderActionButton
-              icon="menu"
-              size={20}
-              accessibilityLabel="Menu"
+        onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+        right={
+          navigation.canGoBack() ? null : (
+            <TopBarButton
+              icon="user"
+              accessibilityLabel={isAuthenticated ? "Profile" : "Sign in"}
               onPress={() =>
                 isAuthenticated
                   ? navigation.navigate("ProtectedTabs", { screen: "Profile" })
@@ -224,18 +308,14 @@ export function MatchResultsPage() {
         }
       />
 
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
+      <KeyboardAvoider className="flex-1">
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 32 }}
+          contentContainerStyle={{ paddingTop: 4, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {hasSearched && !isFormExpanded ? (
-            <View className="px-5 pt-5">
+          {!showForm ? (
+            <View className="px-5">
               <Pressable
                 onPress={() => setIsFormExpanded(true)}
                 accessibilityRole="button"
@@ -244,252 +324,233 @@ export function MatchResultsPage() {
                   opacity: pressed ? 0.85 : 1,
                   ...shadows.sm,
                 })}
-                className="flex-row items-center bg-white rounded-xl2 border-[1.5px] border-line px-4 py-3.5"
+                className="flex-row items-center bg-white rounded-full border border-line px-4 min-h-[54px]"
               >
-                <View className="w-9 h-9 rounded-full bg-primary-muted items-center justify-center mr-3">
-                  <Feather name="search" size={15} color={colors.primary} />
-                </View>
-                <View className="flex-1">
+                <Feather name="search" size={17} color={colors.primary} />
+                <Text
+                  className="flex-1 ml-3 text-[14.5px] font-semibold text-ink"
+                  numberOfLines={1}
+                >
+                  {summarizeSearch(submittedFilters)}
+                </Text>
+                <View
+                  className="rounded-full px-3 py-1.5"
+                  style={{ backgroundColor: colors.primaryLight }}
+                >
                   <Text
-                    className="text-[14.5px] font-bold text-ink"
-                    numberOfLines={1}
+                    className="text-[12.5px] font-bold"
+                    style={{ color: colors.primaryActive }}
                   >
-                    {summarizeSearch(submittedFilters)}
-                  </Text>
-                  <Text className="text-[11.5px] text-ink-muted mt-0.5">
-                    Tap to edit search
+                    Edit
                   </Text>
                 </View>
-                <Feather name="edit-2" size={15} color={colors.inkMuted} />
               </Pressable>
             </View>
           ) : (
-            <>
-              <View className="px-5 pt-5">
-                <SectionHeader
-                  title="What do you need?"
-                  subtitle="Tell us your requirements and we'll find matching farmers."
-                />
-              </View>
-
-              <View className="px-5">
-                <Card>
-                  <FieldLabel required>Crop type</FieldLabel>
+            <View>
+              {quickSearches.length > 0 ? (
+                <View className="mb-5">
+                  <Text className="px-5 text-[12.5px] font-semibold text-ink-muted mb-2.5">
+                    Quick searches
+                  </Text>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    className="mb-1"
+                    style={{ flexGrow: 0 }}
+                    contentContainerStyle={{ paddingHorizontal: 20 }}
                   >
-                    {CROP_TYPE_OPTIONS.map((crop) => (
+                    {quickSearches.map((q) => (
                       <Chip
-                        key={crop}
-                        label={formatLabel(crop)}
-                        isSelected={cropType === crop}
-                        icon="feather"
-                        onPress={() => setValue("cropType", crop)}
-                      />
-                    ))}
-                  </ScrollView>
-                  {errors.cropType ? (
-                    <Text
-                      className="text-[12px] text-danger mt-1.5 mb-1"
-                      accessibilityRole="alert"
-                    >
-                      {friendlyError("cropType", errors.cropType)}
-                    </Text>
-                  ) : (
-                    <View className="h-4" />
-                  )}
-
-                  <View className="flex-row gap-3">
-                    <View className="flex-1">
-                      <FieldLabel required>Quantity needed</FieldLabel>
-                      <Controller
-                        control={control}
-                        name="requestedQuantity"
-                        render={({ field: { value, onChange, onBlur } }) => (
-                          <TextInput
-                            value={value !== undefined ? String(value) : ""}
-                            onChangeText={onChange}
-                            onBlur={onBlur}
-                            placeholder="0"
-                            placeholderTextColor={colors.inkFaint}
-                            keyboardType="numeric"
-                            accessibilityLabel="Quantity needed"
-                            style={shadows.sm}
-                            className={`${inputBase} ${errors.requestedQuantity ? "border-danger" : "border-line"}`}
-                          />
-                        )}
-                      />
-                      {errors.requestedQuantity ? (
-                        <Text
-                          className="text-[12px] text-danger mt-1.5"
-                          accessibilityRole="alert"
-                        >
-                          {friendlyError(
-                            "requestedQuantity",
-                            errors.requestedQuantity,
-                          )}
-                        </Text>
-                      ) : null}
-                    </View>
-
-                    <View className="flex-1">
-                      <FieldLabel>Max price (GHS)</FieldLabel>
-                      <Controller
-                        control={control}
-                        name="maxPrice"
-                        render={({ field: { value, onChange, onBlur } }) => (
-                          <TextInput
-                            value={value !== undefined ? String(value) : ""}
-                            onChangeText={onChange}
-                            onBlur={onBlur}
-                            placeholder="Any"
-                            placeholderTextColor={colors.inkFaint}
-                            keyboardType="numeric"
-                            accessibilityLabel="Maximum price (optional)"
-                            style={shadows.sm}
-                            className={`${inputBase} ${errors.maxPrice ? "border-danger" : "border-line"}`}
-                          />
-                        )}
-                      />
-                      {errors.maxPrice ? (
-                        <Text
-                          className="text-[12px] text-danger mt-1.5"
-                          accessibilityRole="alert"
-                        >
-                          {friendlyError("maxPrice", errors.maxPrice)}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-
-                  <View className="h-5" />
-
-                  <FieldLabel required>Unit</FieldLabel>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    className="mb-1"
-                  >
-                    {QUANTITY_UNIT_OPTIONS.map((unit) => (
-                      <Chip
-                        key={unit}
-                        label={formatLabel(unit)}
-                        isSelected={requestedQuantityUnit === unit}
-                        onPress={() => setValue("requestedQuantityUnit", unit)}
-                      />
-                    ))}
-                  </ScrollView>
-                  {errors.requestedQuantityUnit ? (
-                    <Text
-                      className="text-[12px] text-danger mt-1.5 mb-1"
-                      accessibilityRole="alert"
-                    >
-                      {friendlyError(
-                        "requestedQuantityUnit",
-                        errors.requestedQuantityUnit,
-                      )}
-                    </Text>
-                  ) : (
-                    <View className="h-4" />
-                  )}
-
-                  <FieldLabel>Location (optional)</FieldLabel>
-                  <Controller
-                    control={control}
-                    name="location"
-                    render={({ field: { value, onChange, onBlur } }) => (
-                      <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        placeholder="e.g. Techiman"
-                        placeholderTextColor={colors.inkFaint}
-                        accessibilityLabel="Location"
-                        style={shadows.sm}
-                        className={`${inputBase} ${errors.location ? "border-danger" : "border-line"}`}
-                      />
-                    )}
-                  />
-                  {errors.location ? (
-                    <Text
-                      className="text-[12px] text-danger mt-1.5"
-                      accessibilityRole="alert"
-                    >
-                      {friendlyError("location", errors.location)}
-                    </Text>
-                  ) : null}
-
-                  <View className="h-6" />
-
-                  <View className="flex-row gap-3">
-                    {hasSearched ? (
-                      <View className="flex-1">
-                        <Button
-                          label="Cancel"
-                          variant="secondary"
-                          onPress={() => setIsFormExpanded(false)}
-                        />
-                      </View>
-                    ) : null}
-                    <View className="flex-1">
-                      <Button
-                        label="Search matches"
-                        icon="search"
-                        onPress={handleSubmit(onSubmit)}
-                      />
-                    </View>
-                  </View>
-                </Card>
-              </View>
-
-              {!hasSearched ? (
-                <View className="px-5 mt-6">
-                  {recentSearches.length > 0 ? (
-                    <View className="mb-5">
-                      <SectionHeader title="Recent searches" />
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{ paddingRight: 20 }}
-                      >
-                        {recentSearches.map((entry, index) => (
-                          <Chip
-                            key={`${summarizeSearch(entry)}-${index}`}
-                            label={summarizeSearch(entry)}
-                            icon="clock"
-                            onPress={() => applySuggestion(entry)}
-                          />
-                        ))}
-                      </ScrollView>
-                    </View>
-                  ) : null}
-
-                  <SectionHeader
-                    title="Popular searches"
-                    subtitle="A quick starting point if you're not sure yet"
-                  />
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingRight: 20 }}
-                  >
-                    {POPULAR_SEARCHES.map((suggestion) => (
-                      <Chip
-                        key={suggestion.label}
-                        label={suggestion.label}
-                        icon={suggestion.icon}
-                        onPress={() => applySuggestion(suggestion.values)}
+                        key={q.key}
+                        size="sm"
+                        label={q.label}
+                        icon={q.icon}
+                        onPress={() => applySuggestion(q.values)}
                       />
                     ))}
                   </ScrollView>
                 </View>
               ) : null}
-            </>
+
+              <View
+                className="mx-5 bg-white rounded-3xl border border-line/60 p-5"
+                style={shadows.card}
+              >
+                <StepLabel step={1} done={hasCrop} title="What crop?" />
+                <OptionWrap>
+                  {CROP_TYPE_OPTIONS.map((crop) => (
+                    <Chip
+                      key={crop}
+                      label={formatLabel(crop)}
+                      isSelected={cropType === crop}
+                      onPress={() => setValue("cropType", crop)}
+                    />
+                  ))}
+                </OptionWrap>
+                {errors.cropType ? (
+                  <Text
+                    className="text-[12.5px] text-danger mt-2"
+                    accessibilityRole="alert"
+                  >
+                    {friendlyError("cropType", errors.cropType)}
+                  </Text>
+                ) : null}
+
+                <View className="h-px bg-line/70 my-5" />
+
+                <StepLabel step={2} done={hasAmount} title="How much?" />
+                <Controller
+                  control={control}
+                  name="requestedQuantity"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      value={value !== undefined ? String(value) : ""}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder="Quantity, e.g. 20"
+                      placeholderTextColor={colors.inkFaint}
+                      keyboardType="numeric"
+                      returnKeyType="done"
+                      accessibilityLabel="Quantity needed"
+                      className={`${inputBase} ${
+                        errors.requestedQuantity
+                          ? "border-danger"
+                          : "border-line"
+                      }`}
+                    />
+                  )}
+                />
+                {errors.requestedQuantity ? (
+                  <Text
+                    className="text-[12.5px] text-danger mt-1.5"
+                    accessibilityRole="alert"
+                  >
+                    {friendlyError(
+                      "requestedQuantity",
+                      errors.requestedQuantity,
+                    )}
+                  </Text>
+                ) : null}
+                <Text className="text-[12.5px] text-ink-muted mt-3 mb-2">
+                  Sold by the…
+                </Text>
+                <OptionWrap>
+                  {QUANTITY_UNIT_OPTIONS.map((unit) => (
+                    <Chip
+                      key={unit}
+                      size="sm"
+                      label={formatLabel(unit)}
+                      isSelected={requestedQuantityUnit === unit}
+                      onPress={() => setValue("requestedQuantityUnit", unit)}
+                    />
+                  ))}
+                </OptionWrap>
+                {errors.requestedQuantityUnit ? (
+                  <Text
+                    className="text-[12.5px] text-danger mt-1.5"
+                    accessibilityRole="alert"
+                  >
+                    {friendlyError(
+                      "requestedQuantityUnit",
+                      errors.requestedQuantityUnit,
+                    )}
+                  </Text>
+                ) : null}
+
+                <View className="h-px bg-line/70 my-5" />
+
+                {/* Optional refinements stay out of the way until wanted. */}
+                <Pressable
+                  onPress={() => setShowMoreFilters((v) => !v)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: filtersOpen }}
+                  className="flex-row items-center justify-between min-h-[36px]"
+                >
+                  <View className="flex-row items-center flex-1">
+                    <Feather
+                      name="sliders"
+                      size={16}
+                      color={colors.inkSecondary}
+                    />
+                    <Text className="text-[14.5px] font-bold text-ink ml-2.5">
+                      Narrow it down
+                    </Text>
+                    <Text className="text-[12.5px] text-ink-muted ml-2">
+                      optional
+                    </Text>
+                  </View>
+                  <Feather
+                    name={filtersOpen ? "chevron-up" : "chevron-down"}
+                    size={18}
+                    color={colors.inkMuted}
+                  />
+                </Pressable>
+
+                {filtersOpen ? (
+                  <View className="mt-4">
+                    <Label>Highest price you'll pay (GHS)</Label>
+                    <Controller
+                      control={control}
+                      name="maxPrice"
+                      render={({ field: { value, onChange, onBlur } }) => (
+                        <TextInput
+                          value={value !== undefined ? String(value) : ""}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          placeholder="Any price"
+                          placeholderTextColor={colors.inkFaint}
+                          keyboardType="numeric"
+                          accessibilityLabel="Maximum price (optional)"
+                          className={`${inputBase} ${
+                            errors.maxPrice ? "border-danger" : "border-line"
+                          }`}
+                        />
+                      )}
+                    />
+                    {errors.maxPrice ? (
+                      <Text
+                        className="text-[12.5px] text-danger mt-1.5"
+                        accessibilityRole="alert"
+                      >
+                        {friendlyError("maxPrice", errors.maxPrice)}
+                      </Text>
+                    ) : null}
+
+                    <View className="h-4" />
+                    <Label>Near</Label>
+                    <Controller
+                      control={control}
+                      name="location"
+                      render={({ field: { value, onChange, onBlur } }) => (
+                        <TextInput
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          placeholder="Town or region, e.g. Techiman"
+                          placeholderTextColor={colors.inkFaint}
+                          accessibilityLabel="Location"
+                          className={`${inputBase} ${
+                            errors.location ? "border-danger" : "border-line"
+                          }`}
+                        />
+                      )}
+                    />
+                    {errors.location ? (
+                      <Text
+                        className="text-[12.5px] text-danger mt-1.5"
+                        accessibilityRole="alert"
+                      >
+                        {friendlyError("location", errors.location)}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            </View>
           )}
-          {hasSearched ? (
-            <View className="px-5 mt-6">
+
+          {hasSearched && !showForm ? (
+            <View className="px-5 mt-5">
               {matches.isLoading ? (
                 <View className="items-center py-12">
                   <ActivityIndicator color={colors.primary} size="large" />
@@ -511,10 +572,10 @@ export function MatchResultsPage() {
                 />
               ) : (
                 <>
-                  <SectionHeader
-                    title="Results"
-                    subtitle={`${resultCount} farmer${resultCount === 1 ? "" : "s"} matched`}
-                  />
+                  <Text className="text-[17px] font-extrabold text-ink tracking-[-0.2px] mb-3">
+                    {resultCount} {resultCount === 1 ? "match" : "matches"} for
+                    you
+                  </Text>
                   <FlatList
                     data={matches.data.results}
                     keyExtractor={(item) => item.id}
@@ -538,7 +599,52 @@ export function MatchResultsPage() {
             </View>
           ) : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+
+        {showForm ? (
+          <View
+            className="bg-white border-t border-line/60 px-5 pt-3 pb-3"
+            style={shadows.md}
+          >
+            <View className="flex-row items-center mb-2.5">
+              <Feather
+                name={canSearch ? "check-circle" : "search"}
+                size={14}
+                color={canSearch ? colors.primary : colors.inkMuted}
+              />
+              <Text
+                className={`ml-2 flex-1 text-[13px] ${
+                  canSearch
+                    ? "font-bold text-ink"
+                    : "font-medium text-ink-muted"
+                }`}
+                numberOfLines={1}
+              >
+                {draftSummary}
+              </Text>
+            </View>
+            <View className="flex-row" style={{ gap: 12 }}>
+              {hasSearched ? (
+                <View className="flex-1">
+                  <Button
+                    label="Cancel"
+                    variant="secondary"
+                    size="lg"
+                    onPress={() => setIsFormExpanded(false)}
+                  />
+                </View>
+              ) : null}
+              <View style={{ flex: hasSearched ? 2 : 1 }}>
+                <Button
+                  label="Search matches"
+                  icon="search"
+                  size="lg"
+                  onPress={handleSubmit(onSubmit)}
+                />
+              </View>
+            </View>
+          </View>
+        ) : null}
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

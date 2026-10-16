@@ -1,5 +1,9 @@
 import { v2 as cloudinary } from "cloudinary";
-import { ServiceUnavailableError } from "../../errors/commonErrors.js";
+import {
+  ServiceUnavailableError,
+  UploadProviderError,
+} from "../../errors/commonErrors.js";
+import { logger } from "../utils/logger.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -7,9 +11,17 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Phones on mobile data are slow; the provider call itself should not hang
+// forever and tie up a request (and the 5-10 MB buffer held in memory).
+const UPLOAD_TIMEOUT_MS = 45_000;
+
 // Uploads an in-memory image buffer (from multer) to Cloudinary and
 // resolves with the resulting secure URL. Wrapped in a Promise since
 // Cloudinary's stream API is callback-based.
+//
+// Provider failures are converted to UploadProviderError (HTTP 502) instead of
+// leaking Cloudinary's plain `{ message, http_code }` objects, which the error
+// handler could only report as an anonymous 500.
 export function uploadImageBuffer(
   buffer,
   {
@@ -22,9 +34,16 @@ export function uploadImageBuffer(
     !process.env.CLOUDINARY_API_KEY ||
     !process.env.CLOUDINARY_API_SECRET
   ) {
+    logger.error("Image storage is not configured", {
+      missing: [
+        "CLOUDINARY_CLOUD_NAME",
+        "CLOUDINARY_API_KEY",
+        "CLOUDINARY_API_SECRET",
+      ].filter((name) => !process.env[name]),
+    });
     return Promise.reject(
       new ServiceUnavailableError(
-        "Evidence storage is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.",
+        "Photo uploads are temporarily unavailable. Please try again later.",
       ),
     );
   }
@@ -35,12 +54,28 @@ export function uploadImageBuffer(
         folder,
         resource_type: "image",
         transformation,
+        timeout: UPLOAD_TIMEOUT_MS,
       },
       (error, result) => {
-        if (error) return reject(error);
+        if (error || !result?.secure_url) {
+          logger.error("Image provider upload failed", {
+            providerMessage: error?.message,
+            providerStatus: error?.http_code,
+            folder,
+          });
+          return reject(
+            new UploadProviderError(undefined, null, error ?? undefined),
+          );
+        }
         resolve(result.secure_url);
       },
     );
+    uploadStream.on("error", (streamError) => {
+      logger.error("Image upload stream error", {
+        providerMessage: streamError?.message,
+      });
+      reject(new UploadProviderError(undefined, null, streamError));
+    });
     uploadStream.end(buffer);
   });
 }

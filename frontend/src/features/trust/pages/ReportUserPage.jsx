@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, ScrollView, KeyboardAvoidingView } from "react-native";
+import { View, ScrollView } from "react-native";
+import { KeyboardAvoider } from "../../../components/ui/KeyboardAvoider.jsx";
 import { Text, TextInput } from "../../../components/ui/AppText.jsx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -55,7 +56,7 @@ export function ReportUserPage() {
           />
         }
       />
-      <KeyboardAvoidingView className="flex-1">
+      <KeyboardAvoider className="flex-1">
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 32 }}>
           <Text className="text-[13px] text-ink-muted mb-4">
             Reports are reviewed by HarvestLink administrators. Provide factual
@@ -102,7 +103,7 @@ export function ReportUserPage() {
             onPress={submit}
           />
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

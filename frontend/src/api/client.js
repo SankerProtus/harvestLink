@@ -1,7 +1,7 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { env } from "../config/env.js";
-import { isRefreshTokenReuseError } from "../lib/errorMap.js";
+import { isRefreshTokenReuseError } from "../../src/lib/errorMap.js";
 
 const REFRESH_TOKEN_STORAGE_KEY = "harvestlink_refresh_token";
 

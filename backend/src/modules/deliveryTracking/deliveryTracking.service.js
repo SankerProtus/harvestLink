@@ -13,6 +13,7 @@ import {
   OrderNotFoundError,
   UnauthorizedOrderAccessError,
   InvalidOrderStatusTransitionError,
+  HandoverCodeRequiredError,
   OrderCancellationNotAllowedError,
   LocationReportingNotAllowedError,
   SelfOrderNotAllowedError,
@@ -178,12 +179,19 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
     }
     rule = resolveCancellationRule(currentStatus, userId, order);
     if (!rule) {
-      throw new OrderCancellationNotAllowedError();
+      const message =
+        currentStatus === ORDER_STATUS.CANCELLATION_REQUESTED
+          ? "A cancellation request is already waiting for a decision on this order"
+          : currentStatus === ORDER_STATUS.DISPUTED
+            ? "Orders under dispute can only be settled by our support team"
+            : undefined;
+      throw new OrderCancellationNotAllowedError(message, { currentStatus });
     }
   } else {
     if (newStatus === ORDER_STATUS.DELIVERED) {
-      throw new InvalidOrderStatusTransitionError(
+      throw new HandoverCodeRequiredError(
         "Delivery must be verified with the buyer handover code",
+        { currentStatus },
       );
     }
     rule = TRANSITIONS[`${currentStatus}->${newStatus}`];
