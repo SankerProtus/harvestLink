@@ -326,7 +326,7 @@ export function VerificationRequestPage() {
             className="bg-white border-t border-line/60 px-5 pt-3 pb-3"
             style={shadows.md}
           >
-            <Button
+             <Button
               label="Submit for review"
               icon="send"
               size="lg"
