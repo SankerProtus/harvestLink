@@ -84,13 +84,13 @@ function normalizeError(error) {
 
 const refreshClient = axios.create({
   baseURL: env.API_BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
 });
 
 // Main API client
 export const apiClient = axios.create({
   baseURL: env.API_BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
 });
 
 apiClient.interceptors.request.use((config) => {

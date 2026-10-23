@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://mini-project-dbnd.onrender.com/api",
+        "EXPO_PUBLIC_API_BASE_URL": "https://harvestlink-fgou.onrender.com/api",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "229335853828-cru6996fnh2m54tkg4mr72dqm5eqc11r.apps.googleusercontent.com"
       }
     },
@@ -27,7 +27,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://mini-project-dbnd.onrender.com/api",
+        "EXPO_PUBLIC_API_BASE_URL": "https://harvestlink-fgou.onrender.com/api",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "229335853828-cru6996fnh2m54tkg4mr72dqm5eqc11r.apps.googleusercontent.com"
       }
     }
