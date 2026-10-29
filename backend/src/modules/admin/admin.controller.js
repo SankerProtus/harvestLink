@@ -15,6 +15,10 @@ import {
   listAdminOrders,
   listAdminPayments,
   listAdminAuditLogs,
+  getAdminOrderDetail,
+  getAdminPaymentDetail,
+  getAdminListingDetail,
+  getAdminAuditEventDetail,
   setUserAccountStatus,
 } from "./admin.service.js";
 
@@ -113,6 +117,38 @@ export async function getPayments(req, res, next) {
 export async function getAuditLogs(req, res, next) {
   try { return sendSuccess(res, 200, await listAdminAuditLogs()); }
   catch (err) { next(err); }
+}
+
+const orderIdParamSchema = z.object({ orderId: z.string().uuid() }).strict();
+const paymentIdParamSchema = z.object({ paymentId: z.string().uuid() }).strict();
+const eventIdParamSchema = z.object({ eventId: z.string().uuid() }).strict();
+
+export async function getOrderDetail(req, res, next) {
+  try {
+    const { orderId } = parseOrThrow(orderIdParamSchema, req.params);
+    return sendSuccess(res, 200, await getAdminOrderDetail(orderId));
+  } catch (err) { next(err); }
+}
+
+export async function getPaymentDetail(req, res, next) {
+  try {
+    const { paymentId } = parseOrThrow(paymentIdParamSchema, req.params);
+    return sendSuccess(res, 200, await getAdminPaymentDetail(paymentId));
+  } catch (err) { next(err); }
+}
+
+export async function getListingDetail(req, res, next) {
+  try {
+    const { listingId } = parseOrThrow(listingIdParamSchema, req.params);
+    return sendSuccess(res, 200, await getAdminListingDetail(listingId));
+  } catch (err) { next(err); }
+}
+
+export async function getAuditEventDetail(req, res, next) {
+  try {
+    const { eventId } = parseOrThrow(eventIdParamSchema, req.params);
+    return sendSuccess(res, 200, await getAdminAuditEventDetail(eventId));
+  } catch (err) { next(err); }
 }
 
 export async function postVerificationDecision(req, res, next) {

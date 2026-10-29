@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as SplashScreen from "expo-splash-screen";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -28,6 +29,10 @@ import { ReportUserPage } from "../features/trust/pages/ReportUserPage.jsx";
 import { AdminModerationPage } from "../features/admin/pages/AdminModerationPage.jsx";
 import { AdminDisputeDetailPage } from "../features/admin/pages/AdminDisputeDetailPage.jsx";
 import { AdminUserDetailPage } from "../features/admin/pages/AdminUserDetailPage.jsx";
+import { AdminOrderDetailPage } from "../features/admin/pages/AdminOrderDetailPage.jsx";
+import { AdminPaymentDetailPage } from "../features/admin/pages/AdminPaymentDetailPage.jsx";
+import { AdminListingDetailPage } from "../features/admin/pages/AdminListingDetailPage.jsx";
+import { AdminAuditEventDetailPage } from "../features/admin/pages/AdminAuditEventDetailPage.jsx";
 
 import { ListingInterestPage } from "../features/marketplace/pages/ListingInterestPage.jsx";
 import { NotificationsPage } from "../features/notifications/pages/NotificationsPage.jsx";
@@ -136,6 +141,22 @@ function ProtectedNavigator() {
         name="AdminUserDetail"
         component={AdminUserDetailPage}
       />
+      <ProtectedStack.Screen
+        name="AdminOrderDetail"
+        component={AdminOrderDetailPage}
+      />
+      <ProtectedStack.Screen
+        name="AdminPaymentDetail"
+        component={AdminPaymentDetailPage}
+      />
+      <ProtectedStack.Screen
+        name="AdminListingDetail"
+        component={AdminListingDetailPage}
+      />
+      <ProtectedStack.Screen
+        name="AdminAuditDetail"
+        component={AdminAuditEventDetailPage}
+      />
     </ProtectedStack.Navigator>
   );
 }
@@ -148,7 +169,19 @@ export function AppNavigator() {
     getHasSeenOnboarding().then(setHasSeenOnboardingState);
   }, []);
 
-  if (isInitializing || hasSeenOnboarding === null) {
+  const isBooting = isInitializing || hasSeenOnboarding === null;
+
+  // On a fresh install there is no saved session, so boot finishes within a
+  // few milliseconds and BootScreen can unmount before its onLayout ever
+  // fires. Hide the native splash as soon as real UI is showing instead of
+  // relying on BootScreen's layout event alone.
+  useEffect(() => {
+    if (!isBooting) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isBooting]);
+
+  if (isBooting) {
     return <BootScreen />;
   }
 

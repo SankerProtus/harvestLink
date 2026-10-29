@@ -240,6 +240,237 @@ export async function listAdminAuditLogs() {
   });
 }
 
+function adminRecordNotFound(entity, code) {
+  return new AppError(`${entity} not found`, {
+    statusCode: 404,
+    code,
+    isOperational: true,
+  });
+}
+
+const PARTY_SELECT = {
+  id: true,
+  fullName: true,
+  phone: true,
+  verificationLevel: true,
+};
+
+/**
+ * Full read-only view of one order for the admin detail screen. Handover
+ * codes expose only their state (never the hash), and payment metadata is
+ * deliberately left out.
+ */
+export async function getAdminOrderDetail(orderId) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      listing: {
+        select: {
+          id: true,
+          title: true,
+          location: true,
+          quantityUnit: true,
+          crop: { select: { name: true } },
+        },
+      },
+      buyer: { select: PARTY_SELECT },
+      farmer: { select: PARTY_SELECT },
+      payments: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          provider: true,
+          status: true,
+          amount: true,
+          currency: true,
+          createdAt: true,
+        },
+      },
+      escrow: {
+        select: {
+          status: true,
+          amount: true,
+          currency: true,
+          fundedAt: true,
+          releasedAt: true,
+        },
+      },
+      refunds: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          amount: true,
+          currency: true,
+          reason: true,
+          processedAt: true,
+          createdAt: true,
+        },
+      },
+      payouts: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          amount: true,
+          currency: true,
+          failureReason: true,
+          processedAt: true,
+          createdAt: true,
+        },
+      },
+      disputes: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          reason: true,
+          createdAt: true,
+          resolvedAt: true,
+        },
+      },
+      cancellationRequests: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          reason: true,
+          createdAt: true,
+          decidedAt: true,
+          requester: { select: { fullName: true, role: true } },
+        },
+      },
+      review: { select: { rating: true, comment: true, createdAt: true } },
+      handoverCode: {
+        select: { expiresAt: true, usedAt: true, attempts: true },
+      },
+    },
+  });
+  if (!order) throw adminRecordNotFound("Order", "ADMIN_ORDER_NOT_FOUND");
+  return order;
+}
+
+export async function getAdminPaymentDetail(paymentId) {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: {
+      id: true,
+      orderId: true,
+      provider: true,
+      providerPaymentId: true,
+      amount: true,
+      currency: true,
+      status: true,
+      authorizedAt: true,
+      capturedAt: true,
+      failedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      buyer: { select: PARTY_SELECT },
+      order: {
+        select: {
+          id: true,
+          status: true,
+          quantity: true,
+          pricePerUnitAtOrder: true,
+          protectionEndsAt: true,
+          listing: { select: { title: true } },
+          farmer: { select: PARTY_SELECT },
+        },
+      },
+      escrow: {
+        select: {
+          status: true,
+          provider: true,
+          providerEscrowId: true,
+          amount: true,
+          currency: true,
+          fundedAt: true,
+          releasedAt: true,
+        },
+      },
+      refunds: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          providerRefundId: true,
+          amount: true,
+          currency: true,
+          reason: true,
+          processedAt: true,
+          createdAt: true,
+        },
+      },
+      payouts: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          providerPayoutId: true,
+          amount: true,
+          currency: true,
+          failureReason: true,
+          processedAt: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+  if (!payment) throw adminRecordNotFound("Payment", "ADMIN_PAYMENT_NOT_FOUND");
+  return payment;
+}
+
+export async function getAdminListingDetail(listingId) {
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: {
+      crop: { select: { id: true, name: true, category: true } },
+      farmer: {
+        select: { ...PARTY_SELECT, accountStatus: true },
+      },
+      _count: { select: { orders: true, interests: true, savedBy: true } },
+      orders: {
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          status: true,
+          quantity: true,
+          pricePerUnitAtOrder: true,
+          createdAt: true,
+          buyer: { select: { fullName: true } },
+        },
+      },
+    },
+  });
+  if (!listing) throw adminRecordNotFound("Listing", "ADMIN_LISTING_NOT_FOUND");
+  return listing;
+}
+
+export async function getAdminAuditEventDetail(eventId) {
+  const event = await prisma.auditLog.findUnique({
+    where: { id: eventId },
+    include: { actor: { select: { id: true, fullName: true, role: true } } },
+  });
+  if (!event) throw adminRecordNotFound("Audit event", "ADMIN_AUDIT_NOT_FOUND");
+
+  // Other events recorded against the same record, newest first, so the
+  // admin can read the history around this one.
+  const related = await prisma.auditLog.findMany({
+    where: {
+      entityType: event.entityType,
+      entityId: event.entityId,
+      id: { not: event.id },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    include: { actor: { select: { fullName: true, role: true } } },
+  });
+
+  return { ...event, related };
+}
+
 export async function listPendingVerificationRecords() {
   return prisma.verificationRecord.findMany({
     where: { status: "PENDING" },

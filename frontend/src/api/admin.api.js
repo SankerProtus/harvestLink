@@ -9,6 +9,18 @@ export function getListings() { return apiClient.get("/admin/listings"); }
 export function getOrders() { return apiClient.get("/admin/orders"); }
 export function getPayments() { return apiClient.get("/admin/payments"); }
 export function getAuditLogs() { return apiClient.get("/admin/audit-logs"); }
+export function getOrderDetail(orderId) {
+  return apiClient.get(`/admin/orders/${orderId}`);
+}
+export function getPaymentDetail(paymentId) {
+  return apiClient.get(`/admin/payments/${paymentId}`);
+}
+export function getListingDetail(listingId) {
+  return apiClient.get(`/admin/listings/${listingId}`);
+}
+export function getAuditEventDetail(eventId) {
+  return apiClient.get(`/admin/audit-logs/${eventId}`);
+}
 export function setUserStatus(userId, payload) {
   return apiClient.post(`/admin/users/${userId}/status`, payload);
 }

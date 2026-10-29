@@ -18,6 +18,10 @@ import {
   getOrders,
   getPayments,
   getAuditLogs,
+  getOrderDetail,
+  getPaymentDetail,
+  getListingDetail,
+  getAuditEventDetail,
 } from "./admin.controller.js";
 
 const router = Router();
@@ -35,9 +39,13 @@ router.get("/overview", getOverview);
 router.get("/users", getUsers);
 router.post("/users/:userId/status", postUserStatus);
 router.get("/listings", getListings);
+router.get("/listings/:listingId", getListingDetail);
 router.get("/orders", getOrders);
+router.get("/orders/:orderId", getOrderDetail);
 router.get("/payments", getPayments);
+router.get("/payments/:paymentId", getPaymentDetail);
 router.get("/audit-logs", getAuditLogs);
+router.get("/audit-logs/:eventId", getAuditEventDetail);
 router.get("/verification-queue", getVerificationQueue);
 router.post("/verification-queue/:recordId/decision", postVerificationDecision);
 router.get("/price-review-queue", getPriceReviewQueue);

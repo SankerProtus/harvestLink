@@ -12,6 +12,10 @@ export const adminQueryKeys = {
   orders: ["admin", "orders"],
   payments: ["admin", "payments"],
   auditLogs: ["admin", "auditLogs"],
+  order: (id) => ["admin", "order", id],
+  payment: (id) => ["admin", "payment", id],
+  listing: (id) => ["admin", "listing", id],
+  auditEvent: (id) => ["admin", "auditEvent", id],
 };
 
 export function useAdminOverview({ enabled = true } = {}) {
@@ -44,6 +48,24 @@ export const useAdminListings = () => useAdminList(adminQueryKeys.listings, admi
 export const useAdminOrders = () => useAdminList(adminQueryKeys.orders, adminApi.getOrders);
 export const useAdminPayments = () => useAdminList(adminQueryKeys.payments, adminApi.getPayments);
 export const useAdminAuditLogs = () => useAdminList(adminQueryKeys.auditLogs, adminApi.getAuditLogs);
+
+// Read-only detail records for the Operations drill-down screens.
+function useAdminDetail(key, queryFn, id) {
+  return useQuery({
+    queryKey: key(id),
+    queryFn: () => queryFn(id),
+    enabled: Boolean(id),
+  });
+}
+
+export const useAdminOrder = (id) =>
+  useAdminDetail(adminQueryKeys.order, adminApi.getOrderDetail, id);
+export const useAdminPayment = (id) =>
+  useAdminDetail(adminQueryKeys.payment, adminApi.getPaymentDetail, id);
+export const useAdminListing = (id) =>
+  useAdminDetail(adminQueryKeys.listing, adminApi.getListingDetail, id);
+export const useAdminAuditEvent = (id) =>
+  useAdminDetail(adminQueryKeys.auditEvent, adminApi.getAuditEventDetail, id);
 
 export function useVerificationQueue() {
   return useQuery({

@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { FlatList, RefreshControl, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Text } from "../../../components/ui/AppText.jsx";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.jsx";
@@ -14,7 +15,7 @@ import {
   useAdminListings,
   useAdminOrders,
   useAdminPayments,
-} from "../hooks/adminHooks.js";
+} from "../../../../../operations-detail-screens/Frontend/src/features/admin/hooks/adminHooks.js";
 import { getOrderStatusMeta } from "../../deliveryTracking/lib/orderStatus.js";
 import {
   AdminScreen,
@@ -104,6 +105,14 @@ const SEARCH_TEXT = {
   audit: (a) => `${a.action} ${a.entityType} ${a.actor?.fullName ?? ""}`,
 };
 
+// Where each section's rows open, and the route param that carries the id.
+const DETAIL_ROUTES = {
+  orders: { screen: "AdminOrderDetail", param: "orderId" },
+  payments: { screen: "AdminPaymentDetail", param: "paymentId" },
+  listings: { screen: "AdminListingDetail", param: "listingId" },
+  audit: { screen: "AdminAuditDetail", param: "eventId" },
+};
+
 const OpsRow = memo(function OpsRow({
   icon,
   tone,
@@ -114,16 +123,24 @@ const OpsRow = memo(function OpsRow({
   amount,
   note,
   isLast,
+  onPress,
 }) {
   const label = [title, subtitle, pill?.label, amount, time, note]
     .filter(Boolean)
     .join(", ");
+  const rowClass = `flex-row px-4 py-3.5 ${isLast ? "" : "border-b border-line/60"}`;
 
   return (
-    <View
-      accessible
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? "button" : undefined}
       accessibilityLabel={label}
-      className={`flex-row px-4 py-3.5 bg-white ${isLast ? "" : "border-b border-line/60"}`}
+      accessibilityHint={onPress ? "Opens full details" : undefined}
+      style={({ pressed }) => ({
+        backgroundColor: pressed && onPress ? colors.surface : colors.white,
+      })}
+      className={rowClass}
     >
       <IconBubble name={icon} tone={tone} />
       <View className="flex-1 min-w-0 ml-3">
@@ -172,7 +189,12 @@ const OpsRow = memo(function OpsRow({
           </Text>
         ) : null}
       </View>
-    </View>
+      {onPress ? (
+        <View className="justify-center ml-2">
+          <Feather name="chevron-right" size={16} color={colors.inkFaint} />
+        </View>
+      ) : null}
+    </Pressable>
   );
 });
 
@@ -183,7 +205,8 @@ function orderValue(order) {
   return formatCurrency(total, order.payments?.[0]?.currency ?? "GHS");
 }
 
-function renderRow(section, item, isLast) {
+function renderRow(section, item, isLast, onOpen) {
+  const onPress = () => onOpen(section, item.id);
   if (section === "orders") {
     const meta = getOrderStatusMeta(item.status);
     return (
@@ -197,6 +220,7 @@ function renderRow(section, item, isLast) {
         amount={orderValue(item)}
         note={item.disputes?.length ? "Active dispute under review" : undefined}
         isLast={isLast}
+        onPress={onPress}
       />
     );
   }
@@ -224,6 +248,7 @@ function renderRow(section, item, isLast) {
         amount={formatCurrency(item.amount, item.currency)}
         note={note}
         isLast={isLast}
+        onPress={onPress}
       />
     );
   }
@@ -245,6 +270,7 @@ function renderRow(section, item, isLast) {
         amount={`${formatCurrency(item.pricePerUnit)} / ${String(item.quantityUnit ?? "").toLowerCase()}`}
         note={`${item._count?.orders ?? 0} orders · ${item._count?.interests ?? 0} interests`}
         isLast={isLast}
+        onPress={onPress}
       />
     );
   }
@@ -263,11 +289,18 @@ function renderRow(section, item, isLast) {
           : undefined
       }
       isLast={isLast}
+      onPress={onPress}
     />
   );
 }
 
 function Section({ section, query, search, filter }) {
+  const navigation = useNavigation();
+  const openDetail = (type, id) => {
+    const target = DETAIL_ROUTES[type];
+    navigation.navigate(target.screen, { [target.param]: id });
+  };
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     const test = FILTERS[section].find((f) => f.value === filter)?.test;
@@ -295,7 +328,7 @@ function Section({ section, query, search, filter }) {
       initialNumToRender={10}
       windowSize={7}
       renderItem={({ item, index }) =>
-        renderRow(section, item, index === rows.length - 1)
+        renderRow(section, item, index === rows.length - 1, openDetail)
       }
       refreshControl={
         <RefreshControl
