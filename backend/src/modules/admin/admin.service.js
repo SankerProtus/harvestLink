@@ -11,6 +11,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function getAdminOverview() {
   const since7d = new Date(Date.now() - 7 * DAY_MS);
+  const since14d = new Date(Date.now() - 14 * DAY_MS);
+  // Start of the 7-day bar chart: midnight UTC, six days before today.
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const seriesStart = new Date(todayStart.getTime() - 6 * DAY_MS);
   const unresolved = { in: ["OPEN", "UNDER_REVIEW"] };
 
   const [
@@ -34,6 +39,9 @@ export async function getAdminOverview() {
     oldestVerification,
     oldestReport,
     escrowTotals,
+    newUsersPrev7d,
+    ordersPrev7d,
+    ordersByDayRows,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: "FARMER" } }),
@@ -81,7 +89,27 @@ export async function getAdminOverview() {
       where: { status: { in: ["FUNDED", "FROZEN", "RELEASED"] } },
       _sum: { amount: true },
     }),
+    prisma.user.count({
+      where: { createdAt: { gte: since14d, lt: since7d }, deletedAt: null },
+    }),
+    prisma.order.count({ where: { createdAt: { gte: since14d, lt: since7d } } }),
+    prisma.$queryRaw`
+      SELECT to_char("createdAt", 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
+      FROM "orders"
+      WHERE "createdAt" >= ${seriesStart}
+      GROUP BY 1
+    `,
   ]);
+
+  const ordersByDayCounts = new Map(
+    ordersByDayRows.map((row) => [row.day, Number(row.count)]),
+  );
+  const ordersByDay = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(seriesStart.getTime() + i * DAY_MS)
+      .toISOString()
+      .slice(0, 10);
+    return { date, count: ordersByDayCounts.get(date) ?? 0 };
+  });
 
   return {
     counts: {
@@ -98,7 +126,14 @@ export async function getAdminOverview() {
       refundPending,
       openReports,
     },
-    trends: { newUsers7d, orders7d, deliveredOrders },
+    trends: {
+      newUsers7d,
+      orders7d,
+      deliveredOrders,
+      newUsersPrev7d,
+      ordersPrev7d,
+      ordersByDay,
+    },
     oldest: {
       dispute: oldestDispute?.createdAt?.toISOString() ?? null,
       verification: oldestVerification?.createdAt?.toISOString() ?? null,
