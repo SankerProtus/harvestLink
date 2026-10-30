@@ -291,8 +291,14 @@ export function FilterChips({ options, value, onChange }) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={{ flexGrow: 0 }}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12 }}
+      // A horizontal ScrollView shrinks by default, so the list below was
+      // eating its height and clipping the chips and their bottom padding.
+      style={{ flexGrow: 0, flexShrink: 0 }}
+      contentContainerStyle={{
+        paddingHorizontal: 20,
+        paddingTop: 2,
+        paddingBottom: 14,
+      }}
     >
       {options.map((o) => (
         <Chip
