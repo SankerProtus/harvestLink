@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Text } from "../../../components/ui/AppText.jsx";
-import { useAdminAuditEvent } from "../../../../../operations-detail-screens/Frontend/src/features/admin/hooks/adminHooks.js";
+import { useAdminAuditEvent } from "../hooks/adminHooks.js";
 import {
   DetailScreen,
   Field,

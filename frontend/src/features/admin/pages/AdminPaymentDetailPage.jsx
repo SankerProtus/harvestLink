@@ -1,7 +1,7 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { formatCurrency } from "../../../lib/currency.js";
 import { getOrderStatusMeta } from "../../deliveryTracking/lib/orderStatus.js";
-import { useAdminPayment } from "../../../../../operations-detail-screens/Frontend/src/features/admin/hooks/adminHooks.js";
+import { useAdminPayment } from "../hooks/adminHooks.js";
 import {
   DetailScreen,
   Field,

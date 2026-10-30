@@ -15,7 +15,7 @@ import {
   useAdminListings,
   useAdminOrders,
   useAdminPayments,
-} from "../../../../../operations-detail-screens/Frontend/src/features/admin/hooks/adminHooks.js";
+} from "../hooks/adminHooks.js";
 import { getOrderStatusMeta } from "../../deliveryTracking/lib/orderStatus.js";
 import {
   AdminScreen,
