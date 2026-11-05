@@ -20,21 +20,68 @@ import {
   uploadListingPhoto as uploadListingPhotoService,
 } from "./marketplace.service.js";
 
-import { BadRequestError } from "../../errors/commonErrors.js";
+import { BadRequestError, ConflictError } from "../../errors/commonErrors.js";
+import { requireIdempotencyKey } from "../../common/utils/idempotency.js";
+import { logger } from "../../common/utils/logger.js";
+import {
+  claimListingCreation,
+  completeListingCreation,
+  failListingCreation,
+} from "./idempotency.repository.js";
 
 function sendSuccess(res, statusCode, data) {
   return res.status(statusCode).json({ success: true, data });
 }
 
 export async function createListing(req, res, next) {
+  let idempotencyRecordId;
   try {
     const input = parseOrThrow(createListingSchema, req.body);
+    const key =
+      typeof req.get === "function" ? req.get("Idempotency-Key") : undefined;
+    if (!key) {
+      const result = await createListingService({
+        ...input,
+        farmerId: req.user.id,
+      });
+      return sendSuccess(res, 201, result);
+    }
+    requireIdempotencyKey(key);
+    const claim = await claimListingCreation({
+      key,
+      userId: req.user.id,
+      request: input,
+    });
+    if (claim.status === "conflict") {
+      throw new ConflictError(
+        "Idempotency key was used with different request data",
+      );
+    }
+    if (claim.status === "processing") {
+      throw new ConflictError("This request is already being processed");
+    }
+    if (claim.status === "completed") {
+      return res.status(claim.responseCode).json(claim.responseBody);
+    }
+    idempotencyRecordId = claim.id;
     const result = await createListingService({
       ...input,
       farmerId: req.user.id,
     });
-    return sendSuccess(res, 201, result);
+    const responseBody = { success: true, data: result };
+    await completeListingCreation(idempotencyRecordId, responseBody);
+    return res.status(201).json(responseBody);
   } catch (err) {
+    if (idempotencyRecordId) {
+      try {
+        await failListingCreation(idempotencyRecordId);
+      } catch (cleanupError) {
+        logger.error("Failed to release listing idempotency record", {
+          idempotencyRecordId,
+          error: cleanupError.message,
+        });
+      }
+    }
     next(err);
   }
 }

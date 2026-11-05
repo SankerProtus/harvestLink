@@ -16,8 +16,10 @@ export function getMyListings() {
   return apiClient.get("/marketplace/listings/mine");
 }
 
-export function createListing(payload) {
-  return apiClient.post("/marketplace/listings", payload);
+export function createListing(payload, idempotencyKey) {
+  return apiClient.post("/marketplace/listings", payload, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
 }
 
 export function updateListing(listingId, updates) {

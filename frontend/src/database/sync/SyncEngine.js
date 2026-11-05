@@ -49,16 +49,19 @@ function extractEditableFields(updates) {
 }
 
 async function handleCreateListing(operation) {
-  // No conflict possible: this listing has never existed remotely.
+  const { idempotencyKey, ...requestPayload } = operation.payload;
   const normalizedPayload = {
-    ...operation.payload,
+    ...requestPayload,
     images: await normalizeListingImageUrls(
-      operation.payload.images,
+      requestPayload.images,
       uploadListingPhoto,
     ),
   };
 
-  const remoteListing = await createRemoteListing(normalizedPayload);
+  const remoteListing = await createRemoteListing(
+    normalizedPayload,
+    idempotencyKey,
+  );
 
   await updateLocalListing(operation.entityLocalId, {
     remoteId: remoteListing.id,

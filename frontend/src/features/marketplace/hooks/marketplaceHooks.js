@@ -1,4 +1,10 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useRef } from "react";
 import * as marketplaceApi from "../../../api/marketplace.api.js";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { isOnline } from "../../../lib/networkMonitor.js";
@@ -10,6 +16,7 @@ import {
 } from "../../../database/repositories/ListingRepository.js";
 import { enqueue as enqueueOperation } from "../../../database/sync/SyncQueue.js";
 import { OPERATION_TYPES } from "../../../database/sync/SyncEngine.js";
+import * as Crypto from "expo-crypto";
 import { normalizeListingImageUrls } from "../../../../src/features/marketplace/lib/normalizeListingImageUrls.js";
 
 export const marketplaceQueryKeys = {
@@ -97,20 +104,32 @@ export function useMyListings() {
 export function useCreateListing() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const idempotencyKeys = useRef(new WeakMap()).current;
+  const normalizedPayloads = useRef(new WeakMap()).current;
 
   return useMutation({
     mutationFn: async (payload) => {
       const online = await isOnline();
+      let idempotencyKey = idempotencyKeys.get(payload);
+      if (!idempotencyKey) {
+        idempotencyKey = Crypto.randomUUID();
+        idempotencyKeys.set(payload, idempotencyKey);
+      }
 
       if (online) {
-        const uploadedImages = await normalizeListingImageUrls(
-          payload.images,
-          marketplaceApi.uploadListingPhoto,
+        let normalizedPayload = normalizedPayloads.get(payload);
+        if (!normalizedPayload) {
+          const uploadedImages = await normalizeListingImageUrls(
+            payload.images,
+            marketplaceApi.uploadListingPhoto,
+          );
+          normalizedPayload = { ...payload, images: uploadedImages };
+          normalizedPayloads.set(payload, normalizedPayload);
+        }
+        const remoteListing = await marketplaceApi.createListing(
+          normalizedPayload,
+          idempotencyKey,
         );
-        const remoteListing = await marketplaceApi.createListing({
-          ...payload,
-          images: uploadedImages,
-        });
 
         try {
           await createLocalListing({
@@ -160,7 +179,7 @@ export function useCreateListing() {
         operationType: OPERATION_TYPES.CREATE_LISTING,
         entityType: "listing",
         entityLocalId: localListing.localId,
-        payload,
+        payload: { ...payload, idempotencyKey },
       });
 
       return localListing;
