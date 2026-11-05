@@ -8,13 +8,21 @@ import {
 const DEFAULT_MAX_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 200;
 
+function maskPhone(phone) {
+  const digits = phone.replace(/[^\d]/g, "");
+  if (digits.length < 4) return "[MASKED]";
+
+  const prefix = phone.startsWith("+") ? phone.slice(0, 5) : digits.slice(0, 4);
+  return `${prefix}****${digits.slice(-2)}`;
+}
+
 // Mock SMS provider for development and testing
 export const mockSmsProvider = {
   async send({ phone, message }) {
     // Print the raw message in development mode so you can see the OTP code
     if (process.env.NODE_ENV !== "production") {
       console.log("\n========================================");
-      console.log(`💬 MOCK SMS TO ${phone}:`);
+      console.log(`💬 MOCK SMS TO ${maskPhone(phone)}:`);
       console.log(`   ${message}`);
       console.log("========================================\n");
     }
@@ -26,7 +34,7 @@ export const mockSmsProvider = {
   },
 };
 
-const ARKESEL_SEND_URL = "https://sms.arkesel.com/sms/api";
+const ARKESEL_SEND_URL = "https://sms.arkesel.com/api/v2/sms/send";
 
 function normalizePhoneForArkesel(phone) {
   const digits = phone.replace(/[^\d]/g, "");
@@ -53,16 +61,25 @@ export const arkeselSmsProvider = {
       );
     }
 
+    const headers = {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+    };
+
     const params = new URLSearchParams({
-      action: "send-sms",
-      api_key: apiKey,
-      to: normalizePhoneForArkesel(phone),
-      from: senderId,
-      sms: message,
+      sender: senderId,
+      message,
+      recipients: normalizePhoneForArkesel(phone),
     });
 
     const response = await fetch(`${ARKESEL_SEND_URL}?${params.toString()}`, {
-      method: "GET",
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        sender: senderId,
+        message,
+        recipients: [normalizePhoneForArkesel(phone)],
+      }),
     });
 
     const result = await response.json().catch(() => ({}));
@@ -73,7 +90,42 @@ export const arkeselSmsProvider = {
       );
     }
 
-    logger.info("Arkesel SMS dispatched", { phone });
+    logger.info("Arkesel SMS dispatched", { phone: maskPhone(phone) });
+  },
+};
+
+export const telegramSmsProvider = {
+  async send({ phone, message }) {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    if (!botToken || !chatId) {
+      throw new Error(
+        "Telegram SMS provider is not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID.",
+      );
+    }
+
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    const body = {
+      chat_id: chatId,
+      text: message,
+    };
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Telegram SMS send failed (${response.status}): ${await response.text()}`,
+      );
+    }
+
+    logger.info("Telegram SMS dispatched", { phone: maskPhone(phone) });
   },
 };
 
@@ -122,9 +174,11 @@ export function resolveSmsProvider() {
       return mockSmsProvider;
     case "arkesel":
       return arkeselSmsProvider;
+    case "telegram":
+      return telegramSmsProvider;
     default:
       throw new UnsupportedSmsProviderError(
-        `Unsupported SMS provider: "${providerName}". Supported providers are "mock" and "arkesel".`,
+        `Unsupported SMS provider: "${providerName}". Supported providers are "mock", "arkesel", and "telegram".`,
       );
   }
 }

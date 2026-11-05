@@ -173,10 +173,15 @@ export async function rotateRefreshToken({
   newTokenData,
 }) {
   return prisma.$transaction(async (tx) => {
-    await tx.refreshToken.update({
-      where: { id: oldTokenId },
-      data: { revokedAt: new Date(), revokedReason },
+    const revoked = await tx.refreshToken.updateMany({
+      where: { id: oldTokenId, revokedAt: null },
+      data: {
+        revokedAt: new Date(),
+        rotatedAt: new Date(),
+        revokedReason,
+      },
     });
+    if (revoked.count !== 1) return null;
     return tx.refreshToken.create({ data: newTokenData });
   });
 }
@@ -202,9 +207,9 @@ export async function findLatestActiveOtpCode(phone, purpose) {
   });
 }
 
-export async function incrementOtpAttempts(id) {
-  return prisma.otpCode.update({
-    where: { id },
+export async function incrementOtpAttempts(id, maxAttempts) {
+  return prisma.otpCode.updateMany({
+    where: { id, consumedAt: null, attempts: { lt: maxAttempts } },
     data: { attempts: { increment: 1 } },
   });
 }

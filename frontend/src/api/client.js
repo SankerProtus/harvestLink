@@ -51,6 +51,13 @@ function notifyAuthFailure(error) {
   authFailureListeners.forEach((listener) => listener(error));
 }
 
+function isAccessTokenExpired(error) {
+  return (
+    error?.response?.status === 401 &&
+    error?.response?.data?.error?.details?.reason === "TOKEN_EXPIRED"
+  );
+}
+
 // Error normalization
 function normalizeError(error) {
   const backendError = error?.response?.data?.error;
@@ -128,7 +135,11 @@ apiClient.interceptors.response.use(undefined, async (error) => {
 
   const isAuthEndpoint = originalRequest?.url?.includes("/auth/refresh");
 
-  if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+  if (
+    isAccessTokenExpired(error) &&
+    !originalRequest._retry &&
+    !isAuthEndpoint
+  ) {
     if (isRefreshing) {
       // Another request already triggered a refresh — wait for it.
       return new Promise((resolve, reject) => {
@@ -173,14 +184,16 @@ apiClient.interceptors.response.use(undefined, async (error) => {
     } catch (refreshError) {
       isRefreshing = false;
       onTokenRefreshed(null); // wake up any waiting requests with failure
-      await clearTokens();
 
       const normalized = normalizeError(refreshError);
-      notifyAuthFailure(
-        isRefreshTokenReuseError(normalized)
-          ? { ...normalized, isSecurityLogout: true }
-          : normalized,
-      );
+      if (normalized.code !== "NETWORK_ERROR") {
+        await clearTokens();
+        notifyAuthFailure(
+          isRefreshTokenReuseError(normalized)
+            ? { ...normalized, isSecurityLogout: true }
+            : normalized,
+        );
+      }
       return Promise.reject(normalized);
     }
   }

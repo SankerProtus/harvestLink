@@ -24,13 +24,12 @@ export async function createOrderWithListingLock({
   listingId,
   buyerId,
   quantity,
-  pricePerUnitAtOrder,
 }) {
   const requested = toDecimal(quantity);
 
   return prisma.$transaction(async (tx) => {
     const rows = await tx.$queryRaw`
-      SELECT id, "farmerId", quantity, status, title, "quantityUnit"
+      SELECT id, "farmerId", quantity, status, title, "quantityUnit", "pricePerUnit"
       FROM listings
       WHERE id = ${listingId}::uuid
       FOR UPDATE
@@ -69,7 +68,7 @@ export async function createOrderWithListingLock({
         buyerId,
         farmerId: listing.farmerId,
         quantity: requested,
-        pricePerUnitAtOrder,
+        pricePerUnitAtOrder: listing.pricePerUnit,
         status: ORDER_STATUS.PENDING,
       },
     });

@@ -14,9 +14,3 @@ export const MATCH_CONFIG = Object.freeze({
   LOCATION_MAX_LENGTH: 120,
   MIN_MAX_PRICE: 0.01,
 });
-
-export const MATCH_SORT_ORDER = Object.freeze([
-  "LOCATION_MATCH",
-  "PRICE_ASC",
-  "NEWEST_FIRST",
-]);

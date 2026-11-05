@@ -11,6 +11,8 @@ import {
 } from "./deliveryTracking.controller.js";
 
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
+import { requireRole } from "../../common/middlewares/role.middleware.js";
+import { USER_ROLES } from "../auth/auth.constants.js";
 import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";
 
 const router = Router();
@@ -50,7 +52,13 @@ router.get(
   getMyFarmerSummary,
 );
 
-router.post("/orders", authMiddleware, moderateLimiter, createOrder);
+router.post(
+  "/orders",
+  authMiddleware,
+  requireRole(USER_ROLES.BUYER),
+  moderateLimiter,
+  createOrder,
+);
 router.get("/orders/:orderId", authMiddleware, lightLimiter, getOrder);
 router.patch(
   "/orders/:orderId/status",

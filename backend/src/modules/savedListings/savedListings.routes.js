@@ -7,6 +7,8 @@ import {
   getMySavedListings
 } from "./savedListings.controller.js";
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
+import { requireRole } from "../../common/middlewares/role.middleware.js";
+import { USER_ROLES } from "../auth/auth.constants.js";
 import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";
 
 const router = Router();
@@ -25,20 +27,34 @@ const lightUserLimiter = rateLimiter({
   strategy: "user",
 });
 
-router.get("/", authMiddleware, lightUserLimiter, getMySavedListings);
+router.get(
+  "/",
+  authMiddleware,
+  requireRole(USER_ROLES.BUYER),
+  lightUserLimiter,
+  getMySavedListings,
+);
 
 router.post(
   "/listings/:listingId",
   authMiddleware,
+  requireRole(USER_ROLES.BUYER),
   moderateUserLimiter,
   saveListing,
 );
 router.delete(
   "/listings/:listingId",
   authMiddleware,
+  requireRole(USER_ROLES.BUYER),
   moderateUserLimiter,
   unsaveListing,
 );
-router.get("/mine", authMiddleware, lightUserLimiter, getMySavedListingIds);
+router.get(
+  "/mine",
+  authMiddleware,
+  requireRole(USER_ROLES.BUYER),
+  lightUserLimiter,
+  getMySavedListingIds,
+);
 
 export default router;

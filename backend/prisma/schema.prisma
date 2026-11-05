@@ -111,11 +111,11 @@ model User {
 model UserReport {
   id String @id @default(uuid()) @db.Uuid
 
-  reporterId String
+  reporterId String @db.Uuid
   reporter   User @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Restrict)
-  reportedUserId String
+  reportedUserId String @db.Uuid
   reportedUser User @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Restrict)
-  resolvedById String?
+  resolvedById String? @db.Uuid
   resolvedBy User? @relation("ReportsResolved", fields: [resolvedById], references: [id], onDelete: SetNull)
 
   reason UserReportReason
@@ -221,8 +221,9 @@ model RefreshToken {
   device   Device? @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   issuedAt  DateTime  @default(now())
-  expiresAt DateTime
+  expiresAt  DateTime
   revokedAt DateTime?
+  rotatedAt DateTime?
 
   revokedReason String? @db.VarChar(100)
 
@@ -663,7 +664,7 @@ model Notification {
 model AuditLog {
   id String @id @default(uuid()) @db.Uuid
 
-  actorId String?
+  actorId String? @db.Uuid
   actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   action     String   @db.VarChar(100)

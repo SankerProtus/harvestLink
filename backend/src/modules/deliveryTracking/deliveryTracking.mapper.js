@@ -28,12 +28,12 @@ function serializeListingSummary(listing) {
   };
 }
 
-function serializePerson(person) {
+function serializePerson(person, includePhone) {
   if (!person) return undefined;
   return {
     id: person.id,
     name: person.fullName,
-    phone: person.phone ?? null,
+    phone: includePhone ? person.phone ?? null : null,
     avatarUrl: person.profileImageUrl ?? null,
   };
 }
@@ -59,6 +59,8 @@ function serializePaymentSummary(payments) {
 }
 
 export function toOrderDTO(order) {
+  const canSharePhone =
+    order.status !== "PENDING" && order.status !== "CANCELLED";
   return {
     id: order.id,
     listingId: order.listingId,
@@ -78,8 +80,8 @@ export function toOrderDTO(order) {
     longitude: order.latestLongitude ?? null,
     locationReportedAt: serializeDate(order.locationReportedAt),
     listing: serializeListingSummary(order.listing),
-    buyer: serializePerson(order.buyer),
-    farmer: serializePerson(order.farmer),
+    buyer: serializePerson(order.buyer, canSharePhone),
+    farmer: serializePerson(order.farmer, canSharePhone),
     createdAt: serializeDate(order.createdAt),
     updatedAt: serializeDate(order.updatedAt),
   };

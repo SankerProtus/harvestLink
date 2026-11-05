@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { ValidationError } from "../../errors/commonErrors.js";
 import {
-  CROP_TYPES,
   QUANTITY_UNITS,
   MATCH_SEARCH_CONFIG,
   MATCH_CONFIG,

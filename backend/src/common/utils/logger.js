@@ -9,10 +9,31 @@ const LOG_LEVELS = Object.freeze({
 const isProduction = process.env.NODE_ENV === "production";
 
 // Redaction of sensitive metadata
-const SENSITIVE_KEY_PATTERN =
-  /(password|otp|code|token|refreshtoken|accesstoken|tokenhash|codehash|authorization|secret|idtoken)/i;
+const SENSITIVE_KEYS = new Set([
+  "password",
+  "otp",
+  "code",
+  "token",
+  "refreshtoken",
+  "accesstoken",
+  "tokenhash",
+  "codehash",
+  "authorization",
+  "secret",
+  "idtoken",
+]);
 
 const REDACTED_PLACEHOLDER = "[REDACTED]";
+
+function maskPhone(phone) {
+  if (typeof phone !== "string") return phone;
+
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 4) return "[MASKED]";
+
+  const prefix = phone.startsWith("+") ? phone.slice(0, 5) : digits.slice(0, 4);
+  return `${prefix}****${digits.slice(-2)}`;
+}
 
 // Redacts sensitive keys in an object or array recursively. Used to prevent logging secrets in plaintext.
 function redact(value) {
@@ -23,9 +44,14 @@ function redact(value) {
   if (value && typeof value === "object") {
     const result = {};
     for (const [key, val] of Object.entries(value)) {
-      result[key] = SENSITIVE_KEY_PATTERN.test(key)
-        ? REDACTED_PLACEHOLDER
-        : redact(val);
+      const normalizedKey = key.toLowerCase();
+      if (normalizedKey === "phone") {
+        result[key] = maskPhone(val);
+      } else if (SENSITIVE_KEYS.has(normalizedKey)) {
+        result[key] = REDACTED_PLACEHOLDER;
+      } else {
+        result[key] = redact(val);
+      }
     }
     return result;
   }

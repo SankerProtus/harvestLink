@@ -46,12 +46,9 @@ import {
 
 import { ORDER_STATUS, ORDER_CONFIG } from "./deliveryTracking.constants.js";
 
-import { getListing } from "../marketplace/marketplace.service.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { NOTIFICATION_TYPE } from "../notifications/notifications.constants.js";
 import { recordCancellationMetric } from "../trust/trust.service.js";
-
-// Private helpers
 
 async function requireOrder(orderId) {
   const order = await findOrderById(orderId);
@@ -111,15 +108,11 @@ function resolveCancellationRule(currentStatus, userId, order) {
   return null;
 }
 
-// Public Service Functions
 export async function createOrder({ buyerId, listingId, quantity }) {
-  const listingPreview = await getListing({ listingId });
-
   const result = await createOrderWithListingLock({
     listingId,
     buyerId,
     quantity,
-    pricePerUnitAtOrder: listingPreview.pricePerUnit,
   });
 
   if (!result.ok) {
@@ -142,7 +135,7 @@ export async function createOrder({ buyerId, listingId, quantity }) {
 
   const { order, listing } = result;
 
-  const event = createOrderCreatedEvent({
+  createOrderCreatedEvent({
     orderId: order.id,
     buyerId: order.buyerId,
     farmerId: order.farmerId,
@@ -150,8 +143,6 @@ export async function createOrder({ buyerId, listingId, quantity }) {
     quantity: order.quantity,
     pricePerUnitAtOrder: order.pricePerUnitAtOrder,
   });
-  // TODO: publish `event` once an event bus exists.
-
   await createNotification({
     userId: order.farmerId,
     type: NOTIFICATION_TYPE.ORDER_PLACED,
@@ -164,7 +155,6 @@ export async function createOrder({ buyerId, listingId, quantity }) {
   return toCreateOrderResponse(order);
 }
 
-// Status Transitions
 export async function updateOrderStatus({ orderId, userId, newStatus }) {
   const order = await requireOrder(orderId);
   const currentStatus = order.status;
@@ -237,12 +227,11 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
   const updatedOrder = transitionResult.order;
 
   if (newStatus === ORDER_STATUS.CONFIRMED) {
-    const event = createOrderConfirmedEvent({
+    createOrderConfirmedEvent({
       orderId,
       buyerId: order.buyerId,
       farmerId: order.farmerId,
     });
-    // TODO: publish `event` once an event bus exists.
     await createNotification({
       userId: order.buyerId,
       type: NOTIFICATION_TYPE.ORDER_CONFIRMED,
@@ -252,11 +241,10 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
       listingId: order.listingId,
     });
   } else if (newStatus === ORDER_STATUS.IN_TRANSIT) {
-    const event = createOrderInTransitEvent({
+    createOrderInTransitEvent({
       orderId,
       farmerId: order.farmerId,
     });
-    // TODO: publish `event` once an event bus exists.
     await createNotification({
       userId: order.buyerId,
       type: NOTIFICATION_TYPE.ORDER_IN_TRANSIT,
@@ -266,12 +254,11 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
       listingId: order.listingId,
     });
   } else if (newStatus === ORDER_STATUS.DELIVERED) {
-    const event = createOrderDeliveredEvent({
+    createOrderDeliveredEvent({
       orderId,
       buyerId: order.buyerId,
       farmerId: order.farmerId,
     });
-    // TODO: publish `event` once an event bus exists.
     await createNotification({
       userId: order.buyerId,
       type: NOTIFICATION_TYPE.ORDER_DELIVERED,
@@ -281,12 +268,11 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
       listingId: order.listingId,
     });
   } else if (newStatus === ORDER_STATUS.CANCELLED) {
-    const event = createOrderCancelledEvent({
+    createOrderCancelledEvent({
       orderId,
       cancelledBy: userId,
       previousStatus: currentStatus,
     });
-    // TODO: publish `event` once an event bus exists.
     const recipientId =
       userId === order.buyerId ? order.farmerId : order.buyerId;
     await createNotification({
@@ -302,8 +288,6 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
 
   return toUpdateOrderStatusResponse(updatedOrder);
 }
-
-// Location Reporting
 
 export async function reportLocation({ orderId, userId, latitude, longitude }) {
   const order = await requireOrder(orderId);
@@ -322,18 +306,14 @@ export async function reportLocation({ orderId, userId, latitude, longitude }) {
     locationReportedAt,
   });
 
-  const event = createOrderLocationUpdatedEvent({
+  createOrderLocationUpdatedEvent({
     orderId,
     latitude,
     longitude,
     locationReportedAt: locationReportedAt.toISOString(),
   });
-  // TODO: publish `event` once an event bus exists.
-
   return toReportLocationResponse(updatedOrder);
 }
-
-// Reads
 
 export async function getOrder({ orderId, userId }) {
   const order = await findOrderByIdWithRelations(orderId);

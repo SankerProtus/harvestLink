@@ -48,8 +48,10 @@ export function AuthProvider({ children }) {
         if (isMountedRef.current) {
           setUser(profile);
         }
-      } catch {
-        await clearTokens();
+      } catch (error) {
+        if (error?.code !== "NETWORK_ERROR") {
+          await clearTokens();
+        }
         if (isMountedRef.current) {
           setUser(null);
         }

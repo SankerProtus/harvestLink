@@ -8,6 +8,8 @@ import {
   getInterestedListingIdsForBuyer,
 } from "./listingInterest.controller.js";
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
+import { requireRole } from "../../common/middlewares/role.middleware.js";
+import { USER_ROLES } from "../auth/auth.constants.js";
 import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";
 
 const router = Router();
@@ -26,28 +28,38 @@ const lightUserLimiter = rateLimiter({
   strategy: "user",
 });
 
-router.post("/", authMiddleware, moderateUserLimiter, expressInterest);
+router.post(
+  "/",
+  authMiddleware,
+  requireRole(USER_ROLES.BUYER),
+  moderateUserLimiter,
+  expressInterest,
+);
 router.delete(
   "/listings/:listingId",
   authMiddleware,
+  requireRole(USER_ROLES.BUYER),
   moderateUserLimiter,
   withdrawInterest,
 );
 router.get(
   "/listings/:listingId",
   authMiddleware,
+  requireRole(USER_ROLES.FARMER),
   lightUserLimiter,
   getInterestForListing,
 );
 router.get(
   "/summary/mine",
   authMiddleware,
+  requireRole(USER_ROLES.FARMER),
   lightUserLimiter,
   getInterestSummaryForFarmer,
 );
 router.get(
   "/mine",
   authMiddleware,
+  requireRole(USER_ROLES.BUYER),
   lightUserLimiter,
   getInterestedListingIdsForBuyer,
 );

@@ -21,6 +21,24 @@ export function validateEnvironment() {
         'SMS_PROVIDER must not be "mock" in production (configure a real provider such as "arkesel")',
       );
     }
+    if (smsProvider === "arkesel") {
+      if (!process.env.ARKESEL_API_KEY?.trim()) {
+        errors.push("ARKESEL_API_KEY must be set when SMS_PROVIDER is arkesel");
+      }
+      if (!process.env.ARKESEL_SENDER_ID?.trim()) {
+        errors.push("ARKESEL_SENDER_ID must be set when SMS_PROVIDER is arkesel");
+      }
+    }
+    if (smsProvider === "telegram") {
+      if (!process.env.TELEGRAM_BOT_TOKEN?.trim()) {
+        errors.push(
+          "TELEGRAM_BOT_TOKEN must be set when SMS_PROVIDER is telegram",
+        );
+      }
+      if (!process.env.TELEGRAM_CHAT_ID?.trim()) {
+        errors.push("TELEGRAM_CHAT_ID must be set when SMS_PROVIDER is telegram");
+      }
+    }
 
     if (!process.env.CORS_ORIGIN?.trim()) {
       errors.push("CORS_ORIGIN must be set in production");

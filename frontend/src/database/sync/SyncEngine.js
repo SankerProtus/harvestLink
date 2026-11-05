@@ -7,16 +7,14 @@ import {
   getPendingOperations,
   incrementRetry,
   markCompleted,
+  markFailed,
 } from "./SyncQueue.js";
-
-import { resolve as resolveConflict } from "./ConflictResolver.js";
 
 import {
   createListing as createRemoteListing,
   updateListing as updateRemoteListing,
   updateListingQuantity as updateRemoteListingQuantity,
   changeListingStatus as changeRemoteListingStatus,
-  getListing as getRemoteListing,
   uploadListingPhoto,
 } from "../../api/marketplace.api.js";
 import { normalizeListingImageUrls } from "../../../src/features/marketplace/lib/normalizeListingImageUrls.js";
@@ -32,17 +30,20 @@ const EDITABLE_LISTING_FIELDS = [
   "title",
   "description",
   "cropType",
-  "quantity",
   "quantityUnit",
   "pricePerUnit",
   "location",
   "images",
 ];
 
-function extractEditableFields(listing) {
+const MAX_SYNC_RETRIES = 5;
+
+function extractEditableFields(updates) {
   const result = {};
   for (const field of EDITABLE_LISTING_FIELDS) {
-    if (listing[field] !== undefined) result[field] = listing[field];
+    if (updates[field] !== undefined && updates[field] !== null) {
+      result[field] = updates[field];
+    }
   }
   return result;
 }
@@ -74,11 +75,7 @@ async function handleUpdateListing(operation) {
     throw new Error("Cannot sync an update for a listing with no remoteId");
   }
 
-  const remoteListing = await getRemoteListing(localListing.remoteId);
-
-  const merged = resolveConflict(localListing, remoteListing);
-
-  const editableFields = extractEditableFields(merged);
+  const editableFields = extractEditableFields(operation.payload);
   const normalizedEditableFields = {
     ...editableFields,
     images: editableFields.images
@@ -162,10 +159,16 @@ export async function syncOperation(operation) {
 
     await markCompleted(operation.localId);
   } catch (err) {
-    await incrementRetry(
-      operation.localId,
-      err?.message ?? "Unknown sync error",
-    );
+    const errorMessage = err?.message ?? "Unknown sync error";
+    const status = err?.status ?? err?.response?.status;
+    const retryCount = operation.retryCount ?? 0;
+    const isPermanent = status >= 400 && status < 500 && status !== 408 && status !== 429;
+
+    if (isPermanent || retryCount + 1 >= MAX_SYNC_RETRIES) {
+      await markFailed(operation.localId, errorMessage);
+    } else {
+      await incrementRetry(operation.localId, errorMessage);
+    }
   }
 }
 

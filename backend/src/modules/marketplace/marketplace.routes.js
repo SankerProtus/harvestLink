@@ -13,6 +13,8 @@ import {
 } from "./marketplace.controller.js";
 
 import { authMiddleware } from "../../common/middlewares/auth.middleware.js";
+import { requireRole } from "../../common/middlewares/role.middleware.js";
+import { USER_ROLES } from "../auth/auth.constants.js";
 import { rateLimiter } from "../../common/middlewares/rateLimit.middleware.js";
 import { uploadSingleImage } from "../../common/middlewares/upload.middleware.js";
 
@@ -60,10 +62,17 @@ router.get(
 router.get("/crops", lightLimiter, listCrops);
 router.get("/listings", lightLimiter, searchListings);
 
-router.post("/listings", authMiddleware, listingWriteLimiter, createListing);
+router.post(
+  "/listings",
+  authMiddleware,
+  requireRole(USER_ROLES.FARMER),
+  listingWriteLimiter,
+  createListing,
+);
 router.post(
   "/listings/photos",
   authMiddleware,
+  requireRole(USER_ROLES.FARMER),
   listingWriteLimiter,
   uploadSingleImage,
   uploadListingPhoto,
@@ -71,18 +80,21 @@ router.post(
 router.patch(
   "/listings/:listingId",
   authMiddleware,
+  requireRole(USER_ROLES.FARMER),
   moderateLimiter,
   updateListing,
 );
 router.patch(
   "/listings/:listingId/quantity",
   authMiddleware,
+  requireRole(USER_ROLES.FARMER),
   moderateLimiter,
   updateListingQuantity,
 );
 router.patch(
   "/listings/:listingId/status",
   authMiddleware,
+  requireRole(USER_ROLES.FARMER),
   moderateLimiter,
   changeListingStatus,
 );

@@ -51,8 +51,6 @@ import { prisma } from "../../common/utils/prismaClient.js";
 import { InvalidCropTypeError } from "./marketplace.errors.js";
 
 
-// Private helpers
-
 async function requireListing(listingId) {
   const listing = await findListingById(listingId);
   if (!listing) {
@@ -93,8 +91,6 @@ async function mapListingCropUpdates(updates) {
   return { ...rest, cropId: crop.id };
 }
 
-
-// Create Listing
 
 export async function createListing({
   farmerId,
@@ -151,7 +147,7 @@ export async function createListing({
     priceReviewRequired,
   });
 
-  const event = createListingCreatedEvent({
+  createListingCreatedEvent({
     listingId: listing.id,
     farmerId: listing.farmerId,
     cropType: crop.slug,
@@ -159,12 +155,8 @@ export async function createListing({
     quantityUnit: listing.quantityUnit,
     pricePerUnit: listing.pricePerUnit,
   });
-  // TODO: publish `event` once an event bus exists.
-
   return toCreateListingResponse(listing);
 }
-
-// Update Listing (general field edit)
 
 export async function updateListing({ listingId, userId, updates }) {
   const listing = await requireListing(listingId);
@@ -174,7 +166,7 @@ export async function updateListing({ listingId, userId, updates }) {
   const becomesZeroQuantity =
     updates.quantity !== undefined && updates.quantity === 0;
 
-  let mappedUpdates = await mapListingCropUpdates(updates);
+  const mappedUpdates = await mapListingCropUpdates(updates);
 
   if (mappedUpdates.pricePerUnit !== undefined) {
     const cropId = mappedUpdates.cropId ?? listing.cropId;
@@ -195,24 +187,20 @@ export async function updateListing({ listingId, userId, updates }) {
   const updatedListing = await updateListingRepo(listingId, data);
 
   if (becomesZeroQuantity) {
-    const soldEvent = createListingSoldEvent({
+    createListingSoldEvent({
       listingId,
       farmerId: listing.farmerId,
     });
-    // TODO: publish `soldEvent` once an event bus exists.
   } else {
-    const updatedEvent = createListingUpdatedEvent({
+    createListingUpdatedEvent({
       listingId,
       farmerId: listing.farmerId,
       changedFields: Object.keys(updates),
     });
-    // TODO: publish `updatedEvent` once an event bus exists.
   }
 
   return toUpdateListingResponse(updatedListing);
 }
-
-// Update Quantity (dedicated endpoint)
 
 export async function updateListingQuantity({ listingId, userId, quantity }) {
   const listing = await requireListing(listingId);
@@ -234,25 +222,20 @@ export async function updateListingQuantity({ listingId, userId, quantity }) {
     updatedListing = await updateListingQuantityRepo(listingId, quantity);
   }
 
-  const quantityEvent = createListingQuantityUpdatedEvent({
+  createListingQuantityUpdatedEvent({
     listingId,
     previousQuantity,
     newQuantity: quantity,
   });
-  // TODO: publish `quantityEvent` once an event bus exists.
-
   if (quantity === 0) {
-    const soldEvent = createListingSoldEvent({
+    createListingSoldEvent({
       listingId,
       farmerId: listing.farmerId,
     });
-    // TODO: publish `soldEvent` once an event bus exists.
   }
 
   return toUpdateListingQuantityResponse(updatedListing);
 }
-
-// Status Change (ACTIVE → REMOVED or ACTIVE → SOLD only)
 
 export async function changeListingStatus({ listingId, userId, newStatus }) {
   const listing = await requireListing(listingId);
@@ -269,25 +252,21 @@ export async function changeListingStatus({ listingId, userId, newStatus }) {
   const previousStatus = listing.status;
   const updatedListing = await updateListingStatusRepo(listingId, newStatus);
 
-  const statusChangedEvent = createListingStatusChangedEvent({
+  createListingStatusChangedEvent({
     listingId,
     previousStatus,
     newStatus,
   });
-  // TODO: publish `statusChangedEvent` once an event bus exists.
-
   if (newStatus === LISTING_STATUS.REMOVED) {
-    const removedEvent = createListingRemovedEvent({
+    createListingRemovedEvent({
       listingId,
       farmerId: listing.farmerId,
     });
-    // TODO: publish `removedEvent` once an event bus exists.
   } else if (newStatus === LISTING_STATUS.SOLD) {
-    const soldEvent = createListingSoldEvent({
+    createListingSoldEvent({
       listingId,
       farmerId: listing.farmerId,
     });
-    // TODO: publish `soldEvent` once an event bus exists.
   }
 
   return toChangeListingStatusResponse(updatedListing);
@@ -307,7 +286,6 @@ async function resolveReservationFailure(listingId) {
   throw new InsufficientListingQuantityError();
 }
 
-// Reservation / Inventory Management
 export async function confirmListingReservation({ listingId, quantity }) {
   const before = await requireListing(listingId);
   const previousQuantity = Number(before.quantity);
@@ -321,19 +299,16 @@ export async function confirmListingReservation({ listingId, quantity }) {
   }
 
   const newQuantity = Number(updatedListing.quantity);
-  const quantityEvent = createListingQuantityUpdatedEvent({
+  createListingQuantityUpdatedEvent({
     listingId,
     previousQuantity,
     newQuantity,
   });
-  // TODO: publish `quantityEvent` once an event bus exists.
-
   if (updatedListing.status === LISTING_STATUS.SOLD) {
-    const soldEvent = createListingSoldEvent({
+    createListingSoldEvent({
       listingId,
       farmerId: updatedListing.farmerId,
     });
-    // TODO: publish `soldEvent` once an event bus exists.
   }
 
   return toListingDTO(updatedListing);
@@ -350,26 +325,21 @@ export async function releaseListingReservation({ listingId, quantity }) {
   }
 
   const newQuantity = Number(updatedListing.quantity);
-  const quantityEvent = createListingQuantityUpdatedEvent({
+  createListingQuantityUpdatedEvent({
     listingId,
     previousQuantity,
     newQuantity,
   });
-  // TODO: publish `quantityEvent` once an event bus exists.
-
   if (reactivates) {
-    const statusEvent = createListingStatusChangedEvent({
+    createListingStatusChangedEvent({
       listingId,
       previousStatus: LISTING_STATUS.SOLD,
       newStatus: LISTING_STATUS.ACTIVE,
     });
-    // TODO: publish `statusEvent` once an event bus exists.
   }
 
   return toListingDTO(updatedListing);
 }
-
-// Reads
 
 export async function getListing({ listingId }) {
   const listing = await findListingByIdWithFarmer(listingId);

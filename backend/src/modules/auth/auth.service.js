@@ -115,6 +115,7 @@ const smsProvider = resolveSmsProvider();
 const OTP_VERIFICATION_TOKEN_TTL_MINUTES = 10;
 
 const OTP_DEBUG_EXPOSE = process.env.OTP_DEBUG_EXPOSE === "true";
+const REFRESH_ROTATION_GRACE_MS = 60 * 1000;
 
 function issueSessionTokens({ userId, role }) {
   const family = randomUUID();
@@ -276,7 +277,13 @@ export async function verifyOtp({ phone, code, purpose }) {
 
   const isValid = verifyOtpCode(code, otpCode.codeHash);
   if (!isValid) {
-    await incrementOtpAttempts(otpCode.id);
+    const attemptUpdate = await incrementOtpAttempts(
+      otpCode.id,
+      OTP_CONFIG.MAX_VERIFY_ATTEMPTS,
+    );
+    if (attemptUpdate.count === 0) {
+      throw new OTPMaxAttemptsExceededError();
+    }
     throw new InvalidOTPError();
   }
 
@@ -458,6 +465,46 @@ export async function refreshSession({ refreshToken }) {
     throw new InvalidRefreshTokenError();
   }
 
+  if (
+    existingToken.revokedAt &&
+    existingToken.revokedReason === "ROTATED" &&
+    existingToken.rotatedAt &&
+    Date.now() - existingToken.rotatedAt.getTime() <= REFRESH_ROTATION_GRACE_MS
+  ) {
+    const { user } = existingToken;
+    assertAccountIsUsable(user);
+
+    const graceRefreshToken = signRefreshToken({
+      userId: user.id,
+      family: existingToken.family,
+    });
+    const graceAccessToken = signAccessToken({
+      userId: user.id,
+      role: user.role,
+    });
+    const graceRefreshTokenExpiresAt = computeRefreshTokenExpiry();
+    const graceAccessTokenExpiresAt = computeAccessTokenExpiry();
+
+    await createRefreshToken({
+      tokenHash: sha256Hash(graceRefreshToken),
+      family: existingToken.family,
+      userId: user.id,
+      deviceId: existingToken.deviceId,
+      expiresAt: graceRefreshTokenExpiresAt,
+    });
+
+    return toRefreshResponse({
+      accessToken: {
+        token: graceAccessToken,
+        expiresAt: graceAccessTokenExpiresAt,
+      },
+      refreshToken: {
+        token: graceRefreshToken,
+        expiresAt: graceRefreshTokenExpiresAt,
+      },
+    });
+  }
+
   if (existingToken.revokedAt) {
     await revokeRefreshTokenFamily(existingToken.family, "REUSE_DETECTED");
     throw new RefreshTokenReuseError();
@@ -485,7 +532,7 @@ export async function refreshSession({ refreshToken }) {
   const newRefreshTokenExpiresAt = computeRefreshTokenExpiry();
   const newAccessTokenExpiresAt = computeAccessTokenExpiry();
 
-  await rotateRefreshToken({
+  const rotatedToken = await rotateRefreshToken({
     oldTokenId: existingToken.id,
     revokedReason: "ROTATED",
     newTokenData: {
@@ -496,6 +543,10 @@ export async function refreshSession({ refreshToken }) {
       expiresAt: newRefreshTokenExpiresAt,
     },
   });
+  if (rotatedToken === null) {
+    await revokeRefreshTokenFamily(existingToken.family, "REUSE_DETECTED");
+    throw new RefreshTokenReuseError();
+  }
 
   createRefreshTokenRotatedEvent({
     userId: user.id,

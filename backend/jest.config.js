@@ -1,5 +1,3 @@
-// jest.config.js
-
 /** @type {import('jest').Config} */
 export default {
   testEnvironment: "node",
@@ -9,7 +7,7 @@ export default {
   moduleFileExtensions: ["js", "json"],
   collectCoverageFrom: [
     "src/modules/**/*.js",
-    "!src/modules/**/*.routes.js", // thin wiring, low value to unit-test
+    "!src/modules/**/*.routes.js",
   ],
   coverageDirectory: "coverage",
   verbose: true,
