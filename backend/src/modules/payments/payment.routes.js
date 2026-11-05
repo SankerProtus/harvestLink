@@ -13,12 +13,19 @@ const webhookLimiter = rateLimiter({
   max: 120,
   strategy: "ip",
 });
+const initializeLimiter = rateLimiter({
+  routeName: "payment-initialize",
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  strategy: "user",
+});
 
 router.post("/webhook", webhookLimiter, postPaymentWebhook);
 router.post(
   "/initialize",
   authMiddleware,
   requireRole(USER_ROLES.BUYER),
+  initializeLimiter,
   initializePaymentCheckout,
 );
 

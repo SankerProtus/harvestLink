@@ -103,7 +103,10 @@ export async function initializePayment({ orderId, buyerId, email }) {
       orderBy: { createdAt: "desc" },
     });
     if (existing) {
-      return { payment: existing, order };
+      throw paymentError(
+        "An active payment already exists for this order",
+        "PAYMENT_ALREADY_ACTIVE",
+      );
     }
     const amount = getOrderAmountInMinorUnits(order).toString();
     const payment = await tx.payment.create({

@@ -18,6 +18,7 @@ import verificationRoutes from "./src/modules/trust/verification.routes.js";
 import { errorHandlerMiddleware } from "./src/common/middlewares/errorHandler.middleware.js";
 import { logger } from "./src/common/utils/logger.js";
 import { uptime } from "node:process";
+import { capturePaymentRawBody } from "./src/modules/payments/payment.raw-body.js";
 
 const app = express();
 
@@ -38,11 +39,7 @@ app.use(
 app.use(
   express.json({
     limit: "10kb",
-    verify: (req, _res, rawBody) => {
-      if (req.path === "/api/payments/webhook") {
-        req.rawBody = Buffer.from(rawBody);
-      }
-    },
+    verify: capturePaymentRawBody,
   }),
 );
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
