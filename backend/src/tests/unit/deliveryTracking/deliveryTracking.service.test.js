@@ -7,6 +7,7 @@ jest.unstable_mockModule(
     createOrder: jest.fn(),
     createOrderWithListingLock: jest.fn(),
     findOrderById: jest.fn(),
+    findOrderPaymentState: jest.fn(),
     findOrderByIdWithRelations: jest.fn(),
     applyOrderStatusTransition: jest.fn(),
     updateOrderStatus: jest.fn(),
@@ -422,6 +423,28 @@ describe('updateOrderStatus — legal transitions', () => {
       }),
     );
     expect(events.createOrderConfirmedEvent).toHaveBeenCalled();
+  });
+
+  test('PAYMENTS_REQUIRED blocks confirmation without funded escrow', async () => {
+    const previous = process.env.PAYMENTS_REQUIRED;
+    process.env.PAYMENTS_REQUIRED = 'true';
+    const order = fakeOrder({ status: ORDER_STATUS.PENDING });
+    repo.findOrderById.mockResolvedValue(order);
+    repo.findOrderPaymentState.mockResolvedValue({
+      payments: [{ status: 'INITIATED' }],
+      escrow: { status: 'PENDING' },
+    });
+
+    await expect(
+      service.updateOrderStatus({
+        orderId: order.id,
+        userId: 'farmer-1',
+        newStatus: ORDER_STATUS.CONFIRMED,
+      }),
+    ).rejects.toMatchObject({ code: 'PAYMENT_REQUIRED' });
+    expect(repo.applyOrderStatusTransition).not.toHaveBeenCalled();
+    if (previous === undefined) delete process.env.PAYMENTS_REQUIRED;
+    else process.env.PAYMENTS_REQUIRED = previous;
   });
 
   test('CONFIRMED → IN_TRANSIT (farmer only): emits OrderInTransitEvent', async () => {

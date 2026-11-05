@@ -145,6 +145,20 @@ export async function findOrderById(id) {
   return prisma.order.findUnique({ where: { id } });
 }
 
+export async function findOrderPaymentState(orderId) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      payments: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { status: true },
+      },
+      escrow: { select: { status: true } },
+    },
+  });
+}
+
 const ORDER_PAYMENT_INCLUDE = {
   escrow: {
     select: {
@@ -202,7 +216,9 @@ export async function listOrdersByBuyerId(buyerId, filters) {
 
   const where = {
     buyerId,
-    ...(status ? { status: Array.isArray(status) ? { in: status } : status } : {}),
+    ...(status
+      ? { status: Array.isArray(status) ? { in: status } : status }
+      : {}),
   };
 
   const [items, totalCount] = await prisma.$transaction([
@@ -228,7 +244,9 @@ export async function listOrdersByFarmerId(farmerId, filters) {
 
   const where = {
     farmerId,
-    ...(status ? { status: Array.isArray(status) ? { in: status } : status } : {}),
+    ...(status
+      ? { status: Array.isArray(status) ? { in: status } : status }
+      : {}),
   };
 
   const [items, totalCount] = await prisma.$transaction([

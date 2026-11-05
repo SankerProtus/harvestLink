@@ -445,6 +445,7 @@ model Order {
 
   quantity            Decimal @db.Decimal(10, 2)
   pricePerUnitAtOrder Decimal @db.Decimal(10, 2)
+  currency            String  @default("GHS") @db.Char(3)
 
   status OrderStatus @default(PENDING)
 
@@ -747,6 +748,7 @@ enum PaymentProvider {
 }
 
 enum PaymentStatus {
+  INITIATED
   PENDING
   AUTHORIZED
   CAPTURED
@@ -756,6 +758,7 @@ enum PaymentStatus {
   REFUND_PENDING
   FAILED
   CANCELLED
+  EXPIRED
   REFUNDED
 }
 
@@ -776,6 +779,7 @@ model Payment {
   authorizedAt      DateTime?
   capturedAt        DateTime?
   failedAt          DateTime?
+  expiresAt         DateTime?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 

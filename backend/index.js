@@ -35,7 +35,16 @@ app.use(
     origin: resolveCorsOriginConfig(),
   }),
 );
-app.use(express.json({ limit: "10kb" }));
+app.use(
+  express.json({
+    limit: "10kb",
+    verify: (req, _res, rawBody) => {
+      if (req.path === "/api/payments/webhook") {
+        req.rawBody = Buffer.from(rawBody);
+      }
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
 app.use((req, res, next) => {

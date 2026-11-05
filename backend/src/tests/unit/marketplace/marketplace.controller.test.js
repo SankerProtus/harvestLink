@@ -16,6 +16,8 @@ jest.unstable_mockModule(
     getListing: jest.fn(),
     getFarmerListings: jest.fn(),
     searchListings: jest.fn(),
+    listCrops: jest.fn(),
+    uploadListingPhoto: jest.fn(),
   }),
 );
 

@@ -16,8 +16,16 @@ export function mockRequest({
   query = {},
   user = null,
   ip = "127.0.0.1",
+  headers = {},
 } = {}) {
-  return { body, params, query, user, ip };
+  return {
+    body,
+    params,
+    query,
+    user,
+    ip,
+    get: (name) => headers[name] ?? headers[name.toLowerCase()],
+  };
 }
 
 export function mockResponse() {

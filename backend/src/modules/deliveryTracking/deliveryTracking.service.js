@@ -1,12 +1,13 @@
 import {
   createOrderWithListingLock,
   findOrderById,
+  findOrderPaymentState,
   findOrderByIdWithRelations,
   applyOrderStatusTransition,
   updateOrderLocation as updateOrderLocationRepo,
   listOrdersByBuyerId,
   listOrdersByFarmerId,
-  getFarmerSummaryData
+  getFarmerSummaryData,
 } from "./deliveryTracking.repository.js";
 
 import {
@@ -49,6 +50,10 @@ import { ORDER_STATUS, ORDER_CONFIG } from "./deliveryTracking.constants.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { NOTIFICATION_TYPE } from "../notifications/notifications.constants.js";
 import { recordCancellationMetric } from "../trust/trust.service.js";
+import {
+  assertFundedEscrow,
+  isPaymentsRequired,
+} from "../payments/payment.gate.js";
 
 async function requireOrder(orderId) {
   const order = await findOrderById(orderId);
@@ -202,6 +207,18 @@ export async function updateOrderStatus({ orderId, userId, newStatus }) {
     userId !== order.farmerId
   ) {
     throw new UnauthorizedOrderAccessError();
+  }
+
+  if (
+    isPaymentsRequired() &&
+    (newStatus === ORDER_STATUS.CONFIRMED ||
+      newStatus === ORDER_STATUS.IN_TRANSIT)
+  ) {
+    const paymentState = await findOrderPaymentState(orderId);
+    assertFundedEscrow({
+      payment: paymentState?.payments?.[0],
+      escrow: paymentState?.escrow,
+    });
   }
 
   const transitionResult = await applyOrderStatusTransition({
