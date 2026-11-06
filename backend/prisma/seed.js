@@ -248,7 +248,7 @@ const buyers = [
 const admin = {
   id: IDS.admin,
   fullName: "HarvestLink Support Admin",
-  phone: "+233200000999",
+  phone: "+233557319534",
   profileImageUrl: IMG.farmer1,
   lastLoginAt: daysAgo(0.2),
 };
