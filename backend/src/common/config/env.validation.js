@@ -11,6 +11,14 @@ export function validateEnvironment() {
   const errors = [];
 
   if (isProduction()) {
+    if (!process.env.JWT_ACCESS_SECRET?.trim()) {
+      errors.push("JWT_ACCESS_SECRET must be set in production");
+    }
+
+    if (!process.env.JWT_REFRESH_SECRET?.trim()) {
+      errors.push("JWT_REFRESH_SECRET must be set in production");
+    }
+
     if (process.env.OTP_DEBUG_EXPOSE === "true") {
       errors.push("OTP_DEBUG_EXPOSE must not be enabled in production");
     }
